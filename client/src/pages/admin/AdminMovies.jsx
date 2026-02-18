@@ -15,6 +15,22 @@ const [genre,setGenre] = useState("");
 const [editId,setEditId] = useState(null);
 const [deleteId,setDeleteId] = useState(null);
 
+const API_URL = process.env.REACT_APP_API_URL;
+
+
+
+/* FETCH */
+
+// const fetchMovies = async ()=>{
+
+//   const res = await axios.get("http://localhost:5000/api/movies");
+//   setMovies(res.data);
+// };
+
+// useEffect(()=>{
+//   fetchMovies();
+// },[]);
+
 /* FETCH */
 
 const fetchMovies = async ()=>{
@@ -29,47 +45,119 @@ useEffect(()=>{
 
 /* SAVE */
 
-const saveMovie = async ()=>{
+// const saveMovie = async ()=>{
 
-  if(!title || !poster) return alert("Fill Required Fields");
+//   if(!title || !poster) return alert("Fill Required Fields");
 
-  if(editId){
+//   if(editId){
 
-    await axios.put(
-      `http://localhost:5000/api/movies/${editId}`,
-      {title,description,duration,poster,genre}
-    );
+//     await axios.put(
+//       `http://localhost:5000/api/movies/${editId}`,
+//       {title,description,duration,poster,genre}
+//     );
 
-    setEditId(null);
+//     setEditId(null);
 
-  }else{
+//   }else{
 
-    await axios.post(
-      "http://localhost:5000/api/movies",
-      {title,description,duration,poster,genre}
-    );
+//     await axios.post(
+//       "http://localhost:5000/api/movies",
+//       {title,description,duration,poster,genre}
+//     );
+//   }
+
+//   setTitle("");
+//   setDescription("");
+//   setDuration("");
+//   setPoster("");
+//   setGenre("");
+
+//   fetchMovies();
+// };
+
+/* SAVE */
+
+const saveMovie = async () => {
+
+  if (!title || !poster) return alert("Fill Required Fields");
+
+  try {
+
+    if (editId) {
+
+      await axios.put(
+        `${API_URL}/api/movies/${editId}`,
+        { title, description, duration, poster, genre }
+      );
+
+      setEditId(null);
+
+    } else {
+
+      await axios.post(
+        `${API_URL}/api/movies`,
+        { title, description, duration, poster, genre }
+      );
+    }
+
+    setTitle("");
+    setDescription("");
+    setDuration("");
+    setPoster("");
+    setGenre("");
+
+    fetchMovies();
+
+  } catch (err) {
+
+    console.log("Save movie error:", err);
+
   }
-
-  setTitle("");
-  setDescription("");
-  setDuration("");
-  setPoster("");
-  setGenre("");
-
-  fetchMovies();
 };
+
+
+
+
+
+
 
 /* DELETE */
 
-const deleteMovie = async ()=>{
+// const deleteMovie = async ()=>{
 
-  await axios.delete(
-    `http://localhost:5000/api/movies/${deleteId}`
-  );
+//   await axios.delete(
+//     `http://localhost:5000/api/movies/${deleteId}`
+//   );
 
-  setDeleteId(null);
-  fetchMovies();
+//   setDeleteId(null);
+//   fetchMovies();
+// };
+
+/* DELETE */
+
+const deleteMovie = async () => {
+
+  try {
+
+    await axios.delete(
+      `${API_URL}/api/movies/${deleteId}`
+    );
+
+    setDeleteId(null);
+    fetchMovies();
+
+  } catch (err) {
+
+    console.log("Delete movie error:", err);
+
+  }
+
 };
+
+
+
+
+
 
 return(
 
