@@ -69,7 +69,19 @@ function MovieDetails() {
   const [shows, setShows] = useState([]);
   const [movie, setMovie] = useState(null);
 
-  useEffect(() => {
+  // useEffect(() => {
+
+  //   // 🎬 Get movie info
+  //   axios.get(`http://localhost:5000/api/movies/${movieId}`)
+  //     .then(res => setMovie(res.data));
+
+  //   // 🎭 Get shows
+  //   axios.get(`http://localhost:5000/api/shows/movie/${movieId}`)
+  //     .then(res => setShows(res.data));
+
+  // }, [movieId]);
+  
+    useEffect(() => {
 
     // 🎬 Get movie info
     axios.get(`http://localhost:5000/api/movies/${movieId}`)

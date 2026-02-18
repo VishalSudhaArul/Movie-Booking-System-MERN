@@ -317,16 +317,35 @@ function VerifyTicket() {
   const { bookingId } = useParams();
   const [booking, setBooking] = useState(undefined);
 
+  // useEffect(() => {
+
+  //   if (!bookingId) return;
+
+  //   axios
+  //     .get(`http://10.131.192.148:5000/api/bookings/verify/${bookingId}`)
+  //     .then(res => setBooking(res.data))
+  //     .catch(() => setBooking(null));
+
+  // }, [bookingId]);
+
+
   useEffect(() => {
 
-    if (!bookingId) return;
+  if (!bookingId) return;
 
-    axios
-      .get(`http://10.131.192.148:5000/api/bookings/verify/${bookingId}`)
-      .then(res => setBooking(res.data))
-      .catch(() => setBooking(null));
+  const API_URL =
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  }, [bookingId]);
+  axios
+    .get(`${API_URL}/api/bookings/verify/${bookingId}`)
+    .then(res => setBooking(res.data))
+    .catch(err => {
+      console.log("Verify ticket error:", err);
+      setBooking(null);
+    });
+
+}, [bookingId]);
+
 
   /* ---------- Loading ---------- */
 
