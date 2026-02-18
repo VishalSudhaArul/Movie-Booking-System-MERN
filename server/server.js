@@ -104,14 +104,14 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-// ✅ Connect Database
+// Connect DB
 connectDB();
 
-// ✅ Middleware
-app.use(cors()); // ← SIMPLE & SAFE
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// ✅ Routes
+// Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/movies", require("./routes/movieRoutes"));
 app.use("/api/shows", require("./routes/showRoutes"));
@@ -121,12 +121,12 @@ app.use("/api/parking", require("./routes/parkingRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
 
-// ✅ Test Route
+// Test route
 app.get("/", (req, res) => {
   res.send("API Running");
 });
 
-// ✅ Server Port
+// Port
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
