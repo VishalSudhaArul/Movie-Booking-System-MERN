@@ -460,7 +460,9 @@ const getShowStatus = (booking) => {
   }
 };
 
-
+const FRONTEND_URL =
+  process.env.REACT_APP_FRONTEND_URL ||
+  window.location.origin;
 
 
 
@@ -619,13 +621,26 @@ const getShowStatus = (booking) => {
 
                 {/* QR with Scan Animation */}
                 <div className="relative bg-white p-3 rounded-lg shadow-md overflow-hidden">
-
+{/* 
                   <QRCodeCanvas
                     value={`http://10.131.192.148:3000/verify/${b._id}`}
                     size={120}
                     bgColor="#ffffff"
                     fgColor="#000000"
-                  />
+                  /> */}
+
+
+                  {/* const FRONTEND_URL =
+  process.env.REACT_APP_FRONTEND_URL ||
+  window.location.origin; */}
+
+<QRCodeCanvas
+  value={`${FRONTEND_URL}/verify/${b._id}`}
+  size={120}
+  bgColor="#ffffff"
+  fgColor="#000000"
+/>
+
 
                   <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
                     <div className="scan-line"></div>
