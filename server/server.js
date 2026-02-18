@@ -36,17 +36,29 @@ const allowedOrigins = [
 
 const cors = require("cors");
 
+// app.use(
+//   cors({
+//     origin: [
+//       "http://localhost:3000",
+//       "https://movie-booking-system-mern-fawn.vercel.app",
+//       "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
+//     ],
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     credentials: true
+//   })
+// );
+
 app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "https://movie-booking-system-mern-fawn.vercel.app",
-      "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
+      "https://movie-booking-system-mern-fawn.vercel.app"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   })
 );
+
 
 
 
