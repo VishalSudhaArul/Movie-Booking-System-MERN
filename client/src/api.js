@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL
+  baseURL: axios.get(`${process.env.REACT_APP_API_URL}/api/movies`)
+
 });
 
 export default API;
