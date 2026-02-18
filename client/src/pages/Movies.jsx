@@ -291,12 +291,18 @@ useEffect(() => {
   const API_URL =
     process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+  console.log("API URL:", API_URL); // for debugging
+
   axios
     .get(`${API_URL}/api/movies`)
-    .then(res => setMovies(res.data))
-    .catch(err => console.log("API ERROR:", err));
+    .then(res => {
+      console.log("Movies Data:", res.data);
+      setMovies(res.data);
+    })
+    .catch(err => {
+      console.log("API ERROR:", err);
+    });
 }, []);
-
 
   /* ================= AUTO HERO ROTATION ================= */
   useEffect(() => {

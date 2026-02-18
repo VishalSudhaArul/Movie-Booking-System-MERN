@@ -12,8 +12,27 @@ connectDB();
 
 
 // ✅ Middleware
-app.use(cors());
+//app.use(cors());
 app.use(express.json());
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://movie-booking-system-mern-fawn.vercel.app",
+  "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        return callback(new Error("Not allowed by CORS"));
+      }
+      return callback(null, true);
+    },
+    credentials: true
+  })
+);
 
 
 // ✅ Routes
