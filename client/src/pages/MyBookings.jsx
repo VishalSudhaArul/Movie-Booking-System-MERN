@@ -363,22 +363,37 @@ import { QRCodeCanvas } from "qrcode.react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
+const API_URL = process.env.REACT_APP_API_URL;
+
+
+
 function MyBookings() {
 
   const [bookings, setBookings] = useState([]);
 
   /* ---------- Fetch Bookings ---------- */
-  useEffect(() => {
+  // useEffect(() => {
 
-    const userId = localStorage.getItem("userId");
-    if (!userId) return;
+  //   const userId = localStorage.getItem("userId");
+  //   if (!userId) return;
 
-    axios
-      .get(`http://localhost:5000/api/bookings/user/${userId}`)
-      .then(res => setBookings(res.data));
+  //   axios
+  //     .get(`http://localhost:5000/api/bookings/user/${userId}`)
+  //     .then(res => setBookings(res.data));
 
-  }, []);
+  // }, []);
 
+useEffect(() => {
+
+  const userId = localStorage.getItem("userId");
+  if (!userId) return;
+
+  axios
+    .get(`${API_URL}/api/bookings/user/${userId}`)
+    .then(res => setBookings(res.data))
+    .catch(err => console.log("Bookings load error:", err));
+
+}, []);
 
   
 
