@@ -16,18 +16,52 @@ function AddOns() {
   const [selectedParking, setSelectedParking] = useState(null);
   const [show, setShow] = useState(null);
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
+
   /* ---------- Protect Refresh ---------- */
   useEffect(() => {
     if (!showId) navigate("/");
   }, [showId, navigate]);
 
   /* ---------- Fetch Show + AddOns ---------- */
-  useEffect(() => {
+//   useEffect(() => {
+
+//   if (!showId) return;
+
+//   axios
+//     .get(`http://localhost:5000/api/shows/single/${showId}`)
+//     .then(res => {
+
+//       setShow(res.data);
+
+//       const theatre = res.data.theatre;
+
+//       // 🔥 Load Snacks
+//       axios
+//         .get(`http://localhost:5000/api/snacks/theatre/${theatre}`)
+//         .then(r => setSnacks(r.data))
+//         .catch(() => setSnacks([]));
+
+//       // 🔥 Load Parking
+//       axios
+//         .get(`http://localhost:5000/api/parking/theatre/${theatre}`)
+//         .then(r => setParking(r.data))
+//         .catch(() => setParking(null));
+
+//     })
+//     .catch(err => {
+//       console.log("Show load error", err);
+//     });
+
+// }, [showId]);
+
+useEffect(() => {
 
   if (!showId) return;
 
   axios
-    .get(`http://localhost:5000/api/shows/single/${showId}`)
+    .get(`${API_URL}/api/shows/single/${showId}`)
     .then(res => {
 
       setShow(res.data);
@@ -36,13 +70,13 @@ function AddOns() {
 
       // 🔥 Load Snacks
       axios
-        .get(`http://localhost:5000/api/snacks/theatre/${theatre}`)
+        .get(`${API_URL}/api/snacks/theatre/${theatre}`)
         .then(r => setSnacks(r.data))
         .catch(() => setSnacks([]));
 
       // 🔥 Load Parking
       axios
-        .get(`http://localhost:5000/api/parking/theatre/${theatre}`)
+        .get(`${API_URL}/api/parking/theatre/${theatre}`)
         .then(r => setParking(r.data))
         .catch(() => setParking(null));
 
@@ -52,6 +86,7 @@ function AddOns() {
     });
 
 }, [showId]);
+
 
 
   /* ---------- Snack Add ---------- */
@@ -98,48 +133,93 @@ function AddOns() {
     return seatTotal + snackTotal + parkingTotal;
   };
 
+  // /* ---------- Confirm Booking ---------- */
+  // const confirmBooking = async () => {
+
+  //   try {
+
+  //     const userId = localStorage.getItem("userId");
+
+  //     await axios.post("http://localhost:5000/api/bookings", {
+  //       showId,
+  //       seats: selectedSeats,
+  //       userId,
+  //       snacks: selectedSnacks,
+  //       parking: selectedParking
+  //     });
+
+  //     navigate("/mybookings");
+
+  //   } catch (err) {
+  //     console.error("Booking failed", err);
+  //     alert("Booking failed");
+  //   }
+  // };
+
   /* ---------- Confirm Booking ---------- */
-  const confirmBooking = async () => {
+const confirmBooking = async () => {
 
-    try {
+  try {
 
-      const userId = localStorage.getItem("userId");
+    const userId = localStorage.getItem("userId");
 
-      await axios.post("http://localhost:5000/api/bookings", {
-        showId,
-        seats: selectedSeats,
-        userId,
-        snacks: selectedSnacks,
-        parking: selectedParking
-      });
+    await axios.post(`${API_URL}/api/bookings`, {
+      showId,
+      seats: selectedSeats,
+      userId,
+      snacks: selectedSnacks,
+      parking: selectedParking
+    });
 
-      navigate("/mybookings");
+    navigate("/mybookings");
 
-    } catch (err) {
-      console.error("Booking failed", err);
-      alert("Booking failed");
-    }
-  };
+  } catch (err) {
+    console.error("Booking failed", err);
+    alert("Booking failed");
+  }
+};
+
+
+  // /* ---------- Skip Booking ---------- */
+  // const skipBooking = async () => {
+
+  //   try {
+
+  //     const userId = localStorage.getItem("userId");
+
+  //     await axios.post("http://localhost:5000/api/bookings", {
+  //       showId,
+  //       seats: selectedSeats,
+  //       userId
+  //     });
+
+  //     navigate("/mybookings");
+
+  //   } catch (err) {
+  //     alert("Booking failed");
+  //   }
+  // };
 
   /* ---------- Skip Booking ---------- */
-  const skipBooking = async () => {
+const skipBooking = async () => {
 
-    try {
+  try {
 
-      const userId = localStorage.getItem("userId");
+    const userId = localStorage.getItem("userId");
 
-      await axios.post("http://localhost:5000/api/bookings", {
-        showId,
-        seats: selectedSeats,
-        userId
-      });
+    await axios.post(`${API_URL}/api/bookings`, {
+      showId,
+      seats: selectedSeats,
+      userId
+    });
 
-      navigate("/mybookings");
+    navigate("/mybookings");
 
-    } catch (err) {
-      alert("Booking failed");
-    }
-  };
+  } catch (err) {
+    alert("Booking failed");
+  }
+};
+
 
   if (!show) {
     return <p className="text-white text-center mt-10">Loading...</p>;
