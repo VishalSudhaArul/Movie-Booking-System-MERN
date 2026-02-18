@@ -7,7 +7,26 @@ function AdminScan() {
   const [booking, setBooking] = useState(null);
   const [message, setMessage] = useState("");
 
-  const verifyTicket = () => {
+  // const verifyTicket = () => {
+
+  //   axios
+  //     .get(`http://localhost:5000/api/bookings/verify/${bookingId}`)
+  //     .then(res => {
+  //       setBooking(res.data);
+  //       setMessage("");
+  //     })
+  //     .catch(() => setMessage("Invalid Ticket"));
+  // };
+
+  // const markUsed = () => {
+
+  //   axios
+  //     .put(`http://localhost:5000/api/bookings/use/${bookingId}`)
+  //     .then(res => setMessage(res.data.message));
+  // };
+
+
+   const verifyTicket = () => {
 
     axios
       .get(`http://localhost:5000/api/bookings/verify/${bookingId}`)
@@ -24,6 +43,8 @@ function AdminScan() {
       .put(`http://localhost:5000/api/bookings/use/${bookingId}`)
       .then(res => setMessage(res.data.message));
   };
+
+
 
   return (
     <div className="bg-black min-h-screen text-white p-8">

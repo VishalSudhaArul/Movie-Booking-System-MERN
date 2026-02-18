@@ -80,18 +80,26 @@ function MovieDetails() {
   //     .then(res => setShows(res.data));
 
   // }, [movieId]);
-  
-    useEffect(() => {
 
-    // 🎬 Get movie info
-    axios.get(`http://localhost:5000/api/movies/${movieId}`)
-      .then(res => setMovie(res.data));
+  useEffect(() => {
 
-    // 🎭 Get shows
-    axios.get(`http://localhost:5000/api/shows/movie/${movieId}`)
-      .then(res => setShows(res.data));
+  const API_URL =
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  }, [movieId]);
+  // 🎬 Get movie info
+  axios
+    .get(`${API_URL}/api/movies/${movieId}`)
+    .then(res => setMovie(res.data))
+    .catch(err => console.log("Movie fetch error:", err));
+
+  // 🎭 Get shows
+  axios
+    .get(`${API_URL}/api/shows/movie/${movieId}`)
+    .then(res => setShows(res.data))
+    .catch(err => console.log("Shows fetch error:", err));
+
+}, [movieId]);
+
 
   if (!movie) return <p>Loading...</p>;
 

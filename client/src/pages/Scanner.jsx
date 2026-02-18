@@ -7,49 +7,102 @@ function Scanner() {
   const qrRef = useRef(null);
   const [message, setMessage] = useState("");
 
+  // useEffect(() => {
+
+  //   const qrCodeScanner = new Html5Qrcode("reader");
+
+  //   qrCodeScanner.start(
+  //     { facingMode: "environment" },
+  //     {
+  //       fps: 10,
+  //       qrbox: 250
+  //     },
+  //     async (decodedText) => {
+
+  //       try {
+
+  //         const bookingId = decodedText.split("/").pop();
+
+  //         const res = await axios.get(
+  //           `http://localhost:5000/api/bookings/${bookingId}`
+  //         );
+
+  //         if (res.data.used) {
+  //           setMessage("❌ Ticket Already Used");
+  //         } else {
+
+  //           await axios.put(
+  //             `http://localhost:5000/api/bookings/use/${bookingId}`
+  //           );
+
+  //           setMessage("✅ Entry Allowed");
+  //         }
+
+  //       } catch {
+  //         setMessage("❌ Invalid Ticket");
+  //       }
+
+  //     }
+  //   );
+
+  //   return () => {
+  //     qrCodeScanner.stop().catch(() => {});
+  //   };
+
+  // }, []);
+
   useEffect(() => {
 
-    const qrCodeScanner = new Html5Qrcode("reader");
+  const API_URL =
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-    qrCodeScanner.start(
-      { facingMode: "environment" },
-      {
-        fps: 10,
-        qrbox: 250
-      },
-      async (decodedText) => {
+  const qrCodeScanner = new Html5Qrcode("reader");
 
-        try {
+  qrCodeScanner.start(
+    { facingMode: "environment" },
+    {
+      fps: 10,
+      qrbox: 250
+    },
+    async (decodedText) => {
 
-          const bookingId = decodedText.split("/").pop();
+      try {
 
-          const res = await axios.get(
-            `http://localhost:5000/api/bookings/${bookingId}`
+        const bookingId = decodedText.split("/").pop();
+
+        const res = await axios.get(
+          `${API_URL}/api/bookings/${bookingId}`
+        );
+
+        if (res.data.used) {
+
+          setMessage("❌ Ticket Already Used");
+
+        } else {
+
+          await axios.put(
+            `${API_URL}/api/bookings/use/${bookingId}`
           );
 
-          if (res.data.used) {
-            setMessage("❌ Ticket Already Used");
-          } else {
-
-            await axios.put(
-              `http://localhost:5000/api/bookings/use/${bookingId}`
-            );
-
-            setMessage("✅ Entry Allowed");
-          }
-
-        } catch {
-          setMessage("❌ Invalid Ticket");
+          setMessage("✅ Entry Allowed");
         }
 
+      } catch (error) {
+
+        console.log("Scanner error:", error);
+        setMessage("❌ Invalid Ticket");
+
       }
-    );
 
-    return () => {
-      qrCodeScanner.stop().catch(() => {});
-    };
+    }
+  );
 
-  }, []);
+  return () => {
+    qrCodeScanner.stop().catch(() => {});
+  };
+
+}, []);
+
 
   return (
     <div className="bg-black min-h-screen text-white text-center p-10">

@@ -8,29 +8,56 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogin = () => {
+  // const handleLogin = () => {
 
-    axios.post("http://localhost:5000/api/users/login", {
-      email
-    })
-    .then(res => {
+  //   axios.post("http://localhost:5000/api/users/login", {
+  //     email
+  //   })
+  //   .then(res => {
 
-      // ✅ Save userId
-      localStorage.setItem("userId", res.data._id);
+  //     // ✅ Save userId
+  //     localStorage.setItem("userId", res.data._id);
 
-      // ✅ Save full user
-      localStorage.setItem("user", JSON.stringify(res.data));
+  //     // ✅ Save full user
+  //     localStorage.setItem("user", JSON.stringify(res.data));
 
-      alert("Login Success");
+  //     alert("Login Success");
 
-      // Redirect back if came from protected page
-      const redirectTo = location.state?.redirectTo || "/";
-      navigate(redirectTo);
+  //     // Redirect back if came from protected page
+  //     const redirectTo = location.state?.redirectTo || "/";
+  //     navigate(redirectTo);
 
-    })
-    .catch(() => alert("User not found"));
+  //   })
+  //   .catch(() => alert("User not found"));
 
-  };
+  // };
+
+  const API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+const handleLogin = () => {
+
+  axios.post(`${API_URL}/api/users/login`, {
+    email
+  })
+  .then(res => {
+
+    localStorage.setItem("userId", res.data._id);
+    localStorage.setItem("user", JSON.stringify(res.data));
+
+    alert("Login Success");
+
+    const redirectTo = location.state?.redirectTo || "/";
+    navigate(redirectTo);
+
+  })
+  .catch(err => {
+    console.log("Login error:", err);
+    alert("User not found");
+  });
+
+};
+
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">

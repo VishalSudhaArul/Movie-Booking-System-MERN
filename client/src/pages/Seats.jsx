@@ -125,10 +125,23 @@ function Seats() {
   const [show, setShow] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
 
+  // useEffect(() => {
+  //   axios.get(`http://localhost:5000/api/shows/single/${showId}`)
+  //     .then(res => setShow(res.data));
+  // }, [showId]);
+
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/shows/single/${showId}`)
-      .then(res => setShow(res.data));
-  }, [showId]);
+
+  const API_URL =
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+  axios
+    .get(`${API_URL}/api/shows/single/${showId}`)
+    .then(res => setShow(res.data))
+    .catch(err => console.log("Seat fetch error:", err));
+
+}, [showId]);
+
 
   const toggleSeat = (seat) => {
 

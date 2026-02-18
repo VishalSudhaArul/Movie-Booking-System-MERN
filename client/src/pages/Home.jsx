@@ -263,12 +263,25 @@ function Home() {
   // Get logged-in user safely
   const user = JSON.parse(localStorage.getItem("user"));
 
+  // useEffect(() => {
+  //   axios
+  //     .get("http://localhost:5000/api/movies")
+  //     .then((res) => setMovies(res.data))
+  //     .catch((err) => console.log(err));
+  // }, []);
+
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/movies")
-      .then((res) => setMovies(res.data))
-      .catch((err) => console.log(err));
-  }, []);
+
+  const API_URL =
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+  axios
+    .get(`${API_URL}/api/movies`)
+    .then((res) => setMovies(res.data))
+    .catch((err) => console.log("Home fetch error:", err));
+
+}, []);
+
 
   // Genre filtering logic
   const filteredMovies =

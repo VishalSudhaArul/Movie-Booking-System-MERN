@@ -161,6 +161,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+
+// const API_URL =
+//   process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 function Admin() {
 
   const [movies, setMovies] = useState([]);
@@ -181,44 +185,120 @@ function Admin() {
     time: ""
   });
 
-  // 🔹 Load movies & shows
-  useEffect(() => {
-    axios.get("http://localhost:5000/api/movies")
-      .then(res => setMovies(res.data));
+  // // 🔹 Load movies & shows
+  // useEffect(() => {
+  //   axios.get("http://localhost:5000/api/movies")
+  //     .then(res => setMovies(res.data));
 
-    axios.get("http://localhost:5000/api/shows")
-      .then(res => setShows(res.data));
-  }, []);
+  //   axios.get("http://localhost:5000/api/shows")
+  //     .then(res => setShows(res.data));
+  // }, []);
 
-  const handleMovieChange = (e) => {
-    setMovie({ ...movie, [e.target.name]: e.target.value });
-  };
+  // const handleMovieChange = (e) => {
+  //   setMovie({ ...movie, [e.target.name]: e.target.value });
+  // };
 
-  const handleShowChange = (e) => {
-    setShow({ ...show, [e.target.name]: e.target.value });
-  };
+  // const handleShowChange = (e) => {
+  //   setShow({ ...show, [e.target.name]: e.target.value });
+  // };
 
-  const addMovie = () => {
-    axios.post("http://localhost:5000/api/movies", movie)
-      .then(() => axios.get("http://localhost:5000/api/movies"))
-      .then(res => setMovies(res.data));
-  };
+  // const addMovie = () => {
+  //   axios.post("http://localhost:5000/api/movies", movie)
+  //     .then(() => axios.get("http://localhost:5000/api/movies"))
+  //     .then(res => setMovies(res.data));
+  // };
 
-  const addShow = () => {
-    axios.post("http://localhost:5000/api/shows", show)
-      .then(() => axios.get("http://localhost:5000/api/shows"))
-      .then(res => setShows(res.data));
-  };
+  // const addShow = () => {
+  //   axios.post("http://localhost:5000/api/shows", show)
+  //     .then(() => axios.get("http://localhost:5000/api/shows"))
+  //     .then(res => setShows(res.data));
+  // };
 
-  const deleteMovie = (id) => {
-    axios.delete(`http://localhost:5000/api/movies/${id}`)
-      .then(() => setMovies(movies.filter(m => m._id !== id)));
-  };
+  // const deleteMovie = (id) => {
+  //   axios.delete(`http://localhost:5000/api/movies/${id}`)
+  //     .then(() => setMovies(movies.filter(m => m._id !== id)));
+  // };
 
-  const deleteShow = (id) => {
-    axios.delete(`http://localhost:5000/api/shows/${id}`)
-      .then(() => setShows(shows.filter(s => s._id !== id)));
-  };
+  // const deleteShow = (id) => {
+  //   axios.delete(`http://localhost:5000/api/shows/${id}`)
+  //     .then(() => setShows(shows.filter(s => s._id !== id)));
+  // };
+
+
+
+// ✅ API Base URL (Works for both Local & Production)
+const API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+
+// 🔹 Load movies & shows
+useEffect(() => {
+
+  axios.get(`${API_URL}/api/movies`)
+    .then(res => setMovies(res.data))
+    .catch(err => console.log("Fetch movies error:", err));
+
+  axios.get(`${API_URL}/api/shows`)
+    .then(res => setShows(res.data))
+    .catch(err => console.log("Fetch shows error:", err));
+
+}, []);
+
+
+// 🔹 Input Handlers
+const handleMovieChange = (e) => {
+  setMovie({ ...movie, [e.target.name]: e.target.value });
+};
+
+const handleShowChange = (e) => {
+  setShow({ ...show, [e.target.name]: e.target.value });
+};
+
+
+// 🔹 Add Movie
+const addMovie = () => {
+
+  axios.post(`${API_URL}/api/movies`, movie)
+    .then(() => axios.get(`${API_URL}/api/movies`))
+    .then(res => setMovies(res.data))
+    .catch(err => console.log("Add movie error:", err));
+
+};
+
+
+// 🔹 Add Show
+const addShow = () => {
+
+  axios.post(`${API_URL}/api/shows`, show)
+    .then(() => axios.get(`${API_URL}/api/shows`))
+    .then(res => setShows(res.data))
+    .catch(err => console.log("Add show error:", err));
+
+};
+
+
+// 🔹 Delete Movie
+const deleteMovie = (id) => {
+
+  axios.delete(`${API_URL}/api/movies/${id}`)
+    .then(() => setMovies(movies.filter(m => m._id !== id)))
+    .catch(err => console.log("Delete movie error:", err));
+
+};
+
+
+// 🔹 Delete Show
+const deleteShow = (id) => {
+
+  axios.delete(`${API_URL}/api/shows/${id}`)
+    .then(() => setShows(shows.filter(s => s._id !== id)))
+    .catch(err => console.log("Delete show error:", err));
+
+};
+
+
+
+
 
   return (
     <div className="bg-black min-h-screen text-white p-10">
