@@ -19,7 +19,7 @@ import AdminSnacks from "./pages/admin/AdminSnacks";
 import AdminParking from "./pages/admin/AdminParking";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 
-import PrivateRoute from "./components/PrivateRoute";
+//import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
   return (
