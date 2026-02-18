@@ -21,18 +21,33 @@ const allowedOrigins = [
   "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
 ];
 
+// app.use(
+//   cors({
+//     origin: function (origin, callback) {
+//       if (!origin || allowedOrigins.includes(origin)) {
+//         callback(null, true);
+//       } else {
+//         callback(new Error("Not allowed by CORS"));
+//       }
+//     },
+//     credentials: true
+//   })
+// );
+
+const cors = require("cors");
+
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: [
+      "http://localhost:3000",
+      "https://movie-booking-system-mern-fawn.vercel.app",
+      "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   })
 );
+
 
 
 
