@@ -10,16 +10,31 @@ const [data,setData] = useState({});
 const [startDate,setStartDate] = useState("");
 const [endDate,setEndDate] = useState("");
 
-useEffect(()=>{
- fetchAnalytics();
-},[]);
+// useEffect(()=>{
+//  fetchAnalytics();
+// },[]);
 
-const fetchAnalytics = ()=>{
- axios.get("http://localhost:5000/api/analytics",{
-   params:{startDate,endDate}
- })
- .then(res=>setData(res.data));
-};
+// const fetchAnalytics = ()=>{
+//  axios.get("http://localhost:5000/api/analytics",{
+//    params:{startDate,endDate}
+//  })
+//  .then(res=>setData(res.data));
+// };
+
+
+  const API_URL = process.env.REACT_APP_API_URL;
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = () => {
+    axios.get(`${API_URL}/api/analytics`, {
+      params: { startDate, endDate }
+    })
+    .then(res => setData(res.data))
+    .catch(err => console.log("Analytics error:", err));
+  };
 
 /* ---------- EXPORT CSV ---------- */
 const exportCSV = () => {
