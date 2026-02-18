@@ -287,14 +287,14 @@ function Movies() {
   //     .then(res => setMovies(res.data))
   //     .catch(err => console.log(err));
   // }, []);
-  useEffect(() => {
+useEffect(() => {
   const API_URL =
     process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   axios
     .get(`${API_URL}/api/movies`)
     .then(res => setMovies(res.data))
-    .catch(err => console.log(err));
+    .catch(err => console.log("API ERROR:", err));
 }, []);
 
 
