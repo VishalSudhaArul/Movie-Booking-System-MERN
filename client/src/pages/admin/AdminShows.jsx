@@ -18,90 +18,193 @@ function AdminShows() {
   const [editId,setEditId] = useState(null);
   const [deleteId,setDeleteId] = useState(null);
 
+  const API_URL = process.env.REACT_APP_API_URL;
 
-  /* ---------- FETCH ---------- */
 
-  const fetchData = async () => {
 
-    const movieRes = await axios.get("http://localhost:5000/api/movies");
-    const showRes = await axios.get("http://localhost:5000/api/shows");
+//   /* ---------- FETCH ---------- */
+
+//   const fetchData = async () => {
+
+//     const movieRes = await axios.get("http://localhost:5000/api/movies");
+//     const showRes = await axios.get("http://localhost:5000/api/shows");
+
+//     setMovies(movieRes.data);
+//     setShows(showRes.data);
+//   };
+
+//   useEffect(()=>{
+//     fetchData();
+//   },[]);
+
+
+//   /* ---------- SAVE SHOW ---------- */
+
+//   const saveShow = async () => {
+
+//  if (
+//   movieId.trim() === "" ||
+//   theatre.trim() === "" ||
+//   date.trim() === "" ||
+//   time.trim() === "" ||
+//   balconyPrice === "" ||
+//   firstPrice === "" ||
+//   secondPrice === ""
+// ) {
+//   alert("Fill all fields");
+//   return;
+// }
+
+
+//   if(editId){
+
+//     await axios.put(
+//       `http://localhost:5000/api/shows/${editId}`,
+//       {
+//         movieId,
+//         theatre,
+//         date,
+//         time,
+//         balconyPrice,
+//         firstClassPrice: firstPrice,
+//         secondClassPrice: secondPrice
+//       }
+//     );
+
+//     setEditId(null);
+
+//   } else {
+
+//     await axios.post(
+//       "http://localhost:5000/api/shows",
+//       {
+//         movieId,
+//         theatre,
+//         date,
+//         time,
+//         balconyPrice,
+//         firstClassPrice: firstPrice,
+//         secondClassPrice: secondPrice
+//       }
+//     );
+//   }
+
+//   setMovieId("");
+//   setTheatre("");
+//   setDate("");
+//   setTime("");
+//   setBalconyPrice("");
+//   setFirstPrice("");
+//   setSecondPrice("");
+
+//   fetchData();
+// };
+
+
+
+//   /* ---------- RESET FORM ---------- */
+
+//   const resetForm = () => {
+//     setMovieId("");
+//     setTheatre("");
+//     setDate("");
+//     setTime("");
+//     setBalconyPrice("");
+//     setFirstPrice("");
+//     setSecondPrice("");
+//     setEditId(null);
+//   };
+
+
+//   /* ---------- DELETE ---------- */
+
+//   const deleteShow = async () => {
+
+//     await axios.delete(
+//       `http://localhost:5000/api/shows/${deleteId}`
+//     );
+
+//     setDeleteId(null);
+//     fetchData();
+//   };
+
+/* ---------- FETCH ---------- */
+
+const fetchData = async () => {
+
+  try {
+
+    const movieRes = await axios.get(`${API_URL}/api/movies`);
+    const showRes = await axios.get(`${API_URL}/api/shows`);
 
     setMovies(movieRes.data);
     setShows(showRes.data);
-  };
 
-  useEffect(()=>{
-    fetchData();
-  },[]);
-
-
-  /* ---------- SAVE SHOW ---------- */
-
-  const saveShow = async () => {
-
- if (
-  movieId.trim() === "" ||
-  theatre.trim() === "" ||
-  date.trim() === "" ||
-  time.trim() === "" ||
-  balconyPrice === "" ||
-  firstPrice === "" ||
-  secondPrice === ""
-) {
-  alert("Fill all fields");
-  return;
-}
-
-
-  if(editId){
-
-    await axios.put(
-      `http://localhost:5000/api/shows/${editId}`,
-      {
-        movieId,
-        theatre,
-        date,
-        time,
-        balconyPrice,
-        firstClassPrice: firstPrice,
-        secondClassPrice: secondPrice
-      }
-    );
-
-    setEditId(null);
-
-  } else {
-
-    await axios.post(
-      "http://localhost:5000/api/shows",
-      {
-        movieId,
-        theatre,
-        date,
-        time,
-        balconyPrice,
-        firstClassPrice: firstPrice,
-        secondClassPrice: secondPrice
-      }
-    );
+  } catch (err) {
+    console.log("Fetch shows error:", err);
   }
 
-  setMovieId("");
-  setTheatre("");
-  setDate("");
-  setTime("");
-  setBalconyPrice("");
-  setFirstPrice("");
-  setSecondPrice("");
-
-  fetchData();
 };
 
+useEffect(() => {
+  fetchData();
+}, []);
 
 
-  /* ---------- RESET FORM ---------- */
 
-  const resetForm = () => {
+/* ---------- SAVE SHOW ---------- */
+
+const saveShow = async () => {
+
+  if (
+    movieId.trim() === "" ||
+    theatre.trim() === "" ||
+    date.trim() === "" ||
+    time.trim() === "" ||
+    balconyPrice === "" ||
+    firstPrice === "" ||
+    secondPrice === ""
+  ) {
+    alert("Fill all fields");
+    return;
+  }
+
+  try {
+
+    if (editId) {
+
+      await axios.put(
+        `${API_URL}/api/shows/${editId}`,
+        {
+          movieId,
+          theatre,
+          date,
+          time,
+          balconyPrice,
+          firstClassPrice: firstPrice,
+          secondClassPrice: secondPrice
+        }
+      );
+
+      setEditId(null);
+
+    } else {
+
+      await axios.post(
+        `${API_URL}/api/shows`,
+        {
+          movieId,
+          theatre,
+          date,
+          time,
+          balconyPrice,
+          firstClassPrice: firstPrice,
+          secondClassPrice: secondPrice
+        }
+      );
+
+    }
+
     setMovieId("");
     setTheatre("");
     setDate("");
@@ -109,21 +212,40 @@ function AdminShows() {
     setBalconyPrice("");
     setFirstPrice("");
     setSecondPrice("");
-    setEditId(null);
-  };
+
+    fetchData();
+
+  } catch (err) {
+    console.log("Save show error:", err);
+  }
+
+};
 
 
-  /* ---------- DELETE ---------- */
 
-  const deleteShow = async () => {
+/* ---------- DELETE ---------- */
+
+const deleteShow = async () => {
+
+  try {
 
     await axios.delete(
-      `http://localhost:5000/api/shows/${deleteId}`
+      `${API_URL}/api/shows/${deleteId}`
     );
 
     setDeleteId(null);
     fetchData();
-  };
+
+  } catch (err) {
+    console.log("Delete show error:", err);
+  }
+
+};
+
+
+
+
+
 
 
   return (

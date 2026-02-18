@@ -12,55 +12,129 @@ function AdminSnacks() {
 
   const [showDropdown, setShowDropdown] = useState(false);
 
+
+  const API_URL = process.env.REACT_APP_API_URL;
+
+
+
+
   /* ---------- Fetch Snacks ---------- */
 
-  const fetchSnacks = () => {
+  // const fetchSnacks = () => {
 
-    axios.get("http://localhost:5000/api/snacks/all")
-      .then(res => {
+  //   axios.get("http://localhost:5000/api/snacks/all")
+  //     .then(res => {
 
-        setSnacks(res.data);
+  //       setSnacks(res.data);
 
-        const unique = [...new Set(res.data.map(s => s.theatre))];
-        setTheatres(unique);
+  //       const unique = [...new Set(res.data.map(s => s.theatre))];
+  //       setTheatres(unique);
 
-      })
-      .catch(() => setSnacks([]));
-  };
+  //     })
+  //     .catch(() => setSnacks([]));
+  // };
 
-  useEffect(() => {
-    fetchSnacks();
-  }, []);
+  // useEffect(() => {
+  //   fetchSnacks();
+  // }, []);
 
-  /* ---------- Add Snack ---------- */
+  // /* ---------- Add Snack ---------- */
 
-  const addSnack = () => {
+  // const addSnack = () => {
 
-    if (!name || !price || !theatre)
-      return alert("Fill all fields");
+  //   if (!name || !price || !theatre)
+  //     return alert("Fill all fields");
 
-    axios.post("http://localhost:5000/api/snacks", {
-      name,
-      price,
-      theatre
+  //   axios.post("http://localhost:5000/api/snacks", {
+  //     name,
+  //     price,
+  //     theatre
+  //   })
+  //     .then(() => {
+
+  //       setName("");
+  //       setPrice("");
+  //       setTheatre("");
+
+  //       fetchSnacks();
+  //     });
+  // };
+
+  // /* ---------- Delete Snack ---------- */
+
+  // const deleteSnack = (id) => {
+
+  //   axios.delete(`http://localhost:5000/api/snacks/${id}`)
+  //     .then(fetchSnacks);
+  // };
+
+
+  /* ---------- Fetch Snacks ---------- */
+
+const fetchSnacks = () => {
+
+  axios.get(`${API_URL}/api/snacks/all`)
+    .then(res => {
+
+      setSnacks(res.data);
+
+      const unique = [...new Set(res.data.map(s => s.theatre))];
+      setTheatres(unique);
+
     })
-      .then(() => {
+    .catch(err => {
+      console.log("Fetch snacks error:", err);
+      setSnacks([]);
+    });
 
-        setName("");
-        setPrice("");
-        setTheatre("");
+};
 
-        fetchSnacks();
-      });
-  };
+useEffect(() => {
+  fetchSnacks();
+}, []);
 
-  /* ---------- Delete Snack ---------- */
 
-  const deleteSnack = (id) => {
 
-    axios.delete(`http://localhost:5000/api/snacks/${id}`)
-      .then(fetchSnacks);
-  };
+/* ---------- Add Snack ---------- */
+
+const addSnack = () => {
+
+  if (!name || !price || !theatre)
+    return alert("Fill all fields");
+
+  axios.post(`${API_URL}/api/snacks`, {
+    name,
+    price,
+    theatre
+  })
+    .then(() => {
+
+      setName("");
+      setPrice("");
+      setTheatre("");
+
+      fetchSnacks();
+
+    })
+    .catch(err => console.log("Add snack error:", err));
+
+};
+
+
+
+/* ---------- Delete Snack ---------- */
+
+const deleteSnack = (id) => {
+
+  axios.delete(`${API_URL}/api/snacks/${id}`)
+    .then(fetchSnacks)
+    .catch(err => console.log("Delete snack error:", err));
+
+};
+
+
+
+
 
   /* ---------- Group Snacks ---------- */
 

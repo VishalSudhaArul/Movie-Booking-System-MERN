@@ -17,6 +17,11 @@ function AdminParking() {
   const [editId, setEditId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
+
+  const API_URL = process.env.REACT_APP_API_URL;
+
+
+
   /* FETCH DATA */
 
   // const fetchData = async () => {
@@ -51,24 +56,76 @@ function AdminParking() {
   // };
 
 
-  const fetchData = async () => {
+
+
+
+
+
+
+
+//   const fetchData = async () => {
+
+//   try {
+
+//     const parkingRes = await axios.get(
+//       "http://localhost:5000/api/parking/all"
+//     );
+
+//     setParkingList(parkingRes.data || []);
+
+//   } catch (err) {
+//     console.log("Parking Load Failed");
+//   }
+
+//   try {
+
+//     const showRes = await axios.get(
+//       "http://localhost:5000/api/shows"
+//     );
+
+//     const unique = [
+//       ...new Set(showRes.data.map(s => s.theatre))
+//     ];
+
+//     setTheatres(unique);
+
+//   } catch (err) {
+//     console.log("Show Load Failed");
+//   }
+
+//   try {
+
+//     const rev = await axios.get(
+//       "http://localhost:5000/api/bookings/parking-revenue"
+//     );
+
+//     setRevenueMap(rev.data || {});
+
+//   } catch (err) {
+//     console.log("Revenue Load Failed");
+//   }
+// };
+
+
+
+const fetchData = async () => {
 
   try {
 
     const parkingRes = await axios.get(
-      "http://localhost:5000/api/parking/all"
+      `${API_URL}/api/parking/all`
     );
 
     setParkingList(parkingRes.data || []);
 
   } catch (err) {
-    console.log("Parking Load Failed");
+    console.log("Parking Load Failed", err);
   }
 
   try {
 
     const showRes = await axios.get(
-      "http://localhost:5000/api/shows"
+      `${API_URL}/api/shows`
     );
 
     const unique = [
@@ -78,84 +135,161 @@ function AdminParking() {
     setTheatres(unique);
 
   } catch (err) {
-    console.log("Show Load Failed");
+    console.log("Show Load Failed", err);
   }
 
   try {
 
     const rev = await axios.get(
-      "http://localhost:5000/api/bookings/parking-revenue"
+      `${API_URL}/api/bookings/parking-revenue`
     );
 
     setRevenueMap(rev.data || {});
 
   } catch (err) {
-    console.log("Revenue Load Failed");
+    console.log("Revenue Load Failed", err);
   }
 };
+
+
 
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  // /* ADD / EDIT */
+
+  // const addParking = async () => {
+
+  //   if (!theatre || !bikePrice || !carPrice)
+  //     return alert("Fill all fields");
+
+  //   try {
+
+  //     if (editId) {
+
+  //       await axios.put(
+  //         `http://localhost:5000/api/parking/${editId}`,
+  //         {
+  //           theatre,
+  //           priceBike: bikePrice,
+  //           priceCar: carPrice
+  //         }
+  //       );
+
+  //       setEditId(null);
+
+  //     } else {
+
+  //       await axios.post(
+  //         "http://localhost:5000/api/parking",
+  //         {
+  //           theatre,
+  //           priceBike: bikePrice,
+  //           priceCar: carPrice
+  //         }
+  //       );
+
+  //     }
+
+  //     setTheatre("");
+  //     setBikePrice("");
+  //     setCarPrice("");
+
+  //     fetchData();
+
+  //   } catch {
+  //     alert("Operation Failed");
+  //   }
+  // };
+
+  // /* DELETE */
+
+  // const confirmDelete = async () => {
+
+  //   await axios.delete(
+  //     `http://localhost:5000/api/parking/${deleteId}`
+  //   );
+
+  //   setDeleteId(null);
+  //   fetchData();
+  // };
+
+
   /* ADD / EDIT */
 
-  const addParking = async () => {
+const addParking = async () => {
 
-    if (!theatre || !bikePrice || !carPrice)
-      return alert("Fill all fields");
+  if (!theatre || !bikePrice || !carPrice)
+    return alert("Fill all fields");
 
-    try {
+  try {
 
-      if (editId) {
+    if (editId) {
 
-        await axios.put(
-          `http://localhost:5000/api/parking/${editId}`,
-          {
-            theatre,
-            priceBike: bikePrice,
-            priceCar: carPrice
-          }
-        );
+      await axios.put(
+        `${API_URL}/api/parking/${editId}`,
+        {
+          theatre,
+          priceBike: bikePrice,
+          priceCar: carPrice
+        }
+      );
 
-        setEditId(null);
+      setEditId(null);
 
-      } else {
+    } else {
 
-        await axios.post(
-          "http://localhost:5000/api/parking",
-          {
-            theatre,
-            priceBike: bikePrice,
-            priceCar: carPrice
-          }
-        );
+      await axios.post(
+        `${API_URL}/api/parking`,
+        {
+          theatre,
+          priceBike: bikePrice,
+          priceCar: carPrice
+        }
+      );
 
-      }
-
-      setTheatre("");
-      setBikePrice("");
-      setCarPrice("");
-
-      fetchData();
-
-    } catch {
-      alert("Operation Failed");
     }
-  };
 
-  /* DELETE */
+    setTheatre("");
+    setBikePrice("");
+    setCarPrice("");
 
-  const confirmDelete = async () => {
+    fetchData();
+
+  } catch (err) {
+
+    console.log("Parking operation failed:", err);
+    alert("Operation Failed");
+
+  }
+};
+
+
+/* DELETE */
+
+const confirmDelete = async () => {
+
+  try {
 
     await axios.delete(
-      `http://localhost:5000/api/parking/${deleteId}`
+      `${API_URL}/api/parking/${deleteId}`
     );
 
     setDeleteId(null);
     fetchData();
-  };
+
+  } catch (err) {
+
+    console.log("Delete parking failed:", err);
+
+  }
+
+};
+
+
+
 
   return (
 
