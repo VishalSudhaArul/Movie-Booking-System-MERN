@@ -28,9 +28,11 @@ app.use(
       "https://movie-booking-system-mern-fawn.vercel.app",
       "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
     ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   })
 );
+
 
 
 
