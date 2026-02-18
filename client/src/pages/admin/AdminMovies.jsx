@@ -33,15 +33,18 @@ const API_URL = process.env.REACT_APP_API_URL;
 
 /* FETCH */
 
-const fetchMovies = async ()=>{
+  const fetchMovies = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/movies`);
+      setMovies(res.data);
+    } catch (err) {
+      console.log("Fetch movies error:", err);
+    }
+  };
 
-  const res = await axios.get("http://localhost:5000/api/movies");
-  setMovies(res.data);
-};
-
-useEffect(()=>{
-  fetchMovies();
-},[]);
+  useEffect(() => {
+    fetchMovies();
+  }, []);
 
 /* SAVE */
 
