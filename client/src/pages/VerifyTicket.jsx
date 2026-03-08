@@ -308,43 +308,178 @@
 
 
 
+// import { useParams } from "react-router-dom";
+// import { useEffect, useState } from "react";
+// import axios from "axios";
+
+// function VerifyTicket() {
+
+//   const { bookingId } = useParams();
+//   const [booking, setBooking] = useState(undefined);
+
+//   // useEffect(() => {
+
+//   //   if (!bookingId) return;
+
+//   //   axios
+//   //     .get(`http://10.131.192.148:5000/api/bookings/verify/${bookingId}`)
+//   //     .then(res => setBooking(res.data))
+//   //     .catch(() => setBooking(null));
+
+//   // }, [bookingId]);
+
+
+//   useEffect(() => {
+
+//   if (!bookingId) return;
+
+//   const API_URL =
+//     process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+//   axios
+//     .get(`${API_URL}/api/bookings/verify/${bookingId}`)
+//     .then(res => setBooking(res.data))
+//     .catch(err => {
+//       console.log("Verify ticket error:", err);
+//       setBooking(null);
+//     });
+
+// }, [bookingId]);
+
+
+//   /* ---------- Loading ---------- */
+
+//   if (booking === undefined)
+//     return (
+//       <div className="bg-black min-h-screen flex justify-center items-center text-white text-xl">
+//         Loading Ticket...
+//       </div>
+//     );
+
+//   /* ---------- Invalid ---------- */
+
+//   if (!booking)
+//     return (
+//       <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-xl">
+//         Invalid Ticket
+//       </div>
+//     );
+
+//   /* ---------- UI ---------- */
+
+//   return (
+//     <div className="bg-black min-h-screen flex justify-center items-center p-4">
+
+//       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
+
+//         {/* Movie Poster */}
+//         <img
+//           src={booking.showId?.movieId?.poster}
+//           alt="poster"
+//           className="w-full h-56 rounded-xl mb-4"
+//         />
+
+//         {/* Movie Name */}
+//         <h1 className="text-2xl font-bold">
+//           {booking.showId?.movieId?.title}
+//         </h1>
+
+//         <p className="text-gray-400 mb-4">
+//           {booking.showId?.movieId?.genre}
+//         </p>
+
+//         {/* Ticket Info */}
+//         <div className="space-y-2 border-t border-gray-700 pt-4">
+
+//           <p>🎭 Theatre: <span className="text-gray-300">{booking.showId?.theatre}</span></p>
+
+//           <p>📅 Date: <span className="text-gray-300">{booking.showId?.date}</span></p>
+
+//           <p>⏰ Time: <span className="text-gray-300">{booking.showId?.time}</span></p>
+
+//           <p>💺 Seats: <span className="text-gray-300">{booking.seats?.join(", ")}</span></p>
+
+//           <p>
+// 🍿 Snacks:
+// {booking.snacks?.length > 0
+//   ? booking.snacks.map(s =>
+//       `${s.name} x${s.qty} (₹${s.price * s.qty})`
+//     ).join(", ")
+//   : "None"}
+// </p>
+
+
+// <p>
+// 🚗 Parking:
+// {booking.parking
+//   ? `${booking.parking.type} (₹${booking.parking.price})`
+//   : "None"}
+// </p>
+
+//         </div>
+
+//         {/* Price */}
+//         <div className="border-t border-gray-700 mt-5 pt-4 text-center">
+
+//           <h2 className="text-3xl font-bold text-red-500">
+//             ₹ {booking.totalPrice}
+//           </h2>
+
+//           <p className="text-green-400 mt-1 font-semibold">
+//             Payment Successful ✔
+//           </p>
+
+//         </div>
+
+//       </div>
+
+//     </div>
+//   );
+// }
+
+// export default VerifyTicket;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
 function VerifyTicket() {
 
-  const { bookingId } = useParams();
+  const { id } = useParams();   // ✅ FIXED PARAM
+
   const [booking, setBooking] = useState(undefined);
 
-  // useEffect(() => {
-
-  //   if (!bookingId) return;
-
-  //   axios
-  //     .get(`http://10.131.192.148:5000/api/bookings/verify/${bookingId}`)
-  //     .then(res => setBooking(res.data))
-  //     .catch(() => setBooking(null));
-
-  // }, [bookingId]);
+  const API_URL =
+    process.env.REACT_APP_API_URL ||
+    "https://movie-booking-system-mern-1.onrender.com";
 
 
   useEffect(() => {
 
-  if (!bookingId) return;
+    if (!id) return;
 
-  const API_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000";
+    axios
+      .get(`${API_URL}/api/bookings/verify/${id}`)
+      .then(res => setBooking(res.data))
+      .catch(err => {
+        console.log("Verify ticket error:", err);
+        setBooking(null);
+      });
 
-  axios
-    .get(`${API_URL}/api/bookings/verify/${bookingId}`)
-    .then(res => setBooking(res.data))
-    .catch(err => {
-      console.log("Verify ticket error:", err);
-      setBooking(null);
-    });
-
-}, [bookingId]);
+  }, [id]);
 
 
   /* ---------- Loading ---------- */
@@ -356,6 +491,7 @@ function VerifyTicket() {
       </div>
     );
 
+
   /* ---------- Invalid ---------- */
 
   if (!booking)
@@ -365,21 +501,24 @@ function VerifyTicket() {
       </div>
     );
 
-  /* ---------- UI ---------- */
 
   return (
+
     <div className="bg-black min-h-screen flex justify-center items-center p-4">
 
       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
 
         {/* Movie Poster */}
+
         <img
           src={booking.showId?.movieId?.poster}
           alt="poster"
           className="w-full h-56 rounded-xl mb-4"
         />
 
-        {/* Movie Name */}
+
+        {/* Movie Title */}
+
         <h1 className="text-2xl font-bold">
           {booking.showId?.movieId?.title}
         </h1>
@@ -388,37 +527,67 @@ function VerifyTicket() {
           {booking.showId?.movieId?.genre}
         </p>
 
+
         {/* Ticket Info */}
+
         <div className="space-y-2 border-t border-gray-700 pt-4">
 
-          <p>🎭 Theatre: <span className="text-gray-300">{booking.showId?.theatre}</span></p>
-
-          <p>📅 Date: <span className="text-gray-300">{booking.showId?.date}</span></p>
-
-          <p>⏰ Time: <span className="text-gray-300">{booking.showId?.time}</span></p>
-
-          <p>💺 Seats: <span className="text-gray-300">{booking.seats?.join(", ")}</span></p>
+          <p>
+            🎭 Theatre:
+            <span className="text-gray-300">
+              {" "}
+              {booking.showId?.theatre}
+            </span>
+          </p>
 
           <p>
-🍿 Snacks:
-{booking.snacks?.length > 0
-  ? booking.snacks.map(s =>
-      `${s.name} x${s.qty} (₹${s.price * s.qty})`
-    ).join(", ")
-  : "None"}
-</p>
+            📅 Date:
+            <span className="text-gray-300">
+              {" "}
+              {booking.showId?.date}
+            </span>
+          </p>
 
+          <p>
+            ⏰ Time:
+            <span className="text-gray-300">
+              {" "}
+              {booking.showId?.time}
+            </span>
+          </p>
 
-<p>
-🚗 Parking:
-{booking.parking
-  ? `${booking.parking.type} (₹${booking.parking.price})`
-  : "None"}
-</p>
+          <p>
+            💺 Seats:
+            <span className="text-gray-300">
+              {" "}
+              {booking.seats?.join(", ")}
+            </span>
+          </p>
+
+          <p>
+            🍿 Snacks:
+            {booking.snacks?.length > 0
+              ? booking.snacks
+                  .map(
+                    s =>
+                      `${s.name} x${s.qty} (₹${s.price * s.qty})`
+                  )
+                  .join(", ")
+              : " None"}
+          </p>
+
+          <p>
+            🚗 Parking:
+            {booking.parking
+              ? `${booking.parking.type} (₹${booking.parking.price})`
+              : " None"}
+          </p>
 
         </div>
 
+
         {/* Price */}
+
         <div className="border-t border-gray-700 mt-5 pt-4 text-center">
 
           <h2 className="text-3xl font-bold text-red-500">
@@ -434,7 +603,9 @@ function VerifyTicket() {
       </div>
 
     </div>
+
   );
+
 }
 
 export default VerifyTicket;
