@@ -1,63 +1,39 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 function Login() {
 
-  const [email, setEmail] = useState("");
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+
   const navigate = useNavigate();
-  const location = useLocation();
-
-  // const handleLogin = () => {
-
-  //   axios.post("http://localhost:5000/api/users/login", {
-  //     email
-  //   })
-  //   .then(res => {
-
-  //     // ✅ Save userId
-  //     localStorage.setItem("userId", res.data._id);
-
-  //     // ✅ Save full user
-  //     localStorage.setItem("user", JSON.stringify(res.data));
-
-  //     alert("Login Success");
-
-  //     // Redirect back if came from protected page
-  //     const redirectTo = location.state?.redirectTo || "/";
-  //     navigate(redirectTo);
-
-  //   })
-  //   .catch(() => alert("User not found"));
-
-  // };
 
   const API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000";
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-const handleLogin = () => {
+  const handleLogin = () => {
 
-  axios.post(`${API_URL}/api/users/login`, {
-    email
-  })
-  .then(res => {
+    axios.post(`${API_URL}/api/users/login`,{
+      email,
+      password
+    })
+    .then(res=>{
 
-    localStorage.setItem("userId", res.data._id);
-    localStorage.setItem("user", JSON.stringify(res.data));
+      localStorage.setItem("token",res.data.token);
+      localStorage.setItem("user",JSON.stringify(res.data.user));
 
-    alert("Login Success");
+      alert("Login Success");
 
-    const redirectTo = location.state?.redirectTo || "/";
-    navigate(redirectTo);
+      navigate("/");
 
-  })
-  .catch(err => {
-    console.log("Login error:", err);
-    alert("User not found");
-  });
+    })
+    .catch(err=>{
+      console.log(err);
+      alert("Invalid credentials");
+    });
 
-};
-
+  };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
@@ -67,12 +43,19 @@ const handleLogin = () => {
       <input
         placeholder="Enter Email"
         className="p-3 text-black rounded mb-4"
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e)=>setEmail(e.target.value)}
+      />
+
+      <input
+        placeholder="Enter Password"
+        type="password"
+        className="p-3 text-black rounded mb-4"
+        onChange={(e)=>setPassword(e.target.value)}
       />
 
       <button
         onClick={handleLogin}
-        className="bg-red-600 px-6 py-2 rounded hover:bg-red-700 transition"
+        className="bg-red-600 px-6 py-2 rounded hover:bg-red-700"
       >
         Login
       </button>
