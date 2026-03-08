@@ -451,7 +451,6 @@
 
 
 
-
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -461,6 +460,7 @@ function VerifyTicket() {
   const { id } = useParams();
 
   const [booking, setBooking] = useState(undefined);
+  const [status, setStatus] = useState("");
 
   const API_URL =
     process.env.REACT_APP_API_URL ||
@@ -471,22 +471,46 @@ function VerifyTicket() {
 
     if (!id) return;
 
-    axios
-      .get(`${API_URL}/api/bookings/verify/${id}`)
-      .then(res => {
+    const verifyTicket = async () => {
 
-        console.log("Verify response:", res.data);
+      try {
+
+        const res = await axios.get(`${API_URL}/api/bookings/verify/${id}`);
+
+        if (!res.data) {
+          setBooking(null);
+          return;
+        }
 
         setBooking(res.data);
 
-      })
-      .catch(err => {
+        /* ---------- Check if already used ---------- */
 
-        console.log("Verify ticket error:", err);
+        if (res.data.used) {
+
+          setStatus("USED");
+
+        } else {
+
+          /* ---------- Mark ticket as used ---------- */
+
+          await axios.put(`${API_URL}/api/bookings/use/${id}`);
+
+          setStatus("VALID");
+
+        }
+
+      } catch (err) {
+
+        console.log(err);
 
         setBooking(null);
 
-      });
+      }
+
+    };
+
+    verifyTicket();
 
   }, [id]);
 
@@ -496,32 +520,37 @@ function VerifyTicket() {
   if (booking === undefined)
     return (
       <div className="bg-black min-h-screen flex justify-center items-center text-white text-xl">
-        Loading Ticket...
+        Checking Ticket...
       </div>
     );
 
 
-  /* ---------- Invalid ---------- */
+  /* ---------- Invalid Ticket ---------- */
 
   if (!booking)
     return (
-      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-xl">
-        Invalid Ticket
+      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-3xl font-bold">
+        ❌ Invalid Ticket
       </div>
     );
 
 
   return (
 
-    <div className="bg-black min-h-screen flex justify-center items-center p-4">
+    <div className="bg-black min-h-screen flex justify-center items-center p-6">
 
       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
+
+        {/* Movie Poster */}
 
         <img
           src={booking.showId?.movieId?.poster}
           alt="poster"
           className="w-full h-56 rounded-xl mb-4"
         />
+
+
+        {/* Movie Name */}
 
         <h1 className="text-2xl font-bold">
           {booking.showId?.movieId?.title}
@@ -531,60 +560,23 @@ function VerifyTicket() {
           {booking.showId?.movieId?.genre}
         </p>
 
+
+        {/* Ticket Details */}
+
         <div className="space-y-2 border-t border-gray-700 pt-4">
 
-          <p>
-            🎭 Theatre:
-            <span className="text-gray-300">
-              {" "}
-              {booking.showId?.theatre}
-            </span>
-          </p>
+          <p>🎭 Theatre: {booking.showId?.theatre}</p>
 
-          <p>
-            📅 Date:
-            <span className="text-gray-300">
-              {" "}
-              {booking.showId?.date}
-            </span>
-          </p>
+          <p>📅 Date: {booking.showId?.date}</p>
 
-          <p>
-            ⏰ Time:
-            <span className="text-gray-300">
-              {" "}
-              {booking.showId?.time}
-            </span>
-          </p>
+          <p>⏰ Time: {booking.showId?.time}</p>
 
-          <p>
-            💺 Seats:
-            <span className="text-gray-300">
-              {" "}
-              {booking.seats?.join(", ")}
-            </span>
-          </p>
-
-          <p>
-            🍿 Snacks:
-            {booking.snacks?.length > 0
-              ? booking.snacks
-                  .map(
-                    s =>
-                      `${s.name} x${s.qty} (₹${s.price * s.qty})`
-                  )
-                  .join(", ")
-              : " None"}
-          </p>
-
-          <p>
-            🚗 Parking:
-            {booking.parking
-              ? `${booking.parking.type} (₹${booking.parking.price})`
-              : " None"}
-          </p>
+          <p>💺 Seats: {booking.seats?.join(", ")}</p>
 
         </div>
+
+
+        {/* Status */}
 
         <div className="border-t border-gray-700 mt-5 pt-4 text-center">
 
@@ -592,9 +584,17 @@ function VerifyTicket() {
             ₹ {booking.totalPrice}
           </h2>
 
-          <p className="text-green-400 mt-1 font-semibold">
-            Payment Successful ✔
-          </p>
+          {status === "VALID" && (
+            <p className="text-green-400 text-xl font-bold mt-2">
+              ✅ ENTRY ALLOWED
+            </p>
+          )}
+
+          {status === "USED" && (
+            <p className="text-red-500 text-xl font-bold mt-2">
+              ❌ TICKET ALREADY USED
+            </p>
+          )}
 
         </div>
 
