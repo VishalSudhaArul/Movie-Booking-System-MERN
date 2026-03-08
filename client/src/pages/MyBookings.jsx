@@ -891,10 +891,15 @@ function MyBookings() {
 
                 <div className="bg-white p-3 rounded-lg">
 
-                  <QRCodeCanvas
+                  {/* <QRCodeCanvas
                     value={`${FRONTEND_URL}/verify/${b._id}`}
                     size={120}
-                  />
+                  /> */}
+
+                  <QRCodeCanvas
+ value={`${window.location.origin}/verify/${b._id}`}
+ size={120}
+/>
 
                 </div>
 
