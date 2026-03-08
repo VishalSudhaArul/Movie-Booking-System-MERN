@@ -313,15 +313,46 @@ exports.bookSeats = async (req, res) => {
 
 /* ---------------- USER BOOKINGS ---------------- */
 
+// exports.getUserBookings = async (req, res) => {
+//   try {
+
+//     if (!mongoose.Types.ObjectId.isValid(req.params.userId))
+//       return res.status(400).json({ message: "Invalid user ID" });
+
+//     const bookings = await Booking.find({
+//       userId: req.params.userId
+//     })
+//       .populate({
+//         path: "showId",
+//         populate: { path: "movieId" }
+//       })
+//       .populate("userId")
+//       .sort({ createdAt: -1 });
+
+//     res.json(bookings);
+
+//   } catch (err) {
+//     res.status(500).json({
+//       message: "Booking fetch failed",
+//       error: err.message
+//     });
+//   }
+// };
+
+
 exports.getUserBookings = async (req, res) => {
+
   try {
 
-    if (!mongoose.Types.ObjectId.isValid(req.params.userId))
-      return res.status(400).json({ message: "Invalid user ID" });
+    const { userId } = req.params;
 
-    const bookings = await Booking.find({
-      userId: req.params.userId
-    })
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        message: "Invalid user ID"
+      });
+    }
+
+    const bookings = await Booking.find({ userId })
       .populate({
         path: "showId",
         populate: { path: "movieId" }
@@ -332,11 +363,14 @@ exports.getUserBookings = async (req, res) => {
     res.json(bookings);
 
   } catch (err) {
+
     res.status(500).json({
       message: "Booking fetch failed",
       error: err.message
     });
+
   }
+
 };
 
 

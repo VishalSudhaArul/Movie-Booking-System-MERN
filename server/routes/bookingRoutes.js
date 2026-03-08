@@ -125,7 +125,8 @@ const bookingController = require("../controllers/bookingController");
 const Booking = require("../models/Booking");
 
 
-// ✅ VERIFY ROUTE MUST BE FIRST
+/* -------- VERIFY BOOKING -------- */
+
 router.get("/verify/:id", async (req, res) => {
   try {
 
@@ -135,38 +136,46 @@ router.get("/verify/:id", async (req, res) => {
       .populate({
         path: "showId",
         populate: { path: "movieId" }
-      });
+      })
+      .populate("userId");
 
     if (!booking) return res.json(null);
 
     res.json(booking);
 
   } catch (error) {
+
     console.log(error);
     res.json(null);
+
   }
 });
 
 
-// 🎟 Book Seats
+/* -------- BOOK SEATS -------- */
+
 router.post("/", bookingController.bookSeats);
 
 
-// 📜 User bookings
+/* -------- USER BOOKINGS -------- */
+
 router.get("/user/:userId", bookingController.getUserBookings);
 
 
-// 📄 Single booking
+/* -------- GET SINGLE BOOKING -------- */
+
 router.get("/:id", bookingController.getBookingById);
 
 
-// ✅ Mark Used
+/* -------- MARK TICKET USED -------- */
+
 router.put("/use/:id", bookingController.markAsUsed);
 
+
+/* -------- PARKING REVENUE -------- */
+
+router.get("/parking-revenue", bookingController.getParkingRevenue);
+
+
 module.exports = router;
-
-router.get("/parking-revenue",
- bookingController.getParkingRevenue
-);
-
 
