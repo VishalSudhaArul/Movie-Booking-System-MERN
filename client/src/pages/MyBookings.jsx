@@ -684,7 +684,9 @@ import { QRCodeCanvas } from "qrcode.react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://movie-booking-system-mern-1.onrender.com";
 
 function MyBookings() {
 
@@ -699,7 +701,7 @@ function MyBookings() {
     window.location.origin;
 
 
-  /* ---------- Fetch User Bookings ---------- */
+  /* ---------- Load Bookings ---------- */
 
   useEffect(() => {
 
@@ -713,7 +715,7 @@ function MyBookings() {
   }, [userId]);
 
 
-  /* ---------- Download Ticket PDF ---------- */
+  /* ---------- Download Ticket ---------- */
 
   const downloadPDF = (id) => {
 
@@ -729,6 +731,7 @@ function MyBookings() {
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+
       pdf.save(`QuickShow_Ticket_${id}.pdf`);
 
     });
@@ -736,7 +739,7 @@ function MyBookings() {
   };
 
 
-  /* ---------- Show Status ---------- */
+  /* ---------- Ticket Status ---------- */
 
   const getShowStatus = (booking) => {
 
@@ -750,18 +753,21 @@ function MyBookings() {
 
       hours = parseInt(hours);
 
-      if (modifier === "PM" && hours !== 12) hours += 12;
-      if (modifier === "AM" && hours === 12) hours = 0;
+      if (modifier === "PM" && hours !== 12)
+        hours += 12;
+
+      if (modifier === "AM" && hours === 12)
+        hours = 0;
 
       const showDateTime = new Date(booking.showId.date);
 
       showDateTime.setHours(hours);
       showDateTime.setMinutes(minutes || 0);
-      showDateTime.setSeconds(0);
 
       const now = new Date();
 
       if (now > showDateTime) return "COMPLETED";
+
       if (booking.used) return "USED";
 
       return "VALID";
@@ -774,6 +780,7 @@ function MyBookings() {
 
 
   return (
+
     <div className="bg-black min-h-screen text-white p-8">
 
       <h1 className="text-3xl font-bold mb-10 text-center">
@@ -796,9 +803,7 @@ function MyBookings() {
             className="bg-gradient-to-br from-[#0f172a] to-[#020617] border border-gray-800 p-6 rounded-2xl shadow-2xl"
           >
 
-            <div className="flex flex-col md:flex-row justify-between gap-6">
-
-              {/* LEFT SIDE */}
+            <div className="flex justify-between gap-6">
 
               <div className="flex-1">
 
@@ -811,6 +816,7 @@ function MyBookings() {
                   />
 
                   <div>
+
                     <h2 className="text-xl font-semibold">
                       {b.showId?.movieId?.title}
                     </h2>
@@ -818,6 +824,7 @@ function MyBookings() {
                     <p className="text-gray-400 text-sm">
                       {b.showId?.movieId?.genre}
                     </p>
+
                   </div>
 
                 </div>
@@ -826,41 +833,36 @@ function MyBookings() {
                   Booking ID: {b._id}
                 </p>
 
-                <div className="space-y-2 text-gray-300 mt-2">
+                <p>🎭 Theatre: {b.showId?.theatre}</p>
 
-                  <p>🎭 Theatre: {b.showId?.theatre}</p>
+                <p>
+                  📅 {b.showId?.date} — ⏰ {b.showId?.time}
+                </p>
 
-                  <p>
-                    📅 {b.showId?.date} — ⏰ {b.showId?.time}
-                  </p>
+                <p>
+                  💺 Seats:
+                  <span className="text-green-400 ml-1">
+                    {b.seats?.join(", ")}
+                  </span>
+                </p>
 
-                  <p>
-                    💺 Seats:
-                    <span className="text-green-400 ml-1">
-                      {b.seats?.join(", ")}
-                    </span>
-                  </p>
+                <p>
+                  🍿 Snacks:
+                  {b.snacks?.length > 0
+                    ? b.snacks.map(s =>
+                        `${s.name} x${s.qty}`
+                      ).join(", ")
+                    : " None"}
+                </p>
 
-                  <p>
-                    🍿 Snacks:
-                    {b.snacks?.length > 0
-                      ? b.snacks.map(s =>
-                          `${s.name} x${s.qty}`
-                        ).join(", ")
-                      : " None"}
-                  </p>
+                <p>
+                  🚗 Parking:
+                  {b.parking
+                    ? `${b.parking.type}`
+                    : " None"}
+                </p>
 
-                  <p>
-                    🚗 Parking:
-                    {b.parking
-                      ? `${b.parking.type}`
-                      : " None"}
-                  </p>
-
-                </div>
-
-
-                <div className="flex justify-between items-center mt-4">
+                <div className="flex justify-between mt-4">
 
                   <p className="text-red-500 font-bold text-lg">
                     ₹ {b.totalPrice}
@@ -885,24 +887,20 @@ function MyBookings() {
               </div>
 
 
-              {/* RIGHT SIDE */}
+              <div className="flex flex-col items-center">
 
-              <div className="flex flex-col items-center justify-center">
-
-                <div className="bg-white p-3 rounded-lg shadow-md">
+                <div className="bg-white p-3 rounded-lg">
 
                   <QRCodeCanvas
                     value={`${FRONTEND_URL}/verify/${b._id}`}
                     size={120}
-                    bgColor="#ffffff"
-                    fgColor="#000000"
                   />
 
                 </div>
 
                 <button
                   onClick={() => downloadPDF(b._id)}
-                  className="mt-4 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition"
+                  className="mt-4 bg-red-600 px-4 py-2 rounded"
                 >
                   Download Ticket
                 </button>
@@ -918,7 +916,9 @@ function MyBookings() {
       </div>
 
     </div>
+
   );
+
 }
 
 export default MyBookings;
