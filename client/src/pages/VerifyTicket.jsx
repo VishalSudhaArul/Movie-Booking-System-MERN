@@ -465,6 +465,7 @@ function VerifyTicket() {
     process.env.REACT_APP_API_URL ||
     "https://movie-booking-system-mern-1.onrender.com";
 
+
   useEffect(() => {
 
     if (!bookingId) {
@@ -501,8 +502,7 @@ function VerifyTicket() {
 
       } catch (err) {
 
-        console.log("Verify error:", err);
-
+        console.log(err);
         setBooking(null);
 
       }
@@ -513,6 +513,9 @@ function VerifyTicket() {
 
   }, [bookingId]);
 
+
+  /* ---------- Loading ---------- */
+
   if (booking === undefined)
     return (
       <div className="bg-black min-h-screen flex justify-center items-center text-white text-xl">
@@ -520,59 +523,101 @@ function VerifyTicket() {
       </div>
     );
 
+
+  /* ---------- Invalid Ticket ---------- */
+
   if (!booking)
     return (
-      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-2xl font-bold">
-        ❌ Invalid Ticket
+      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-3xl font-bold">
+        ❌ INVALID TICKET
       </div>
     );
+
 
   return (
 
     <div className="bg-black min-h-screen flex justify-center items-center p-6">
 
-      <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
+      <div className="bg-[#111827] rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+
+        {/* Poster */}
 
         <img
           src={booking.showId?.movieId?.poster}
           alt="poster"
-          className="w-full h-56 rounded-xl mb-4"
+          className="w-full h-56 object-cover"
         />
 
-        <h1 className="text-2xl font-bold">
-          {booking.showId?.movieId?.title}
-        </h1>
 
-        <p className="text-gray-400 mb-4">
-          {booking.showId?.movieId?.genre}
-        </p>
+        <div className="p-6 text-white">
 
-        <div className="space-y-2 border-t border-gray-700 pt-4">
+          {/* Movie Title */}
 
-          <p>🎭 Theatre: {booking.showId?.theatre}</p>
-          <p>📅 Date: {booking.showId?.date}</p>
-          <p>⏰ Time: {booking.showId?.time}</p>
-          <p>💺 Seats: {booking.seats?.join(", ")}</p>
+          <h1 className="text-2xl font-bold text-center">
+            {booking.showId?.movieId?.title}
+          </h1>
 
-        </div>
+          <p className="text-gray-400 text-center mb-6">
+            {booking.showId?.movieId?.genre}
+          </p>
 
-        <div className="border-t border-gray-700 mt-5 pt-4 text-center">
 
-          <h2 className="text-3xl font-bold text-red-500">
+          {/* Ticket Details */}
+
+          <div className="space-y-3 text-sm">
+
+            <div className="flex justify-between">
+              <span>🎭 Theatre</span>
+              <span>{booking.showId?.theatre}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>📅 Date</span>
+              <span>{booking.showId?.date}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>⏰ Time</span>
+              <span>{booking.showId?.time}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>💺 Seats</span>
+              <span>{booking.seats?.join(", ")}</span>
+            </div>
+
+          </div>
+
+
+          {/* Divider */}
+
+          <div className="border-t border-dashed border-gray-600 my-6"></div>
+
+
+          {/* Price */}
+
+          <h2 className="text-3xl font-bold text-center text-red-500">
             ₹ {booking.totalPrice}
           </h2>
 
-          {status === "VALID" && (
-            <p className="text-green-400 text-xl font-bold mt-2">
-              ✅ ENTRY ALLOWED
-            </p>
-          )}
 
-          {status === "USED" && (
-            <p className="text-red-500 text-xl font-bold mt-2">
-              ❌ TICKET ALREADY USED
-            </p>
-          )}
+          {/* Status */}
+
+          <div className="mt-5 text-center">
+
+            {status === "VALID" && (
+              <div className="bg-green-600 text-white py-3 rounded-xl text-lg font-bold">
+                ✅ ENTRY ALLOWED
+              </div>
+            )}
+
+            {status === "USED" && (
+              <div className="bg-red-600 text-white py-3 rounded-xl text-lg font-bold">
+                ❌ TICKET ALREADY USED
+              </div>
+            )}
+
+          </div>
 
         </div>
 
