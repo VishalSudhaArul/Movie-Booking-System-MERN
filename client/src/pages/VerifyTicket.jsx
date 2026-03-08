@@ -465,7 +465,6 @@ function VerifyTicket() {
     process.env.REACT_APP_API_URL ||
     "https://movie-booking-system-mern-1.onrender.com";
 
-
   useEffect(() => {
 
     if (!bookingId) {
@@ -514,6 +513,7 @@ function VerifyTicket() {
   }, [bookingId]);
 
 
+
   /* ---------- Loading ---------- */
 
   if (booking === undefined)
@@ -524,7 +524,7 @@ function VerifyTicket() {
     );
 
 
-  /* ---------- Invalid Ticket ---------- */
+  /* ---------- Invalid ---------- */
 
   if (!booking)
     return (
@@ -534,13 +534,26 @@ function VerifyTicket() {
     );
 
 
+  const snacks =
+    booking.snacks?.length > 0
+      ? booking.snacks
+          .map(s => `${s.name} x${s.qty}`)
+          .join(", ")
+      : "None";
+
+  const parking =
+    booking.parking
+      ? `${booking.parking.type}`
+      : "None";
+
+
   return (
 
     <div className="bg-black min-h-screen flex justify-center items-center p-6">
 
-      <div className="bg-[#111827] rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-[#0f172a] border border-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
 
-        {/* Poster */}
+        {/* Movie Poster */}
 
         <img
           src={booking.showId?.movieId?.poster}
@@ -562,7 +575,12 @@ function VerifyTicket() {
           </p>
 
 
-          {/* Ticket Details */}
+          {/* Ticket Divider */}
+
+          <div className="border-t border-dashed border-gray-600 mb-6"></div>
+
+
+          {/* Ticket Info */}
 
           <div className="space-y-3 text-sm">
 
@@ -583,7 +601,19 @@ function VerifyTicket() {
 
             <div className="flex justify-between">
               <span>💺 Seats</span>
-              <span>{booking.seats?.join(", ")}</span>
+              <span className="text-green-400 font-semibold">
+                {booking.seats?.join(", ")}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>🍿 Snacks</span>
+              <span>{snacks}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>🚗 Parking</span>
+              <span>{parking}</span>
             </div>
 
           </div>
@@ -596,23 +626,31 @@ function VerifyTicket() {
 
           {/* Price */}
 
-          <h2 className="text-3xl font-bold text-center text-red-500">
-            ₹ {booking.totalPrice}
-          </h2>
+          <div className="text-center">
+
+            <p className="text-gray-400 text-sm">
+              Total Amount
+            </p>
+
+            <h2 className="text-4xl font-bold text-red-500">
+              ₹ {booking.totalPrice}
+            </h2>
+
+          </div>
 
 
           {/* Status */}
 
-          <div className="mt-5 text-center">
+          <div className="mt-6 text-center">
 
             {status === "VALID" && (
-              <div className="bg-green-600 text-white py-3 rounded-xl text-lg font-bold">
+              <div className="bg-green-600 text-white py-3 rounded-xl text-lg font-bold shadow-lg">
                 ✅ ENTRY ALLOWED
               </div>
             )}
 
             {status === "USED" && (
-              <div className="bg-red-600 text-white py-3 rounded-xl text-lg font-bold">
+              <div className="bg-red-600 text-white py-3 rounded-xl text-lg font-bold shadow-lg">
                 ❌ TICKET ALREADY USED
               </div>
             )}
