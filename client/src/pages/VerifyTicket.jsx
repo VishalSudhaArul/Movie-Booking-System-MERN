@@ -450,14 +450,13 @@
 
 
 
-
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
 function VerifyTicket() {
 
-  const { id } = useParams();
+  const { bookingId } = useParams();
 
   const [booking, setBooking] = useState(undefined);
   const [status, setStatus] = useState("");
@@ -466,10 +465,9 @@ function VerifyTicket() {
     process.env.REACT_APP_API_URL ||
     "https://movie-booking-system-mern-1.onrender.com";
 
-
   useEffect(() => {
 
-    if (!id) {
+    if (!bookingId) {
       setBooking(null);
       return;
     }
@@ -479,8 +477,7 @@ function VerifyTicket() {
       try {
 
         const res = await axios.get(
-          `${API_URL}/api/bookings/verify/${id}`,
-          { timeout: 10000 }   // prevent infinite loading
+          `${API_URL}/api/bookings/verify/${bookingId}`
         );
 
         if (!res.data) {
@@ -490,17 +487,13 @@ function VerifyTicket() {
 
         setBooking(res.data);
 
-        /* If ticket already used */
-
         if (res.data.used) {
 
           setStatus("USED");
 
         } else {
 
-          /* Mark ticket used */
-
-          await axios.put(`${API_URL}/api/bookings/use/${id}`);
+          await axios.put(`${API_URL}/api/bookings/use/${bookingId}`);
 
           setStatus("VALID");
 
@@ -518,10 +511,7 @@ function VerifyTicket() {
 
     verifyTicket();
 
-  }, [id]);
-
-
-  /* ---------- Loading ---------- */
+  }, [bookingId]);
 
   if (booking === undefined)
     return (
@@ -530,16 +520,12 @@ function VerifyTicket() {
       </div>
     );
 
-
-  /* ---------- Invalid ---------- */
-
   if (!booking)
     return (
       <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-2xl font-bold">
         ❌ Invalid Ticket
       </div>
     );
-
 
   return (
 
