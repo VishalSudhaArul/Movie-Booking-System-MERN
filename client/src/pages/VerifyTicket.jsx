@@ -458,7 +458,7 @@ import axios from "axios";
 
 function VerifyTicket() {
 
-  const { id } = useParams();   // ✅ FIXED PARAM
+  const { id } = useParams();
 
   const [booking, setBooking] = useState(undefined);
 
@@ -473,10 +473,19 @@ function VerifyTicket() {
 
     axios
       .get(`${API_URL}/api/bookings/verify/${id}`)
-      .then(res => setBooking(res.data))
+      .then(res => {
+
+        console.log("Verify response:", res.data);
+
+        setBooking(res.data);
+
+      })
       .catch(err => {
+
         console.log("Verify ticket error:", err);
+
         setBooking(null);
+
       });
 
   }, [id]);
@@ -508,16 +517,11 @@ function VerifyTicket() {
 
       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
 
-        {/* Movie Poster */}
-
         <img
           src={booking.showId?.movieId?.poster}
           alt="poster"
           className="w-full h-56 rounded-xl mb-4"
         />
-
-
-        {/* Movie Title */}
 
         <h1 className="text-2xl font-bold">
           {booking.showId?.movieId?.title}
@@ -526,9 +530,6 @@ function VerifyTicket() {
         <p className="text-gray-400 mb-4">
           {booking.showId?.movieId?.genre}
         </p>
-
-
-        {/* Ticket Info */}
 
         <div className="space-y-2 border-t border-gray-700 pt-4">
 
@@ -584,9 +585,6 @@ function VerifyTicket() {
           </p>
 
         </div>
-
-
-        {/* Price */}
 
         <div className="border-t border-gray-700 mt-5 pt-4 text-center">
 
