@@ -469,13 +469,19 @@ function VerifyTicket() {
 
   useEffect(() => {
 
-    if (!id) return;
+    if (!id) {
+      setBooking(null);
+      return;
+    }
 
     const verifyTicket = async () => {
 
       try {
 
-        const res = await axios.get(`${API_URL}/api/bookings/verify/${id}`);
+        const res = await axios.get(
+          `${API_URL}/api/bookings/verify/${id}`,
+          { timeout: 10000 }   // prevent infinite loading
+        );
 
         if (!res.data) {
           setBooking(null);
@@ -484,7 +490,7 @@ function VerifyTicket() {
 
         setBooking(res.data);
 
-        /* ---------- Check if already used ---------- */
+        /* If ticket already used */
 
         if (res.data.used) {
 
@@ -492,7 +498,7 @@ function VerifyTicket() {
 
         } else {
 
-          /* ---------- Mark ticket as used ---------- */
+          /* Mark ticket used */
 
           await axios.put(`${API_URL}/api/bookings/use/${id}`);
 
@@ -502,7 +508,7 @@ function VerifyTicket() {
 
       } catch (err) {
 
-        console.log(err);
+        console.log("Verify error:", err);
 
         setBooking(null);
 
@@ -525,11 +531,11 @@ function VerifyTicket() {
     );
 
 
-  /* ---------- Invalid Ticket ---------- */
+  /* ---------- Invalid ---------- */
 
   if (!booking)
     return (
-      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-3xl font-bold">
+      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-2xl font-bold">
         ❌ Invalid Ticket
       </div>
     );
@@ -541,16 +547,11 @@ function VerifyTicket() {
 
       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
 
-        {/* Movie Poster */}
-
         <img
           src={booking.showId?.movieId?.poster}
           alt="poster"
           className="w-full h-56 rounded-xl mb-4"
         />
-
-
-        {/* Movie Name */}
 
         <h1 className="text-2xl font-bold">
           {booking.showId?.movieId?.title}
@@ -560,23 +561,14 @@ function VerifyTicket() {
           {booking.showId?.movieId?.genre}
         </p>
 
-
-        {/* Ticket Details */}
-
         <div className="space-y-2 border-t border-gray-700 pt-4">
 
           <p>🎭 Theatre: {booking.showId?.theatre}</p>
-
           <p>📅 Date: {booking.showId?.date}</p>
-
           <p>⏰ Time: {booking.showId?.time}</p>
-
           <p>💺 Seats: {booking.seats?.join(", ")}</p>
 
         </div>
-
-
-        {/* Status */}
 
         <div className="border-t border-gray-700 mt-5 pt-4 text-center">
 
