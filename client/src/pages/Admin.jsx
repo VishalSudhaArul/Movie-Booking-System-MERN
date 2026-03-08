@@ -340,7 +340,19 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+const user = JSON.parse(localStorage.getItem("user"));
 
+if(!user){
+  window.location.href = "/login";
+}
+
+if(user?.role !== "admin" && user?.role !== "theaterOwner"){
+  return (
+    <h1 className="text-white text-center mt-20 text-3xl">
+      Access Denied
+    </h1>
+  );
+}
 function Admin() {
 
   const [movies, setMovies] = useState([]);

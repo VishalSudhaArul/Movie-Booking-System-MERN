@@ -11,11 +11,12 @@ function Register() {
   const navigate = useNavigate();
 
   const API_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000";
+    process.env.REACT_APP_API_URL ||
+    "https://movie-booking-system-mern-1.onrender.com";
 
   const handleRegister = () => {
 
-    axios.post(`${API_URL}/api/users/register`,{
+    axios.post(`${API_URL}/api/auth/register`,{
       name,
       email,
       password
@@ -25,7 +26,7 @@ function Register() {
       navigate("/login");
     })
     .catch(err=>{
-      console.log(err);
+      console.log(err.response?.data || err);
       alert("Registration failed");
     });
 

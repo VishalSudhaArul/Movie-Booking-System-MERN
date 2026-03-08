@@ -10,11 +10,12 @@ function Login() {
   const navigate = useNavigate();
 
   const API_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000";
+    process.env.REACT_APP_API_URL ||
+    "https://movie-booking-system-mern-1.onrender.com";
 
   const handleLogin = () => {
 
-    axios.post(`${API_URL}/api/users/login`,{
+    axios.post(`${API_URL}/api/auth/login`,{
       email,
       password
     })
@@ -29,8 +30,8 @@ function Login() {
 
     })
     .catch(err=>{
-      console.log(err);
-      alert("Invalid credentials");
+      console.log(err.response?.data || err);
+      alert("Login failed");
     });
 
   };
