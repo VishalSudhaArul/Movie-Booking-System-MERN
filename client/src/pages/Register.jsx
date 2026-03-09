@@ -4,79 +4,99 @@ import { useNavigate, Link } from "react-router-dom";
 
 function Register() {
 
-  const [name,setName] = useState("");
-  const [email,setEmail] = useState("");
-  const [password,setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
   const navigate = useNavigate();
 
   const API_URL =
-    process.env.REACT_APP_API_URL ||
-    "https://movie-booking-system-mern-1.onrender.com";
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
 
-    axios.post(`${API_URL}/api/auth/register`,{
-      name,
-      email,
-      password
-    })
-    .then(()=>{
+    try {
+
+      await axios.post(`${API_URL}/api/users/register`, {
+        name,
+        email
+      });
+
       alert("Registration successful");
+
       navigate("/login");
-    })
-    .catch(err=>{
-      console.log(err.response?.data || err);
+
+    } catch {
+
       alert("Registration failed");
-    });
+
+    }
 
   };
 
-  return (
-    <div className="min-h-screen bg-[#0B0B0F] text-white flex items-center justify-center">
 
-      <div className="bg-[#111118] border border-white/10 p-10 rounded-3xl w-[400px] shadow-xl">
+  return (
+
+    <div className="min-h-screen flex items-center justify-center bg-[#0B0B0F] text-white">
+
+      <div className="bg-[#111118] border border-white/10 p-10 rounded-3xl w-[380px] shadow-2xl">
 
         <h1 className="text-3xl font-bold mb-6 text-center">
           Register
         </h1>
 
         <input
-          placeholder="Enter Name"
-          className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20"
-          onChange={(e)=>setName(e.target.value)}
+          placeholder="Name"
+          className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20 focus:border-red-500 outline-none"
+          onChange={(e) => setName(e.target.value)}
         />
 
         <input
-          placeholder="Enter Email"
-          className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20"
-          onChange={(e)=>setEmail(e.target.value)}
-        />
-
-        <input
-          placeholder="Enter Password"
-          type="password"
-          className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20"
-          onChange={(e)=>setPassword(e.target.value)}
+          placeholder="Email"
+          className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20 focus:border-red-500 outline-none"
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         <button
           onClick={handleRegister}
-          className="w-full bg-red-600 py-3 rounded-xl hover:bg-red-700"
+          className="w-full bg-red-600 py-3 rounded-xl hover:bg-red-700 transition"
         >
           Register
         </button>
 
+
+        <div className="text-center my-4 text-gray-400">
+          OR
+        </div>
+
+        <button className="flex items-center justify-center gap-3 w-full bg-white text-black py-3 rounded-xl hover:opacity-90">
+
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/281/281764.png"
+            alt="google"
+            className="w-5"
+          />
+
+          Sign up with Google
+
+        </button>
+
+
         <p className="text-sm text-center mt-6 text-gray-400">
+
           Already have an account?{" "}
-          <Link to="/login" className="text-red-500">
+
+          <Link to="/login" className="text-red-500 hover:underline">
             Login
           </Link>
+
         </p>
 
       </div>
+
     </div>
+
   );
+
 }
 
 export default Register;
