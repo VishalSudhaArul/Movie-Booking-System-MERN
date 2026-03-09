@@ -18,6 +18,7 @@ import AdminShows from "./pages/admin/AdminShows";
 import AdminSnacks from "./pages/admin/AdminSnacks";
 import AdminParking from "./pages/admin/AdminParking";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminGate from "./components/AdminGate";
 
 //import PrivateRoute from "./components/PrivateRoute";
 
@@ -38,13 +39,15 @@ function App() {
         <Route path="/mybookings" element={<MyBookings />} />
         <Route path="/verify/:bookingId" element={<VerifyTicket />} />
         <Route path="/scanner" element={<Scanner />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        {/* <Route path="/admin" element={<AdminDashboard />} /> */}
         <Route path="/admin/scan" element={<AdminScan />} />
         <Route path="/admin/movies" element={<AdminMovies />} />
         <Route path="/admin/shows" element={<AdminShows />} />
         <Route path="/admin/snacks" element={<AdminSnacks />} />
         <Route path="/admin/parking" element={<AdminParking />} />
         <Route path="/admin/analytics" element={<AdminAnalytics />} />
+        <Route path="/admin" element={<AdminGate />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
 
       </Routes>
@@ -54,7 +57,6 @@ function App() {
 }
 
 export default App;
-
 
 // function App() {
 //   return (
