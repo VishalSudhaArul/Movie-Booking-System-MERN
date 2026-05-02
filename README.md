@@ -70,11 +70,12 @@ Movie-Booking-System-MERN/
 
 ## ⚙️ **Setup Instructions**
 
-### **1️⃣ Clone Repository**
 ```bash
+### ** Clone Repository**
 git clone https://github.com/VishalSudhaArul/Movie-Booking-System-MERN.git
 cd Movie-Booking-System-MERN
-2️⃣ Backend Setup
+
+ Backend Setup
 cd server
 npm install
 
@@ -85,9 +86,9 @@ JWT_SECRET=your_secret_key
 PORT=5000
 
 Run backend:
-
 npm start
-3️⃣ Frontend Setup
+
+Frontend Setup
 cd client
 npm install
 
@@ -96,8 +97,9 @@ Create .env file:
 REACT_APP_API_URL=http://localhost:5000
 
 Run frontend:
-
 npm start
+```
+
 ## 🔐 **Authentication Flow**
 
 - User login → JWT token generated  
