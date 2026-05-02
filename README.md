@@ -107,8 +107,6 @@ npm start
 - Protected routes validate user access  
 - Only authenticated users can perform bookings  
 
----
-
 ## 🎟 **Ticket System**
 
 Each booking generates:
@@ -121,15 +119,11 @@ Each booking generates:
 
 - VALID → USED → COMPLETED  
 
----
-
 ## 🌍 **Deployment**
 
 - Frontend hosted on Vercel  
 - Backend deployed on Render  
 - Database managed using MongoDB Atlas  
-
----
 
 ## 📌 **Future Enhancements**
 
@@ -140,14 +134,10 @@ Each booking generates:
 - Role-based authentication  
 - UI/UX enhancements (Dark mode)  
 
----
-
 ## 👨‍💻 **Author**
 
 **Vishal Sudha Arul**  
 Full Stack Developer  
-
----
 
 ## 📄 **License**
 
