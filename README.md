@@ -1,100 +1,82 @@
-🎬 Movie Booking System – MERN Stack
+# 🎬 Movie Booking System – MERN Stack
 
-A full-stack Movie Ticket Booking application built using the MERN stack (MongoDB, Express.js, React.js, Node.js).
-The platform allows users to browse movies, view shows, book seats, generate QR-based tickets, and manage bookings.
+A full-stack Movie Ticket Booking application built using the MERN stack (MongoDB, Express.js, React.js, Node.js). The platform simulates a real-world booking system where users can browse movies, select seats, and generate QR-based tickets with a smooth and secure experience.
 
-🔗 Live Frontend: https://movie-booking-system-mern-fawn.vercel.app
+## 🚀Key Features
 
-🔗 Backend API: https://movie-booking-system-mern.onrender.com
+### 👤User Features
+- User Registration & Login (JWT Authentication)
+- Browse Movies & View Show Details
+- Real-time Seat Selection Interface
+- Add-ons: Snacks & Parking Options
+- Secure Ticket Booking System
+- QR Code-based Ticket Generation
+- Download Tickets as PDF
+- Booking History Management
+- Ticket Verification System
 
-🚀 Features
-👤 User Features
+# 🛠 Tech Stack
 
-User Registration & Login (JWT Authentication)
+# Frontend
+- React.js
+- Tailwind CSS
+- Axios
+- React Router
+- QRCode.react
+- jsPDF & html2canvas
 
-Browse Movies & View Show Details
+### **Backend**
+- Node.js
+- Express.js
+- MongoDB (Atlas)
+- Mongoose
+- JWT Authentication
+- RESTful APIs
 
-Select Seats with Real-time UI
+# Deployment
+- Frontend: Vercel
+- Backend: Render
+- Database: MongoDB Atlas
 
-Add Snacks & Parking Options
+---
 
-Secure Ticket Booking
+# 🧠 System Highlights
 
-QR Code Ticket Generation
+- Designed RESTful APIs for booking, authentication, and data handling
+- Implemented JWT-based authentication for secure access
+- Built seat availability logic to prevent double booking
+- Handled concurrent booking scenarios and edge cases
+- Optimized frontend for responsiveness and smooth user flow
+- Structured scalable backend with modular architecture
 
-Download Ticket as PDF
+## Project Structure
 
-View Booking History
 
-Ticket Verification Page
-
-🛠 Admin Features (if implemented)
-
-Add / Edit Movies
-
-Create Shows
-
-Manage Pricing
-
-🏗 Tech Stack
-Frontend
-
-React.js
-
-Axios
-
-Tailwind CSS
-
-QRCode.react
-
-jsPDF & html2canvas
-
-React Router
-
-Backend
-
-Node.js
-
-Express.js
-
-MongoDB (Atlas)
-
-Mongoose
-
-JWT Authentication
-
-REST APIs
-
-Deployment
-
-Frontend: Vercel
-
-Backend: Render
-
-Database: MongoDB Atlas
-
-📂 Project Structure
 Movie-Booking-System-MERN/
 │
-├── client/         # React Frontend
-│   ├── src/
-│   └── package.json
+├── client/ # React Frontend
+│ ├── src/
+│ └── package.json
 │
-├── server/         # Node + Express Backend
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   └── server.js
+├── server/ # Node.js Backend
+│ ├── controllers/
+│ ├── models/
+│ ├── routes/
+│ └── server.js
 │
 └── README.md
 
-⚙️ Installation & Setup
 
-1️⃣ Clone the Repository
+---
+
+## ⚙️ Setup Instructions
+
+# Clone Repository
+```bash
 git clone https://github.com/VishalSudhaArul/Movie-Booking-System-MERN.git
 cd Movie-Booking-System-MERN
 
-2️⃣ Backend Setup
+Backend Setup
 cd server
 npm install
 
@@ -108,7 +90,7 @@ Run backend:
 
 npm start
 
-3️⃣ Frontend Setup
+Frontend Setup
 cd client
 npm install
 
@@ -119,74 +101,3 @@ REACT_APP_API_URL=http://localhost:5000
 Run frontend:
 
 npm start
-🔐 Authentication Flow
-
-User logs in → JWT token generated
-
-Token stored in localStorage
-
-Protected routes validate token
-
-Only logged-in users can book tickets
-
-🎟 Ticket System
-
-Each booking generates:
-
-Unique Booking ID
-
-QR Code
-
-Movie + Show Details
-
-Tickets can be:
-
-Downloaded as PDF
-
-Verified via QR scan
-
-Show status automatically updates:
-
-VALID
-
-USED
-
-COMPLETED
-
-🌍 Deployment Configuration
-Vercel Environment Variable
-REACT_APP_API_URL=https://movie-booking-system-mern.onrender.com
-Render Settings
-
-Build Command: npm install
-
-Start Command: node server.js
-
-Port: Uses process.env.PORT
-
-
-Ticket Verification
-
-📌 Future Enhancements
-
-Razorpay / Stripe Payment Integration
-
-Admin Dashboard
-
-Real-time seat locking
-
-Email Ticket Confirmation
-
-Role-based Authentication
-
-Dark/Light Mode toggle
-
-👨‍💻 Author
-
-Vishal Sudha Arul
-Full Stack Developer
-GitHub: https://github.com/VishalSudhaArul
-
-📄 License
-
-This project is built for educational and portfolio purposes.
