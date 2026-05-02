@@ -1,10 +1,12 @@
-# 🎬 Movie Booking System – MERN Stack
+# 🎬 **Movie Booking System – MERN Stack**
 
 A full-stack Movie Ticket Booking application built using the MERN stack (MongoDB, Express.js, React.js, Node.js). The platform simulates a real-world booking system where users can browse movies, select seats, and generate QR-based tickets with a smooth and secure experience.
 
-## 🚀Key Features
+---
 
-### 👤User Features
+## 🚀 **Key Features**
+
+### 👤 **User Features**
 - User Registration & Login (JWT Authentication)
 - Browse Movies & View Show Details
 - Real-time Seat Selection Interface
@@ -15,9 +17,11 @@ A full-stack Movie Ticket Booking application built using the MERN stack (MongoD
 - Booking History Management
 - Ticket Verification System
 
-# 🛠 Tech Stack
+---
 
-# Frontend
+## 🛠 **Tech Stack**
+
+### **Frontend**
 - React.js
 - Tailwind CSS
 - Axios
@@ -33,14 +37,14 @@ A full-stack Movie Ticket Booking application built using the MERN stack (MongoD
 - JWT Authentication
 - RESTful APIs
 
-# Deployment
+### **Deployment**
 - Frontend: Vercel
 - Backend: Render
 - Database: MongoDB Atlas
 
 ---
 
-# 🧠 System Highlights
+## 🧠 **System Highlights**
 
 - Designed RESTful APIs for booking, authentication, and data handling
 - Implemented JWT-based authentication for secure access
@@ -49,7 +53,9 @@ A full-stack Movie Ticket Booking application built using the MERN stack (MongoD
 - Optimized frontend for responsiveness and smooth user flow
 - Structured scalable backend with modular architecture
 
-## Project Structure
+---
+
+## 📂 **Project Structure**
 
 
 Movie-Booking-System-MERN/
@@ -67,7 +73,39 @@ Movie-Booking-System-MERN/
 └── README.md
 
 
-## 🔐 Authentication Flow
+---
+
+## ⚙️ **Setup Instructions**
+
+### **1️⃣ Clone Repository**
+```bash
+git clone https://github.com/VishalSudhaArul/Movie-Booking-System-MERN.git
+cd Movie-Booking-System-MERN
+2️⃣ Backend Setup
+cd server
+npm install
+
+Create .env file:
+
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
+PORT=5000
+
+Run backend:
+
+npm start
+3️⃣ Frontend Setup
+cd client
+npm install
+
+Create .env file:
+
+REACT_APP_API_URL=http://localhost:5000
+
+Run frontend:
+
+npm start
+🔐 Authentication Flow
 User login → JWT token generated
 Token stored securely
 Protected routes validate user access
@@ -102,42 +140,3 @@ Full Stack Developer
 📄 License
 
 This project is developed for educational and portfolio purposes.
-
-
-
-## ⚙️ Setup Instructions
-
-# Clone Repository
-```bash
-git clone https://github.com/VishalSudhaArul/Movie-Booking-System-MERN.git
-cd Movie-Booking-System-MERN
-
-Backend Setup
-cd server
-npm install
-
-Create .env file:
-
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_secret_key
-PORT=5000
-
-Run backend:
-
-npm start
-
-Frontend Setup
-cd client
-npm install
-
-Create .env file:
-
-REACT_APP_API_URL=http://localhost:5000
-
-Run frontend:
-
-npm start
-
----
-
-
