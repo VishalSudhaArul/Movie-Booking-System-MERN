@@ -101,3 +101,40 @@ REACT_APP_API_URL=http://localhost:5000
 Run frontend:
 
 npm start
+
+
+## 🔐 Authentication Flow
+User login → JWT token generated
+Token stored securely
+Protected routes validate user access
+Only authenticated users can perform bookings
+🎟 Ticket System
+
+Each booking generates:
+
+Unique Booking ID
+QR Code for verification
+Movie & show details
+
+Ticket lifecycle:
+
+VALID → USED → COMPLETED
+🌍 Deployment
+Frontend hosted on Vercel
+Backend deployed on Render
+Database managed using MongoDB Atlas
+📌 Future Enhancements
+Payment Gateway Integration (Razorpay / Stripe)
+Admin Dashboard
+Real-time seat locking system
+Email-based ticket confirmation
+Role-based authentication
+UI/UX enhancements (Dark mode)
+👨‍💻 Author
+
+Vishal Sudha Arul
+Full Stack Developer
+
+📄 License
+
+This project is developed for educational and portfolio purposes.
