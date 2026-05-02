@@ -66,9 +66,6 @@ Movie-Booking-System-MERN/
 │
 └── README.md
 
-
----
-
 ## ⚙️ Setup Instructions
 
 # Clone Repository
@@ -101,6 +98,8 @@ REACT_APP_API_URL=http://localhost:5000
 Run frontend:
 
 npm start
+
+---
 
 
 ## 🔐 Authentication Flow
@@ -138,3 +137,4 @@ Full Stack Developer
 📄 License
 
 This project is developed for educational and portfolio purposes.
+
