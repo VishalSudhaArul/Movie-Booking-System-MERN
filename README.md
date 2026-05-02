@@ -66,41 +66,6 @@ Movie-Booking-System-MERN/
 │
 └── README.md
 
-## ⚙️ Setup Instructions
-
-# Clone Repository
-```bash
-git clone https://github.com/VishalSudhaArul/Movie-Booking-System-MERN.git
-cd Movie-Booking-System-MERN
-
-Backend Setup
-cd server
-npm install
-
-Create .env file:
-
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_secret_key
-PORT=5000
-
-Run backend:
-
-npm start
-
-Frontend Setup
-cd client
-npm install
-
-Create .env file:
-
-REACT_APP_API_URL=http://localhost:5000
-
-Run frontend:
-
-npm start
-
----
-
 
 ## 🔐 Authentication Flow
 User login → JWT token generated
@@ -137,4 +102,42 @@ Full Stack Developer
 📄 License
 
 This project is developed for educational and portfolio purposes.
+
+
+
+## ⚙️ Setup Instructions
+
+# Clone Repository
+```bash
+git clone https://github.com/VishalSudhaArul/Movie-Booking-System-MERN.git
+cd Movie-Booking-System-MERN
+
+Backend Setup
+cd server
+npm install
+
+Create .env file:
+
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
+PORT=5000
+
+Run backend:
+
+npm start
+
+Frontend Setup
+cd client
+npm install
+
+Create .env file:
+
+REACT_APP_API_URL=http://localhost:5000
+
+Run frontend:
+
+npm start
+
+---
+
 
