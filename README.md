@@ -2,8 +2,6 @@
 
 A full-stack Movie Ticket Booking application built using the MERN stack (MongoDB, Express.js, React.js, Node.js). The platform simulates a real-world booking system where users can browse movies, select seats, and generate QR-based tickets with a smooth and secure experience.
 
----
-
 ## 🚀 **Key Features**
 
 ### 👤 **User Features**
@@ -17,7 +15,6 @@ A full-stack Movie Ticket Booking application built using the MERN stack (MongoD
 - Booking History Management
 - Ticket Verification System
 
----
 
 ## 🛠 **Tech Stack**
 
@@ -42,7 +39,6 @@ A full-stack Movie Ticket Booking application built using the MERN stack (MongoD
 - Backend: Render
 - Database: MongoDB Atlas
 
----
 
 ## 🧠 **System Highlights**
 
@@ -53,7 +49,6 @@ A full-stack Movie Ticket Booking application built using the MERN stack (MongoD
 - Optimized frontend for responsiveness and smooth user flow
 - Structured scalable backend with modular architecture
 
----
 
 ## 📂 **Project Structure**
 
@@ -72,8 +67,6 @@ Movie-Booking-System-MERN/
 │
 └── README.md
 
-
----
 
 ## ⚙️ **Setup Instructions**
 
@@ -105,38 +98,55 @@ REACT_APP_API_URL=http://localhost:5000
 Run frontend:
 
 npm start
-🔐 Authentication Flow
-User login → JWT token generated
-Token stored securely
-Protected routes validate user access
-Only authenticated users can perform bookings
-🎟 Ticket System
+## 🔐 **Authentication Flow**
+
+- User login → JWT token generated  
+- Token stored securely  
+- Protected routes validate user access  
+- Only authenticated users can perform bookings  
+
+---
+
+## 🎟 **Ticket System**
 
 Each booking generates:
 
-Unique Booking ID
-QR Code for verification
-Movie & show details
+- Unique Booking ID  
+- QR Code for verification  
+- Movie & show details  
 
-Ticket lifecycle:
+**Ticket lifecycle:**
 
-VALID → USED → COMPLETED
-🌍 Deployment
-Frontend hosted on Vercel
-Backend deployed on Render
-Database managed using MongoDB Atlas
-📌 Future Enhancements
-Payment Gateway Integration (Razorpay / Stripe)
-Admin Dashboard
-Real-time seat locking system
-Email-based ticket confirmation
-Role-based authentication
-UI/UX enhancements (Dark mode)
-👨‍💻 Author
+- VALID → USED → COMPLETED  
 
-Vishal Sudha Arul
-Full Stack Developer
+---
 
-📄 License
+## 🌍 **Deployment**
+
+- Frontend hosted on Vercel  
+- Backend deployed on Render  
+- Database managed using MongoDB Atlas  
+
+---
+
+## 📌 **Future Enhancements**
+
+- Payment Gateway Integration (Razorpay / Stripe)  
+- Admin Dashboard  
+- Real-time seat locking system  
+- Email-based ticket confirmation  
+- Role-based authentication  
+- UI/UX enhancements (Dark mode)  
+
+---
+
+## 👨‍💻 **Author**
+
+**Vishal Sudha Arul**  
+Full Stack Developer  
+
+---
+
+## 📄 **License**
 
 This project is developed for educational and portfolio purposes.
