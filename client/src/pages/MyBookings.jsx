@@ -679,39 +679,27 @@
 
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { QRCodeCanvas } from "qrcode.react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-
-const API_URL =
-  process.env.REACT_APP_API_URL ||
-  "https://movie-booking-system-mern-1.onrender.com";
+import API from "../api";
 
 function MyBookings() {
-
   const [bookings, setBookings] = useState([]);
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const userString = localStorage.getItem("user");
+  const user = userString ? JSON.parse(userString) : null;
+  const userId = user?._id || user?.id || localStorage.getItem("userId");
 
-  const userId = user?._id || user?.id;
-
-  const FRONTEND_URL =
-    process.env.REACT_APP_FRONTEND_URL ||
-    window.location.origin;
-
+  const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
 
   /* ---------- Load Bookings ---------- */
-
   useEffect(() => {
-
     if (!userId) return;
 
-    axios
-      .get(`${API_URL}/api/bookings/user/${userId}`)
-      .then(res => setBookings(res.data))
-      .catch(err => console.log("Bookings load error:", err));
-
+    API.get(`/api/bookings/user/${userId}`)
+      .then((res) => setBookings(res.data))
+      .catch((err) => console.log("Bookings load error:", err));
   }, [userId]);
 
 
