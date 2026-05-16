@@ -375,7 +375,7 @@ function Home() {
             {movies.slice(0, 7).map((movie) => (
               <Link
                 key={movie._id}
-                to={`/movie/${movie._id}`}
+                to={`/movies/${movie._id}`}
                 className="min-w-[300px] group"
               >
                 <div className="rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 hover:border-red-500 transition duration-300">
@@ -432,7 +432,7 @@ function Home() {
             {filteredMovies.slice(0, 6).map((movie) => (
               <Link
                 key={movie._id}
-                to={`/movie/${movie._id}`}
+                to={`/movies/${movie._id}`}
                 className="bg-[#111118] border border-white/10 rounded-3xl overflow-hidden hover:border-red-500 transition"
               >
                 <img
@@ -467,7 +467,7 @@ function Home() {
             {movies.slice(0, 2).map((movie) => (
               <Link
                 key={movie._id}
-                to={`/movie/${movie._id}`}
+                to={`/movies/${movie._id}`}
                 className="relative rounded-3xl overflow-hidden group"
               >
                 <img

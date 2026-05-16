@@ -378,7 +378,7 @@ useEffect(() => {
 
             <div className="flex gap-6">
               <button
-                onClick={() => navigate(`/movie/${movies[activeHero]._id}`)}
+                onClick={() => navigate(`/movies/${movies[activeHero]._id}`)}
                 className="bg-red-600 hover:bg-red-700 px-10 py-4 rounded-xl text-lg font-semibold shadow-lg transition"
               >
                 🎟 Book Now
@@ -488,7 +488,7 @@ useEffect(() => {
                 </p>
 
                 <button
-                  onClick={() => navigate(`/movie/${movie._id}`)}
+                  onClick={() => navigate(`/movies/${movie._id}`)}
                   className="mt-4 w-full bg-red-600 py-2 rounded-lg hover:bg-red-700 transition"
                 >
                   View Shows
