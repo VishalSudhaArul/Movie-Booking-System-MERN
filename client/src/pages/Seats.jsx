@@ -37,7 +37,7 @@ export default function Seats() {
   useEffect(() => {
     const fetchShow = async () => {
       try {
-        const { data } = await API.get(`/api/shows/${showId}`);
+        const { data } = await API.get(`/api/shows/single/${showId}`);
         setShow(data);
       } catch {
         setError("Failed to load seat data. Please go back and try again.");

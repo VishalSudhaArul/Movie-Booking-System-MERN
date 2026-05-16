@@ -318,66 +318,67 @@
 
 
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import API from "../api";
 
 function AddOns() {
 
+  const { showId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const showId = location.state?.showId;
   const selectedSeats = location.state?.selectedSeats || [];
+  const initialShow = location.state?.show;
 
   const [snacks, setSnacks] = useState([]);
   const [parking, setParking] = useState(null);
   const [selectedSnacks, setSelectedSnacks] = useState([]);
   const [selectedParking, setSelectedParking] = useState(null);
-  const [show, setShow] = useState(null);
-
-  const API_URL =
-    process.env.REACT_APP_API_URL ||
-    "https://movie-booking-system-mern-1.onrender.com";
+  const [show, setShow] = useState(initialShow || null);
 
   const user = JSON.parse(localStorage.getItem("user"));
-
   const userId = user?._id || user?.id;
 
-
   /* ---------- Protect Refresh ---------- */
-
   useEffect(() => {
-    if (!showId) navigate("/");
-  }, [showId, navigate]);
+    if (!showId || selectedSeats.length === 0) {
+      navigate("/");
+    }
+  }, [showId, selectedSeats, navigate]);
 
 
   /* ---------- Fetch Show + AddOns ---------- */
 
   useEffect(() => {
-
     if (!showId) return;
 
-    axios
-      .get(`${API_URL}/api/shows/single/${showId}`)
-      .then(res => {
+    const loadData = async () => {
+      try {
+        // If show data wasn't passed in state, fetch it
+        let currentShow = show;
+        if (!currentShow) {
+          const res = await API.get(`/api/shows/single/${showId}`);
+          currentShow = res.data;
+          setShow(currentShow);
+        }
 
-        setShow(res.data);
+        const theatre = currentShow.theatre;
 
-        const theatre = res.data.theatre;
-
-        axios
-          .get(`${API_URL}/api/snacks/theatre/${theatre}`)
-          .then(r => setSnacks(r.data))
+        // Fetch Snacks
+        API.get(`/api/snacks/theatre/${theatre}`)
+          .then((r) => setSnacks(r.data))
           .catch(() => setSnacks([]));
 
-        axios
-          .get(`${API_URL}/api/parking/theatre/${theatre}`)
-          .then(r => setParking(r.data))
+        // Fetch Parking
+        API.get(`/api/parking/theatre/${theatre}`)
+          .then((r) => setParking(r.data))
           .catch(() => setParking(null));
+      } catch (err) {
+        console.error("Data load error", err);
+      }
+    };
 
-      })
-      .catch(err => console.log("Show load error", err));
-
+    loadData();
   }, [showId]);
 
 
@@ -442,50 +443,33 @@ function AddOns() {
   /* ---------- Confirm Booking ---------- */
 
   const confirmBooking = async () => {
-
     try {
-
-      await axios.post(`${API_URL}/api/bookings`, {
+      await API.post(`/api/bookings`, {
         showId,
         seats: selectedSeats,
         userId,
         snacks: selectedSnacks,
-        parking: selectedParking
+        parking: selectedParking,
       });
-
       navigate("/mybookings");
-
     } catch (err) {
-
       console.error("Booking failed", err);
-
       alert("Booking failed");
-
     }
-
   };
 
-
-  /* ---------- Skip Booking ---------- */
-
   const skipBooking = async () => {
-
     try {
-
-      await axios.post(`${API_URL}/api/bookings`, {
+      await API.post(`/api/bookings`, {
         showId,
         seats: selectedSeats,
-        userId
+        userId,
       });
-
       navigate("/mybookings");
-
     } catch (err) {
-
+      console.error("Booking failed", err);
       alert("Booking failed");
-
     }
-
   };
 
 
