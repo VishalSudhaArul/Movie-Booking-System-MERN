@@ -11,11 +11,11 @@ API.interceptors.request.use(
     const token = localStorage.getItem("token");
     const bypass = sessionStorage.getItem("admin_bypass");
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else if (bypass === "true") {
-      // Use 'Bypass' prefix to avoid adding new custom headers to CORS whitelist
+    // Prioritize bypass password for admin actions
+    if (bypass === "true") {
       config.headers.Authorization = `Bypass 123456`;
+    } else if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     
     return config;
