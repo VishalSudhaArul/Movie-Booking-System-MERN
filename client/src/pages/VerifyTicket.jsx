@@ -452,33 +452,23 @@
 
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api";
 
 function VerifyTicket() {
-
   const { bookingId } = useParams();
 
   const [booking, setBooking] = useState(undefined);
   const [status, setStatus] = useState("");
 
-  const API_URL =
-    process.env.REACT_APP_API_URL ||
-    "https://movie-booking-system-mern-1.onrender.com";
-
   useEffect(() => {
-
     if (!bookingId) {
       setBooking(null);
       return;
     }
 
     const verifyTicket = async () => {
-
       try {
-
-        const res = await axios.get(
-          `${API_URL}/api/bookings/verify/${bookingId}`
-        );
+        const res = await API.get(`/api/bookings/verify/${bookingId}`);
 
         if (!res.data) {
           setBooking(null);
@@ -488,28 +478,18 @@ function VerifyTicket() {
         setBooking(res.data);
 
         if (res.data.used) {
-
           setStatus("USED");
-
         } else {
-
-          await axios.put(`${API_URL}/api/bookings/use/${bookingId}`);
-
+          await API.put(`/api/bookings/use/${bookingId}`);
           setStatus("VALID");
-
         }
-
       } catch (err) {
-
         console.log(err);
         setBooking(null);
-
       }
-
     };
 
     verifyTicket();
-
   }, [bookingId]);
 
 

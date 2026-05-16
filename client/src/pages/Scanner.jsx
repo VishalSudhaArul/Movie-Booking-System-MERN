@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import axios from "axios";
+import API from "../api";
 
 function Scanner() {
 
@@ -52,11 +52,7 @@ function Scanner() {
   // }, []);
 
   useEffect(() => {
-
-  const API_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-  const qrCodeScanner = new Html5Qrcode("reader");
+    const qrCodeScanner = new Html5Qrcode("reader");
 
   qrCodeScanner.start(
     { facingMode: "environment" },
@@ -70,9 +66,7 @@ function Scanner() {
 
         const bookingId = decodedText.split("/").pop();
 
-        const res = await axios.get(
-          `${API_URL}/api/bookings/${bookingId}`
-        );
+        const res = await API.get(`/api/bookings/${bookingId}`);
 
         if (res.data.used) {
 
@@ -80,9 +74,7 @@ function Scanner() {
 
         } else {
 
-          await axios.put(
-            `${API_URL}/api/bookings/use/${bookingId}`
-          );
+          await API.put(`/api/bookings/use/${bookingId}`);
 
           setMessage("✅ Entry Allowed");
         }

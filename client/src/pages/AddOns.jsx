@@ -336,8 +336,9 @@ function AddOns() {
   const [selectedParking, setSelectedParking] = useState(null);
   const [show, setShow] = useState(initialShow || null);
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  const userId = user?._id || user?.id;
+  const userString = localStorage.getItem("user");
+  const user = userString ? JSON.parse(userString) : null;
+  const userId = user?._id || user?.id || localStorage.getItem("userId");
 
   /* ---------- Protect Refresh ---------- */
   useEffect(() => {
