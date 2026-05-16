@@ -38,6 +38,7 @@ function App() {
         <Route path="/movie/:movieId" element={<MovieDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify/:bookingId" element={<VerifyTicket />} />
 
         {/* ── Protected User Routes ── */}
         <Route
@@ -69,14 +70,6 @@ function App() {
           element={
             <PrivateRoute>
               <MyBookings />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/verify/:bookingId"
-          element={
-            <PrivateRoute>
-              <VerifyTicket />
             </PrivateRoute>
           }
         />
