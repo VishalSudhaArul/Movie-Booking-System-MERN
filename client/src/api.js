@@ -5,7 +5,7 @@ const API = axios.create({
     process.env.REACT_APP_API_URL || "http://localhost:5000",
 });
 
-// ── Attach JWT token or Bypass header to every request automatically ──
+// ── Attach JWT token or Bypass token to every request automatically ──
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -13,10 +13,9 @@ API.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    if (bypass === "true") {
-      config.headers["X-Admin-Bypass"] = "123456";
+    } else if (bypass === "true") {
+      // Use 'Bypass' prefix to avoid adding new custom headers to CORS whitelist
+      config.headers.Authorization = `Bypass 123456`;
     }
     
     return config;

