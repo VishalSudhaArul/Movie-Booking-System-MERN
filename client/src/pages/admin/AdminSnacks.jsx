@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../../api";
 
 function AdminSnacks() {
-
   const [snacks, setSnacks] = useState([]);
   const [theatres, setTheatres] = useState([]);
 
@@ -12,125 +11,54 @@ function AdminSnacks() {
 
   const [showDropdown, setShowDropdown] = useState(false);
 
-
-  const API_URL = process.env.REACT_APP_API_URL;
-
-
-
-
   /* ---------- Fetch Snacks ---------- */
+  const fetchSnacks = () => {
+    API.get("/api/snacks/all")
+      .then((res) => {
+        setSnacks(res.data);
+        const unique = [...new Set(res.data.map((s) => s.theatre))];
+        setTheatres(unique);
+      })
+      .catch((err) => {
+        console.log("Fetch snacks error:", err);
+        setSnacks([]);
+      });
+  };
 
-  // const fetchSnacks = () => {
+  useEffect(() => {
+    fetchSnacks();
+  }, []);
 
-  //   axios.get("http://localhost:5000/api/snacks/all")
-  //     .then(res => {
+  /* ---------- Add Snack ---------- */
+  const addSnack = () => {
+    if (!name || !price || !theatre) return alert("Fill all fields");
 
-  //       setSnacks(res.data);
-
-  //       const unique = [...new Set(res.data.map(s => s.theatre))];
-  //       setTheatres(unique);
-
-  //     })
-  //     .catch(() => setSnacks([]));
-  // };
-
-  // useEffect(() => {
-  //   fetchSnacks();
-  // }, []);
-
-  // /* ---------- Add Snack ---------- */
-
-  // const addSnack = () => {
-
-  //   if (!name || !price || !theatre)
-  //     return alert("Fill all fields");
-
-  //   axios.post("http://localhost:5000/api/snacks", {
-  //     name,
-  //     price,
-  //     theatre
-  //   })
-  //     .then(() => {
-
-  //       setName("");
-  //       setPrice("");
-  //       setTheatre("");
-
-  //       fetchSnacks();
-  //     });
-  // };
-
-  // /* ---------- Delete Snack ---------- */
-
-  // const deleteSnack = (id) => {
-
-  //   axios.delete(`http://localhost:5000/api/snacks/${id}`)
-  //     .then(fetchSnacks);
-  // };
-
-
-  /* ---------- Fetch Snacks ---------- */
-
-const fetchSnacks = () => {
-
-  axios.get(`${API_URL}/api/snacks/all`)
-    .then(res => {
-
-      setSnacks(res.data);
-
-      const unique = [...new Set(res.data.map(s => s.theatre))];
-      setTheatres(unique);
-
+    API.post("/api/snacks", {
+      name,
+      price,
+      theatre,
     })
-    .catch(err => {
-      console.log("Fetch snacks error:", err);
-      setSnacks([]);
-    });
+      .then(() => {
+        setName("");
+        setPrice("");
+        setTheatre("");
+        fetchSnacks();
+      })
+      .catch((err) => {
+        console.log("Add snack error:", err);
+        alert("Error adding snack: " + (err.response?.data?.message || err.message));
+      });
+  };
 
-};
-
-useEffect(() => {
-  fetchSnacks();
-}, []);
-
-
-
-/* ---------- Add Snack ---------- */
-
-const addSnack = () => {
-
-  if (!name || !price || !theatre)
-    return alert("Fill all fields");
-
-  axios.post(`${API_URL}/api/snacks`, {
-    name,
-    price,
-    theatre
-  })
-    .then(() => {
-
-      setName("");
-      setPrice("");
-      setTheatre("");
-
-      fetchSnacks();
-
-    })
-    .catch(err => console.log("Add snack error:", err));
-
-};
-
-
-
-/* ---------- Delete Snack ---------- */
-
-const deleteSnack = (id) => {
-
-  axios.delete(`${API_URL}/api/snacks/${id}`)
-    .then(fetchSnacks)
-    .catch(err => console.log("Delete snack error:", err));
-
-};
+  /* ---------- Delete Snack ---------- */
+  const deleteSnack = (id) => {
+    API.delete(`/api/snacks/${id}`)
+      .then(fetchSnacks)
+      .catch((err) => {
+        console.log("Delete snack error:", err);
+        alert("Error deleting snack: " + (err.response?.data?.message || err.message));
+      });
+  };
 
 
 

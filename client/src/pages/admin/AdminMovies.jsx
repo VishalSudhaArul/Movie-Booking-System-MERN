@@ -1,41 +1,23 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../../api";
 
-function AdminMovies(){
+function AdminMovies() {
+  const [movies, setMovies] = useState([]);
+  const [search, setSearch] = useState("");
 
-const [movies,setMovies] = useState([]);
-const [search,setSearch] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [duration, setDuration] = useState("");
+  const [poster, setPoster] = useState("");
+  const [genre, setGenre] = useState("");
 
-const [title,setTitle] = useState("");
-const [description,setDescription] = useState("");
-const [duration,setDuration] = useState("");
-const [poster,setPoster] = useState("");
-const [genre,setGenre] = useState("");
+  const [editId, setEditId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
 
-const [editId,setEditId] = useState(null);
-const [deleteId,setDeleteId] = useState(null);
-
-const API_URL = process.env.REACT_APP_API_URL;
-
-
-
-/* FETCH */
-
-// const fetchMovies = async ()=>{
-
-//   const res = await axios.get("http://localhost:5000/api/movies");
-//   setMovies(res.data);
-// };
-
-// useEffect(()=>{
-//   fetchMovies();
-// },[]);
-
-/* FETCH */
-
+  /* FETCH */
   const fetchMovies = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/movies`);
+      const res = await API.get("/api/movies");
       setMovies(res.data);
     } catch (err) {
       console.log("Fetch movies error:", err);
@@ -46,77 +28,42 @@ const API_URL = process.env.REACT_APP_API_URL;
     fetchMovies();
   }, []);
 
-/* SAVE */
+  /* SAVE */
+  const saveMovie = async () => {
+    if (!title || !poster) return alert("Fill Required Fields");
 
-// const saveMovie = async ()=>{
+    try {
+      if (editId) {
+        await API.put(`/api/movies/${editId}`, {
+          title,
+          description,
+          duration,
+          poster,
+          genre,
+        });
+        setEditId(null);
+      } else {
+        await API.post("/api/movies", {
+          title,
+          description,
+          duration,
+          poster,
+          genre,
+        });
+      }
 
-//   if(!title || !poster) return alert("Fill Required Fields");
+      setTitle("");
+      setDescription("");
+      setDuration("");
+      setPoster("");
+      setGenre("");
 
-//   if(editId){
-
-//     await axios.put(
-//       `http://localhost:5000/api/movies/${editId}`,
-//       {title,description,duration,poster,genre}
-//     );
-
-//     setEditId(null);
-
-//   }else{
-
-//     await axios.post(
-//       "http://localhost:5000/api/movies",
-//       {title,description,duration,poster,genre}
-//     );
-//   }
-
-//   setTitle("");
-//   setDescription("");
-//   setDuration("");
-//   setPoster("");
-//   setGenre("");
-
-//   fetchMovies();
-// };
-
-/* SAVE */
-
-const saveMovie = async () => {
-
-  if (!title || !poster) return alert("Fill Required Fields");
-
-  try {
-
-    if (editId) {
-
-      await axios.put(
-        `${API_URL}/api/movies/${editId}`,
-        { title, description, duration, poster, genre }
-      );
-
-      setEditId(null);
-
-    } else {
-
-      await axios.post(
-        `${API_URL}/api/movies`,
-        { title, description, duration, poster, genre }
-      );
+      fetchMovies();
+    } catch (err) {
+      console.log("Save movie error:", err);
+      alert("Error saving movie: " + (err.response?.data?.message || err.message));
     }
-
-    setTitle("");
-    setDescription("");
-    setDuration("");
-    setPoster("");
-    setGenre("");
-
-    fetchMovies();
-
-  } catch (err) {
-
-    console.log("Save movie error:", err);
-
-  }
-};
+  };
 
 
 
@@ -137,24 +84,15 @@ const saveMovie = async () => {
 // };
 
 /* DELETE */
-
 const deleteMovie = async () => {
-
   try {
-
-    await axios.delete(
-      `${API_URL}/api/movies/${deleteId}`
-    );
-
+    await API.delete(`/api/movies/${deleteId}`);
     setDeleteId(null);
     fetchMovies();
-
   } catch (err) {
-
     console.log("Delete movie error:", err);
-
+    alert("Error deleting movie: " + (err.response?.data?.message || err.message));
   }
-
 };
 
 

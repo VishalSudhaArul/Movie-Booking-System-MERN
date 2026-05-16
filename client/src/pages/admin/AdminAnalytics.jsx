@@ -1,49 +1,34 @@
-import { useEffect,useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
+import API from "../../api";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import RevenueCharts from "../../components/RevenueCharts";
 
-function AdminAnalytics(){
-
-const [data,setData] = useState({});
-const [startDate,setStartDate] = useState("");
-const [endDate,setEndDate] = useState("");
-
-// useEffect(()=>{
-//  fetchAnalytics();
-// },[]);
-
-// const fetchAnalytics = ()=>{
-//  axios.get("http://localhost:5000/api/analytics",{
-//    params:{startDate,endDate}
-//  })
-//  .then(res=>setData(res.data));
-// };
-
-
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+function AdminAnalytics() {
+  const [data, setData] = useState({});
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
 
   const fetchAnalytics = () => {
-    axios.get(`${API_URL}/api/analytics`, {
-      params: { startDate, endDate }
+    API.get("/api/analytics", {
+      params: { startDate, endDate },
     })
-    .then(res => setData(res.data))
-    .catch(err => console.log("Analytics error:", err));
+      .then((res) => setData(res.data))
+      .catch((err) => console.log("Analytics error:", err));
   };
 
-/* ---------- EXPORT CSV ---------- */
-const exportCSV = () => {
-
-  const rows = data.movieStats.map(m => ({
-    Movie: m.title,
-    Tickets: m.ticketsSold,
-    Revenue: m.ticketRevenue
-  }));
+  /* ---------- EXPORT CSV ---------- */
+  const exportCSV = () => {
+    if (!data.movieStats) return;
+    const rows = data.movieStats.map((m) => ({
+      Movie: m.title,
+      Tickets: m.ticketsSold,
+      Revenue: m.ticketRevenue,
+    }));
 
   const csv = [
     Object.keys(rows[0]).join(","),

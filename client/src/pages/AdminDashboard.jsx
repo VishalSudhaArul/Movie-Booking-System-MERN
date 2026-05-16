@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -11,19 +11,16 @@ function AdminDashboard() {
     totalRevenue: 0
   });
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
   useEffect(() => {
     // Fetch Stats
-    axios
-      .get(`${API_URL}/api/analytics`)
+    API.get("/api/analytics")
       .then((res) => {
         if (res.data && res.data.summary) {
           setStats(res.data.summary);
         }
       })
       .catch((err) => console.log("Dashboard stats fetch error:", err));
-  }, [API_URL]);
+  }, []);
 
   const logoutAdmin = () => {
     localStorage.removeItem("token");

@@ -1,246 +1,104 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../../api";
 
 function AdminShows() {
+  const [movies, setMovies] = useState([]);
+  const [shows, setShows] = useState([]);
 
-  const [movies,setMovies] = useState([]);
-  const [shows,setShows] = useState([]);
+  const [movieId, setMovieId] = useState("");
+  const [theatre, setTheatre] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
 
-  const [movieId,setMovieId] = useState("");
-  const [theatre,setTheatre] = useState("");
-  const [date,setDate] = useState("");
-  const [time,setTime] = useState("");
+  const [balconyPrice, setBalconyPrice] = useState("");
+  const [firstPrice, setFirstPrice] = useState("");
+  const [secondPrice, setSecondPrice] = useState("");
 
-  const [balconyPrice,setBalconyPrice] = useState("");
-  const [firstPrice,setFirstPrice] = useState("");
-  const [secondPrice,setSecondPrice] = useState("");
+  const [editId, setEditId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
 
-  const [editId,setEditId] = useState(null);
-  const [deleteId,setDeleteId] = useState(null);
+  /* ---------- FETCH ---------- */
+  const fetchData = async () => {
+    try {
+      const movieRes = await API.get("/api/movies");
+      const showRes = await API.get("/api/shows");
 
-  const API_URL = process.env.REACT_APP_API_URL;
+      setMovies(movieRes.data);
+      setShows(showRes.data);
+    } catch (err) {
+      console.log("Fetch shows error:", err);
+    }
+  };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-
-//   /* ---------- FETCH ---------- */
-
-//   const fetchData = async () => {
-
-//     const movieRes = await axios.get("http://localhost:5000/api/movies");
-//     const showRes = await axios.get("http://localhost:5000/api/shows");
-
-//     setMovies(movieRes.data);
-//     setShows(showRes.data);
-//   };
-
-//   useEffect(()=>{
-//     fetchData();
-//   },[]);
-
-
-//   /* ---------- SAVE SHOW ---------- */
-
-//   const saveShow = async () => {
-
-//  if (
-//   movieId.trim() === "" ||
-//   theatre.trim() === "" ||
-//   date.trim() === "" ||
-//   time.trim() === "" ||
-//   balconyPrice === "" ||
-//   firstPrice === "" ||
-//   secondPrice === ""
-// ) {
-//   alert("Fill all fields");
-//   return;
-// }
-
-
-//   if(editId){
-
-//     await axios.put(
-//       `http://localhost:5000/api/shows/${editId}`,
-//       {
-//         movieId,
-//         theatre,
-//         date,
-//         time,
-//         balconyPrice,
-//         firstClassPrice: firstPrice,
-//         secondClassPrice: secondPrice
-//       }
-//     );
-
-//     setEditId(null);
-
-//   } else {
-
-//     await axios.post(
-//       "http://localhost:5000/api/shows",
-//       {
-//         movieId,
-//         theatre,
-//         date,
-//         time,
-//         balconyPrice,
-//         firstClassPrice: firstPrice,
-//         secondClassPrice: secondPrice
-//       }
-//     );
-//   }
-
-//   setMovieId("");
-//   setTheatre("");
-//   setDate("");
-//   setTime("");
-//   setBalconyPrice("");
-//   setFirstPrice("");
-//   setSecondPrice("");
-
-//   fetchData();
-// };
-
-
-
-//   /* ---------- RESET FORM ---------- */
-
-//   const resetForm = () => {
-//     setMovieId("");
-//     setTheatre("");
-//     setDate("");
-//     setTime("");
-//     setBalconyPrice("");
-//     setFirstPrice("");
-//     setSecondPrice("");
-//     setEditId(null);
-//   };
-
-
-//   /* ---------- DELETE ---------- */
-
-//   const deleteShow = async () => {
-
-//     await axios.delete(
-//       `http://localhost:5000/api/shows/${deleteId}`
-//     );
-
-//     setDeleteId(null);
-//     fetchData();
-//   };
-
-/* ---------- FETCH ---------- */
-
-const fetchData = async () => {
-
-  try {
-
-    const movieRes = await axios.get(`${API_URL}/api/movies`);
-    const showRes = await axios.get(`${API_URL}/api/shows`);
-
-    setMovies(movieRes.data);
-    setShows(showRes.data);
-
-  } catch (err) {
-    console.log("Fetch shows error:", err);
-  }
-
-};
-
-useEffect(() => {
-  fetchData();
-}, []);
-
-
-
-/* ---------- SAVE SHOW ---------- */
-
-const saveShow = async () => {
-
-  if (
-    movieId.trim() === "" ||
-    theatre.trim() === "" ||
-    date.trim() === "" ||
-    time.trim() === "" ||
-    balconyPrice === "" ||
-    firstPrice === "" ||
-    secondPrice === ""
-  ) {
-    alert("Fill all fields");
-    return;
-  }
-
-  try {
-
-    if (editId) {
-
-      await axios.put(
-        `${API_URL}/api/shows/${editId}`,
-        {
-          movieId,
-          theatre,
-          date,
-          time,
-          balconyPrice,
-          firstClassPrice: firstPrice,
-          secondClassPrice: secondPrice
-        }
-      );
-
-      setEditId(null);
-
-    } else {
-
-      await axios.post(
-        `${API_URL}/api/shows`,
-        {
-          movieId,
-          theatre,
-          date,
-          time,
-          balconyPrice,
-          firstClassPrice: firstPrice,
-          secondClassPrice: secondPrice
-        }
-      );
-
+  /* ---------- SAVE SHOW ---------- */
+  const saveShow = async () => {
+    if (
+      movieId.trim() === "" ||
+      theatre.trim() === "" ||
+      date.trim() === "" ||
+      time.trim() === "" ||
+      balconyPrice === "" ||
+      firstPrice === "" ||
+      secondPrice === ""
+    ) {
+      alert("Fill all fields");
+      return;
     }
 
-    setMovieId("");
-    setTheatre("");
-    setDate("");
-    setTime("");
-    setBalconyPrice("");
-    setFirstPrice("");
-    setSecondPrice("");
+    try {
+      if (editId) {
+        await API.put(`/api/shows/${editId}`, {
+          movieId,
+          theatre,
+          date,
+          time,
+          balconyPrice,
+          firstClassPrice: firstPrice,
+          secondClassPrice: secondPrice,
+        });
+        setEditId(null);
+      } else {
+        await API.post("/api/shows", {
+          movieId,
+          theatre,
+          date,
+          time,
+          balconyPrice,
+          firstClassPrice: firstPrice,
+          secondClassPrice: secondPrice,
+        });
+      }
 
-    fetchData();
+      setMovieId("");
+      setTheatre("");
+      setDate("");
+      setTime("");
+      setBalconyPrice("");
+      setFirstPrice("");
+      setSecondPrice("");
 
-  } catch (err) {
-    console.log("Save show error:", err);
-  }
+      fetchData();
+    } catch (err) {
+      console.log("Save show error:", err);
+      alert("Error saving show: " + (err.response?.data?.message || err.message));
+    }
+  };
 
-};
-
-
-
-/* ---------- DELETE ---------- */
-
-const deleteShow = async () => {
-
-  try {
-
-    await axios.delete(
-      `${API_URL}/api/shows/${deleteId}`
-    );
-
-    setDeleteId(null);
-    fetchData();
-
-  } catch (err) {
-    console.log("Delete show error:", err);
-  }
-
-};
+  /* ---------- DELETE ---------- */
+  const deleteShow = async () => {
+    try {
+      await API.delete(`/api/shows/${deleteId}`);
+      setDeleteId(null);
+      fetchData();
+    } catch (err) {
+      console.log("Delete show error:", err);
+      alert("Error deleting show: " + (err.response?.data?.message || err.message));
+    }
+  };
 
 
 
