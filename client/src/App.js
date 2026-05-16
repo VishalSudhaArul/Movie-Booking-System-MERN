@@ -19,6 +19,13 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminScan from "./pages/AdminScan";
 import Scanner from "./pages/Scanner";
 
+// ── Admin Sub-pages ──
+import AdminMovies from "./pages/admin/AdminMovies";
+import AdminShows from "./pages/admin/AdminShows";
+import AdminSnacks from "./pages/admin/AdminSnacks";
+import AdminParking from "./pages/admin/AdminParking";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+
 function App() {
   return (
     <Router>
@@ -87,6 +94,46 @@ function App() {
           element={
             <AdminGate>
               <AdminDashboard />
+            </AdminGate>
+          }
+        />
+        <Route
+          path="/admin/movies"
+          element={
+            <AdminGate>
+              <AdminMovies />
+            </AdminGate>
+          }
+        />
+        <Route
+          path="/admin/shows"
+          element={
+            <AdminGate>
+              <AdminShows />
+            </AdminGate>
+          }
+        />
+        <Route
+          path="/admin/snacks"
+          element={
+            <AdminGate>
+              <AdminSnacks />
+            </AdminGate>
+          }
+        />
+        <Route
+          path="/admin/parking"
+          element={
+            <AdminGate>
+              <AdminParking />
+            </AdminGate>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <AdminGate>
+              <AdminAnalytics />
             </AdminGate>
           }
         />

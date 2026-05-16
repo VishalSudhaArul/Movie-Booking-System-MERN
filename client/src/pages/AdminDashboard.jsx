@@ -14,11 +14,6 @@ function AdminDashboard() {
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || (user.role !== "admin" && user.role !== "theaterOwner")) {
-      navigate("/");
-    }
-
     // Fetch Stats
     axios
       .get(`${API_URL}/api/analytics`)
@@ -28,7 +23,7 @@ function AdminDashboard() {
         }
       })
       .catch((err) => console.log("Dashboard stats fetch error:", err));
-  }, [navigate, API_URL]);
+  }, [API_URL]);
 
   const logoutAdmin = () => {
     localStorage.removeItem("token");
