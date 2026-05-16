@@ -422,11 +422,13 @@ function AddOns() {
   };
 
 
-  /* ---------- Calculate Total ---------- */
-
   const calculateTotal = () => {
+    if (!show) return 0;
 
-    const seatTotal = selectedSeats.length * 200;
+    // Calculate actual seat total based on the selected seat numbers and their prices in the show data
+    const seatTotal = show.seats
+      .filter((s) => selectedSeats.includes(s.seatNumber))
+      .reduce((acc, s) => acc + s.price, 0);
 
     const snackTotal = selectedSnacks.reduce(
       (acc, s) => acc + s.price * s.qty,
@@ -436,7 +438,6 @@ function AddOns() {
     const parkingTotal = selectedParking?.price || 0;
 
     return seatTotal + snackTotal + parkingTotal;
-
   };
 
 
