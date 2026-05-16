@@ -1,101 +1,3 @@
-// require("dotenv").config();
-
-// const express = require("express");
-// const cors = require("cors");
-// const connectDB = require("./config/db");
-
-// const app = express();
-
-
-// // ✅ Connect Database
-// connectDB();
-
-
-// app.use(express.json());
-
-// const allowedOrigins = [
-//   "http://localhost:3000",
-//   "https://movie-booking-system-mern-fawn.vercel.app",
-//   "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
-// ];
-
-// // app.use(
-// //   cors({
-// //     origin: function (origin, callback) {
-// //       if (!origin || allowedOrigins.includes(origin)) {
-// //         callback(null, true);
-// //       } else {
-// //         callback(new Error("Not allowed by CORS"));
-// //       }
-// //     },
-// //     credentials: true
-// //   })
-// // );
-
-// //const cors = require("cors");
-
-// // app.use(
-// //   cors({
-// //     origin: [
-// //       "http://localhost:3000",
-// //       "https://movie-booking-system-mern-fawn.vercel.app",
-// //       "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
-// //     ],
-// //     methods: ["GET", "POST", "PUT", "DELETE"],
-// //     credentials: true
-// //   })
-// // );
-
-// app.use(
-//   cors({
-//     origin: [
-//       "http://localhost:3000",
-//       "https://movie-booking-system-mern-fawn.vercel.app"
-//     ],
-//     methods: ["GET", "POST", "PUT", "DELETE"],
-//     credentials: true
-//   })
-// );
-
-
-
-
-
-
-// // ✅ Routes
-// app.use("/api/auth", require("./routes/authRoutes"));
-// app.use("/api/movies", require("./routes/movieRoutes"));
-// app.use("/api/shows", require("./routes/showRoutes"));
-// app.use("/api/bookings", require("./routes/bookingRoutes"));
-// app.use("/api/snacks", require("./routes/snackRoutes"));
-// app.use("/api/parking", require("./routes/parkingRoutes"));
-// app.use("/api/users", require("./routes/userRoutes"));
-// app.use("/api/analytics", require("./routes/analyticsRoutes"));
-
-
-
-// // ✅ Test Route
-// app.get("/", (req, res) => {
-//     res.send("API Running");
-// });
-
-
-// // ✅ Server Port
-// const PORT = process.env.PORT || 5000;
-
-// app.listen(PORT, "0.0.0.0", () => {
-//   console.log(`Server running on ${PORT}`);
-// });
-
-
-
-
-
-
-
-
-
-
 require("dotenv").config();
 
 const express = require("express");
@@ -104,43 +6,71 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-// Connect DB
+// ── Connect to MongoDB ────────────────────────────────────────────────────
 connectDB();
 
-// Middleware
-//const cors = require("cors");
-
+// ── CORS ──────────────────────────────────────────────────────────────────
+// Allows localhost in dev + all Vercel preview/production deployments
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://movie-booking-system-mern-fawn.vercel.app",
-      "https://movie-booking-system-mern-git-main-vishals-projects-addcb1c7.vercel.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    origin: function (origin, callback) {
+      const allowedExact = [
+        "http://localhost:3000",
+        "https://movie-booking-system-mern-fawn.vercel.app",
+      ];
+
+      // Allow requests with no origin (mobile apps, Postman, curl)
+      if (!origin) return callback(null, true);
+
+      // Allow exact matches or any *.vercel.app preview URL
+      if (
+        allowedExact.includes(origin) ||
+        origin.endsWith(".vercel.app")
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
+
+// ── Body Parser ───────────────────────────────────────────────────────────
 app.use(express.json());
 
-// Routes
-app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/movies", require("./routes/movieRoutes"));
-app.use("/api/shows", require("./routes/showRoutes"));
-app.use("/api/bookings", require("./routes/bookingRoutes"));
-app.use("/api/snacks", require("./routes/snackRoutes"));
-app.use("/api/parking", require("./routes/parkingRoutes"));
-app.use("/api/users", require("./routes/userRoutes"));
-app.use("/api/analytics", require("./routes/analyticsRoutes"));
-
-// Test route
+// ── Health Check ─────────────────────────────────────────────────────────
 app.get("/", (req, res) => {
-  res.send("API Running");
+  res.json({ status: "ok", message: "CineBook API is running 🎬" });
 });
 
-// Port
-const PORT = process.env.PORT || 5000;
+// ── API Routes ────────────────────────────────────────────────────────────
+app.use("/api/auth",      require("./routes/authRoutes"));
+app.use("/api/movies",    require("./routes/movieRoutes"));
+app.use("/api/shows",     require("./routes/showRoutes"));
+app.use("/api/bookings",  require("./routes/bookingRoutes"));
+app.use("/api/snacks",    require("./routes/snackRoutes"));
+app.use("/api/parking",   require("./routes/parkingRoutes"));
+app.use("/api/users",     require("./routes/userRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
 
-app.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
+// ── 404 Handler ───────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
+
+// ── Global Error Handler ──────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error("Server Error:", err.message);
+  res.status(err.status || 500).json({
+    message: err.message || "Internal Server Error",
+  });
+});
+
+// ── Start Server ──────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });

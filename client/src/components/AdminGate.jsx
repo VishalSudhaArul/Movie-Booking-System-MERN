@@ -1,58 +1,22 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
-function AdminGate() {
+/**
+ * AdminGate — wraps admin-only pages.
+ * Redirects non-admin users to the home page.
+ */
+function AdminGate({ children }) {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
 
-  const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
 
-  const ADMIN_PASSWORD = "123456";
+  if (role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
 
-  const handleAccess = () => {
-
-    if (password === ADMIN_PASSWORD) {
-
-      sessionStorage.setItem("admin", "true");
-
-      navigate("/admin/dashboard");
-
-    } else {
-
-      alert("❌ Incorrect Admin Password");
-
-    }
-
-  };
-
-  return (
-
-    <div className="bg-black min-h-screen flex items-center justify-center text-white">
-
-      <div className="bg-[#111827] p-8 rounded-2xl shadow-xl w-80">
-
-        <h1 className="text-2xl font-bold text-center mb-6">
-          🔐 Admin Access
-        </h1>
-
-        <input
-          type="password"
-          placeholder="Enter Admin Password"
-          className="w-full p-3 rounded bg-black border border-gray-700 mb-4"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button
-          onClick={handleAccess}
-          className="bg-red-600 hover:bg-red-700 transition w-full py-2 rounded"
-        >
-          Enter Admin Panel
-        </button>
-
-      </div>
-
-    </div>
-
-  );
+  return children;
 }
 
 export default AdminGate;

@@ -1,214 +1,120 @@
-// import { useState } from "react";
-// import axios from "axios";
-// import { useNavigate, useLocation, Link } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import API from "../api";
 
-// function Login() {
-
-//   const [email, setEmail] = useState("");
-//   const [loading, setLoading] = useState(false);
-
-//   const navigate = useNavigate();
-//   const location = useLocation();
-
-//   const API_URL =
-//     process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-//   const handleLogin = async () => {
-
-//     try {
-
-//       setLoading(true);
-
-//       const res = await axios.post(`${API_URL}/api/users/login`, {
-//         email
-//       });
-
-//       localStorage.setItem("userId", res.data._id);
-//       localStorage.setItem("user", JSON.stringify(res.data));
-
-//       const redirectTo = location.state?.redirectTo || "/";
-//       navigate(redirectTo);
-
-//     } catch {
-
-//       alert("User not found");
-
-//     } finally {
-
-//       setLoading(false);
-
-//     }
-
-//   };
-
-
-//   return (
-
-//     <div className="min-h-screen flex items-center justify-center bg-[#0B0B0F] text-white">
-
-//       <div className="bg-[#111118] border border-white/10 p-10 rounded-3xl w-[380px] shadow-2xl">
-
-//         <h1 className="text-3xl font-bold mb-6 text-center">
-//           Login
-//         </h1>
-
-//         <input
-//           placeholder="Enter Email"
-//           className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20 focus:border-red-500 outline-none"
-//           onChange={(e) => setEmail(e.target.value)}
-//         />
-
-//         <button
-//           onClick={handleLogin}
-//           className="w-full bg-red-600 py-3 rounded-xl hover:bg-red-700 transition"
-//         >
-//           {loading ? "Logging in..." : "Login"}
-//         </button>
-
-
-//         <div className="text-center my-4 text-gray-400">
-//           OR
-//         </div>
-
-
-//         {/* Google Login Button */}
-
-//         <button className="flex items-center justify-center gap-3 w-full bg-white text-black py-3 rounded-xl hover:opacity-90">
-
-//           <img
-//             src="https://cdn-icons-png.flaticon.com/512/281/281764.png"
-//             alt="google"
-//             className="w-5"
-//           />
-
-//           Continue with Google
-
-//         </button>
-
-
-//         <p className="text-sm text-center mt-6 text-gray-400">
-
-//           Don't have account?{" "}
-
-//           <Link to="/register" className="text-red-500 hover:underline">
-//             Register
-//           </Link>
-
-//         </p>
-
-//       </div>
-
-//     </div>
-
-//   );
-
-// }
-
-// export default Login;
-
-
-
-
-
-
-
-
-
-
-import { useState } from "react";
-import axios from "axios";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-
-function Login() {
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function Login() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-  const location = useLocation();
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
-  const API_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-  const handleLogin = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
     try {
-      setLoading(true);
-
-      const res = await axios.post(`${API_URL}/api/auth/login`, {
-        email,
-        password
-      });
-
-      // ✅ store token + user
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data));
-
-      const redirectTo = location.state?.redirectTo || "/";
-      navigate(redirectTo);
-
+      const { data } = await API.post("/api/auth/login", form);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("userId", data._id);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("userName", data.name);
+      navigate("/");
     } catch (err) {
-      console.log(err.response?.data);
-      alert(err.response?.data?.message || "Login failed");
+      setError(
+        err.response?.data?.message || "Login failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B0B0F] text-white">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        {/* Card */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-600 rounded-full mb-4">
+              <span className="text-3xl">🎬</span>
+            </div>
+            <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
+            <p className="text-gray-400 mt-2">Sign in to your account</p>
+          </div>
 
-      <div className="bg-[#111118] border border-white/10 p-10 rounded-3xl w-[380px] shadow-2xl">
+          {/* Error */}
+          {error && (
+            <div className="bg-red-900/40 border border-red-600 text-red-300 rounded-lg px-4 py-3 mb-6 text-sm">
+              {error}
+            </div>
+          )}
 
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          Login
-        </h1>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                placeholder="you@example.com"
+                className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition placeholder-gray-500"
+              />
+            </div>
 
-        <input
-          type="email"
-          placeholder="Enter Email"
-          className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20 focus:border-red-500 outline-none"
-          onChange={(e) => setEmail(e.target.value)}
-        />
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+                className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition placeholder-gray-500"
+              />
+            </div>
 
-        <input
-          type="password"
-          placeholder="Enter Password"
-          className="w-full p-3 mb-4 rounded-xl bg-black border border-white/20 focus:border-red-500 outline-none"
-          onChange={(e) => setPassword(e.target.value)}
-        />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
 
-        <button
-          onClick={handleLogin}
-          className="w-full bg-red-600 py-3 rounded-xl hover:bg-red-700 transition"
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
-
-        <div className="text-center my-4 text-gray-400">
-          OR
+          {/* Footer */}
+          <p className="text-center text-gray-400 mt-6 text-sm">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="text-red-500 hover:text-red-400 font-semibold transition"
+            >
+              Register here
+            </Link>
+          </p>
         </div>
-
-        <button className="flex items-center justify-center gap-3 w-full bg-white text-black py-3 rounded-xl hover:opacity-90">
-          <img
-            src="https://cdn-icons-png.flaticon.com/512/281/281764.png"
-            alt="google"
-            className="w-5"
-          />
-          Continue with Google
-        </button>
-
-        <p className="text-sm text-center mt-6 text-gray-400">
-          Don't have account?{" "}
-          <Link to="/register" className="text-red-500 hover:underline">
-            Register
-          </Link>
-        </p>
-
       </div>
-
     </div>
   );
 }
-
-export default Login;

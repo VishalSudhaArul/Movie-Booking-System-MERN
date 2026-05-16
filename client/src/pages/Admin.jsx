@@ -1,621 +1,218 @@
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-// function Admin() {
-
-//   const [movies, setMovies] = useState([]);
-
-//   const [movie, setMovie] = useState({
-//     title: "",
-//     description: "",
-//     duration: "",
-//     poster: "",
-//     genre: ""
-//   });
-
-//   const [show, setShow] = useState({
-//     movieId: "",
-//     theatre: "",
-//     date: "",
-//     time: ""
-//   });
-
-//   // 🔹 Load movies
-//   useEffect(() => {
-//     axios.get("http://localhost:5000/api/movies")
-//       .then(res => setMovies(res.data));
-//   }, []);
-
-//   const handleMovieChange = (e) => {
-//     setMovie({ ...movie, [e.target.name]: e.target.value });
-//   };
-
-//   const handleShowChange = (e) => {
-//     setShow({ ...show, [e.target.name]: e.target.value });
-//   };
-
-//   const addMovie = () => {
-//     axios.post("http://localhost:5000/api/movies", movie)
-//       .then(() => {
-//         alert("🎬 Movie Added");
-//         return axios.get("http://localhost:5000/api/movies");
-//       })
-//       .then(res => setMovies(res.data));
-//   };
-
-//   const addShow = () => {
-//     axios.post("http://localhost:5000/api/shows", show)
-//       .then(() => alert("🎭 Show Added"));
-//   };
-
-//   // 🔥 DELETE MOVIE
-//   const deleteMovie = (id) => {
-//     axios.delete(`http://localhost:5000/api/movies/${id}`)
-//       .then(() => {
-//         setMovies(movies.filter(movie => movie._id !== id));
-//       });
-//   };
-
-//   return (
-//     <div className="bg-black min-h-screen text-white p-10">
-
-//       <h1 className="text-3xl font-bold mb-10 text-center">
-//         Admin Dashboard
-//       </h1>
-
-//       {/* ===== FORMS ===== */}
-//       <div className="grid grid-cols-2 gap-10">
-
-//         {/* 🎬 Add Movie */}
-//         <div className="bg-gray-900 p-6 rounded-xl shadow-lg">
-//           <h2 className="text-xl font-semibold mb-6">Add Movie</h2>
-
-//           <div className="space-y-4">
-//             <input name="title" placeholder="Movie Title" onChange={handleMovieChange} className="w-full p-2 rounded bg-gray-800" />
-//             <input name="description" placeholder="Description" onChange={handleMovieChange} className="w-full p-2 rounded bg-gray-800" />
-//             <input name="duration" placeholder="Duration" onChange={handleMovieChange} className="w-full p-2 rounded bg-gray-800" />
-//             <input name="poster" placeholder="Poster URL" onChange={handleMovieChange} className="w-full p-2 rounded bg-gray-800" />
-//             <input name="genre" placeholder="Genre" onChange={handleMovieChange} className="w-full p-2 rounded bg-gray-800" />
-
-//             <button onClick={addMovie} className="bg-red-600 px-4 py-2 rounded hover:bg-red-700 w-full">
-//               Add Movie
-//             </button>
-//           </div>
-//         </div>
-
-//         {/* 🎭 Add Show */}
-//         <div className="bg-gray-900 p-6 rounded-xl shadow-lg">
-//           <h2 className="text-xl font-semibold mb-6">Add Show</h2>
-
-//           <div className="space-y-4">
-//             <select name="movieId" onChange={handleShowChange} className="w-full p-2 rounded bg-gray-800">
-//               <option>Select Movie</option>
-//               {movies.map(m => (
-//                 <option key={m._id} value={m._id}>{m.title}</option>
-//               ))}
-//             </select>
-
-//             <input name="theatre" placeholder="Theatre Name" onChange={handleShowChange} className="w-full p-2 rounded bg-gray-800" />
-//             <input type="date" name="date" onChange={handleShowChange} className="w-full p-2 rounded bg-gray-800" />
-//             <input name="time" placeholder="Show Time" onChange={handleShowChange} className="w-full p-2 rounded bg-gray-800" />
-
-//             <button onClick={addShow} className="bg-green-600 px-4 py-2 rounded hover:bg-green-700 w-full">
-//               Add Show
-//             </button>
-//           </div>
-//         </div>
-
-//       </div>
-
-//       {/* ===== MOVIE TABLE ===== */}
-//       <div className="bg-gray-900 p-6 rounded-xl shadow-lg mt-12">
-//         <h2 className="text-xl font-semibold mb-4">Movie List</h2>
-
-//         <table className="w-full text-left">
-//           <thead>
-//             <tr className="border-b border-gray-700 text-gray-400">
-//               <th className="p-2">Title</th>
-//               <th className="p-2">Genre</th>
-//               <th className="p-2">Action</th>
-//             </tr>
-//           </thead>
-
-//           <tbody>
-//             {movies.map(movie => (
-//               <tr key={movie._id} className="border-b border-gray-800">
-//                 <td className="p-2">{movie.title}</td>
-//                 <td className="p-2">{movie.genre}</td>
-//                 <td className="p-2">
-//                   <button
-//                     onClick={() => deleteMovie(movie._id)}
-//                     className="bg-red-600 px-3 py-1 rounded hover:bg-red-700"
-//                   >
-//                     Delete
-//                   </button>
-//                 </td>
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-
-//       </div>
-
-//     </div>
-//   );
-// }
-
-// export default Admin;
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-
-
-// function Admin() {
-
-//   const [movies, setMovies] = useState([]);
-//   const [shows, setShows] = useState([]);
-
-//   const [movie, setMovie] = useState({
-//     title: "",
-//     description: "",
-//     duration: "",
-//     poster: "",
-//     genre: ""
-//   });
-
-//   const [show, setShow] = useState({
-//     movieId: "",
-//     theatre: "",
-//     date: "",
-//     time: ""
-//   });
-// uction)
-// const API_URL =
-//   process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-
-// // 🔹 Load movies & shows
-// useEffect(() => {
-
-//   axios.get(`${API_URL}/api/movies`)
-//     .then(res => setMovies(res.data))
-//     .catch(err => console.log("Fetch movies error:", err));
-
-//   axios.get(`${API_URL}/api/shows`)
-//     .then(res => setShows(res.data))
-//     .catch(err => console.log("Fetch shows error:", err));
-
-// }, []);
-
-
-// // 🔹 Input Handlers
-// const handleMovieChange = (e) => {
-//   setMovie({ ...movie, [e.target.name]: e.target.value });
-// };
-
-// const handleShowChange = (e) => {
-//   setShow({ ...show, [e.target.name]: e.target.value });
-// };
-
-
-// // 🔹 Add Movie
-// const addMovie = () => {
-
-//   axios.post(`${API_URL}/api/movies`, movie)
-//     .then(() => axios.get(`${API_URL}/api/movies`))
-//     .then(res => setMovies(res.data))
-//     .catch(err => console.log("Add movie error:", err));
-
-// };
-
-
-// // 🔹 Add Show
-// const addShow = () => {
-
-//   axios.post(`${API_URL}/api/shows`, show)
-//     .then(() => axios.get(`${API_URL}/api/shows`))
-//     .then(res => setShows(res.data))
-//     .catch(err => console.log("Add show error:", err));
-
-// };
-
-
-// // 🔹 Delete Movie
-// const deleteMovie = (id) => {
-
-//   axios.delete(`${API_URL}/api/movies/${id}`)
-//     .then(() => setMovies(movies.filter(m => m._id !== id)))
-//     .catch(err => console.log("Delete movie error:", err));
-
-// };
-
-
-// // 🔹 Delete Show
-// const deleteShow = (id) => {
-
-//   axios.delete(`${API_URL}/api/shows/${id}`)
-//     .then(() => setShows(shows.filter(s => s._id !== id)))
-//     .catch(err => console.log("Delete show error:", err));
-
-// };
-
-
-
-
-
-//   return (
-//     <div className="bg-black min-h-screen text-white p-10">
-
-//       <h1 className="text-3xl font-bold mb-10 text-center">
-//         Admin Dashboard
-//       </h1>
-
-//       {/* ===== FORMS ===== */}
-//       <div className="grid grid-cols-2 gap-10">
-
-//         {/* Add Movie */}
-//         <div className="bg-gray-900 p-6 rounded-xl">
-//           <h2 className="text-xl mb-4">Add Movie</h2>
-//           <input name="title" placeholder="Title" onChange={handleMovieChange} className="w-full mb-2 p-2 bg-gray-800 rounded" />
-//           <input name="description" placeholder="Description" onChange={handleMovieChange} className="w-full mb-2 p-2 bg-gray-800 rounded" />
-//           <input name="duration" placeholder="Duration" onChange={handleMovieChange} className="w-full mb-2 p-2 bg-gray-800 rounded" />
-//           <input name="poster" placeholder="Poster URL" onChange={handleMovieChange} className="w-full mb-2 p-2 bg-gray-800 rounded" />
-//           <input name="genre" placeholder="Genre" onChange={handleMovieChange} className="w-full mb-4 p-2 bg-gray-800 rounded" />
-//           <button onClick={addMovie} className="bg-red-600 w-full py-2 rounded">Add Movie</button>
-//         </div>
-
-//         {/* Add Show */}
-//         <div className="bg-gray-900 p-6 rounded-xl">
-//           <h2 className="text-xl mb-4">Add Show</h2>
-//           <select name="movieId" onChange={handleShowChange} className="w-full mb-2 p-2 bg-gray-800 rounded">
-//             <option>Select Movie</option>
-//             {movies.map(m => <option key={m._id} value={m._id}>{m.title}</option>)}
-//           </select>
-//           <input name="theatre" placeholder="Theatre" onChange={handleShowChange} className="w-full mb-2 p-2 bg-gray-800 rounded" />
-//           <input type="date" name="date" onChange={handleShowChange} className="w-full mb-2 p-2 bg-gray-800 rounded" />
-//           <input name="time" placeholder="Time" onChange={handleShowChange} className="w-full mb-4 p-2 bg-gray-800 rounded" />
-//           <button onClick={addShow} className="bg-green-600 w-full py-2 rounded">Add Show</button>
-//         </div>
-
-//       </div>
-
-//       {/* ===== MOVIE TABLE ===== */}
-//       <div className="bg-gray-900 p-6 rounded-xl mt-12">
-//         <h2 className="text-xl mb-4">Movies</h2>
-//         {movies.map(m => (
-//           <div key={m._id} className="flex justify-between border-b border-gray-800 py-2">
-//             <span>{m.title}</span>
-//             <button onClick={() => deleteMovie(m._id)} className="bg-red-600 px-3 py-1 rounded">Delete</button>
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* ===== SHOW TABLE ===== */}
-//       <div className="bg-gray-900 p-6 rounded-xl mt-12">
-//         <h2 className="text-xl mb-4">Shows</h2>
-//         {shows.map(s => (
-//           <div key={s._id} className="flex justify-between border-b border-gray-800 py-2">
-//             <span>
-//               {s.theatre} — {s.date} — {s.time}
-//             </span>
-//             <button onClick={() => deleteShow(s._id)} className="bg-red-600 px-3 py-1 rounded">Delete</button>
-//           </div>
-//         ))}
-//       </div>
-
-//     </div>
-//   );
-// }
-
-// export default Admin;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { useEffect, useState } from "react";
-import axios from "axios";
-const user = JSON.parse(localStorage.getItem("user"));
+import API from "../api";
 
-if(!user){
-  window.location.href = "/login";
-}
-
-if(user?.role !== "admin" && user?.role !== "theaterOwner"){
-  return (
-    <h1 className="text-white text-center mt-20 text-3xl">
-      Access Denied
-    </h1>
-  );
-}
-function Admin() {
-
+export default function Admin() {
   const [movies, setMovies] = useState([]);
   const [shows, setShows] = useState([]);
+  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [movie, setMovie] = useState({
     title: "",
     description: "",
     duration: "",
     poster: "",
-    genre: ""
+    genre: "",
   });
 
   const [show, setShow] = useState({
     movieId: "",
     theatre: "",
     date: "",
-    time: ""
+    time: "",
+    balconyPrice: 350,
+    firstClassPrice: 250,
+    secondClassPrice: 150,
   });
 
-  const API_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-  const token = localStorage.getItem("token");
-
-  const user = JSON.parse(localStorage.getItem("user"));
-
-  // 🔒 Protect admin page
-  if(user?.role !== "admin" && user?.role !== "theaterOwner"){
-    return (
-      <h1 className="text-white text-center mt-20 text-3xl">
-        Access Denied
-      </h1>
-    );
-  }
-
-  // 🔹 Load movies & shows
+  // ── Load data ───────────────────────────────────────────────────────────
   useEffect(() => {
-
-    axios.get(`${API_URL}/api/movies`)
-      .then(res => setMovies(res.data))
-      .catch(err => console.log("Fetch movies error:", err));
-
-    axios.get(`${API_URL}/api/shows`)
-      .then(res => setShows(res.data))
-      .catch(err => console.log("Fetch shows error:", err));
-
+    API.get("/api/movies").then((res) => setMovies(res.data)).catch(console.error);
+    API.get("/api/shows").then((res) => setShows(res.data)).catch(console.error);
   }, []);
 
-
-  // 🔹 Input Handlers
-  const handleMovieChange = (e) => {
-    setMovie({ ...movie, [e.target.name]: e.target.value });
+  const flash = (text) => {
+    setMsg(text);
+    setTimeout(() => setMsg(""), 3000);
   };
 
-  const handleShowChange = (e) => {
-    setShow({ ...show, [e.target.name]: e.target.value });
+  // ── Add Movie ───────────────────────────────────────────────────────────
+  const addMovie = async () => {
+    if (!movie.title || !movie.poster) return flash("Title and Poster URL are required.");
+    setLoading(true);
+    try {
+      await API.post("/api/movies", movie);
+      const { data } = await API.get("/api/movies");
+      setMovies(data);
+      setMovie({ title: "", description: "", duration: "", poster: "", genre: "" });
+      flash("✅ Movie added successfully!");
+    } catch (err) {
+      flash("❌ " + (err.response?.data?.message || "Failed to add movie"));
+    } finally {
+      setLoading(false);
+    }
   };
 
-
-  // 🔹 Add Movie
-  const addMovie = () => {
-
-    axios.post(`${API_URL}/api/movies`, movie,{
-      headers:{
-        Authorization:`Bearer ${token}`
-      }
-    })
-    .then(() => axios.get(`${API_URL}/api/movies`))
-    .then(res => setMovies(res.data))
-    .catch(err => console.log("Add movie error:", err));
-
+  // ── Add Show ────────────────────────────────────────────────────────────
+  const addShow = async () => {
+    if (!show.movieId || !show.theatre || !show.date || !show.time) {
+      return flash("All show fields are required.");
+    }
+    setLoading(true);
+    try {
+      await API.post("/api/shows", show);
+      const { data } = await API.get("/api/shows");
+      setShows(data);
+      setShow({ movieId: "", theatre: "", date: "", time: "", balconyPrice: 350, firstClassPrice: 250, secondClassPrice: 150 });
+      flash("✅ Show added successfully!");
+    } catch (err) {
+      flash("❌ " + (err.response?.data?.message || "Failed to add show"));
+    } finally {
+      setLoading(false);
+    }
   };
 
-
-  // 🔹 Add Show
-  const addShow = () => {
-
-    axios.post(`${API_URL}/api/shows`, show,{
-      headers:{
-        Authorization:`Bearer ${token}`
-      }
-    })
-    .then(() => axios.get(`${API_URL}/api/shows`))
-    .then(res => setShows(res.data))
-    .catch(err => console.log("Add show error:", err));
-
+  // ── Delete Movie ────────────────────────────────────────────────────────
+  const deleteMovie = async (id) => {
+    if (!window.confirm("Delete this movie?")) return;
+    try {
+      await API.delete(`/api/movies/${id}`);
+      setMovies((prev) => prev.filter((m) => m._id !== id));
+      flash("Movie deleted.");
+    } catch {
+      flash("Failed to delete movie.");
+    }
   };
 
-
-  // 🔹 Delete Movie
-  const deleteMovie = (id) => {
-
-    axios.delete(`${API_URL}/api/movies/${id}`,{
-      headers:{
-        Authorization:`Bearer ${token}`
-      }
-    })
-    .then(() => setMovies(movies.filter(m => m._id !== id)))
-    .catch(err => console.log("Delete movie error:", err));
-
+  // ── Delete Show ─────────────────────────────────────────────────────────
+  const deleteShow = async (id) => {
+    if (!window.confirm("Delete this show?")) return;
+    try {
+      await API.delete(`/api/shows/${id}`);
+      setShows((prev) => prev.filter((s) => s._id !== id));
+      flash("Show deleted.");
+    } catch {
+      flash("Failed to delete show.");
+    }
   };
 
-
-  // 🔹 Delete Show
-  const deleteShow = (id) => {
-
-    axios.delete(`${API_URL}/api/shows/${id}`,{
-      headers:{
-        Authorization:`Bearer ${token}`
-      }
-    })
-    .then(() => setShows(shows.filter(s => s._id !== id)))
-    .catch(err => console.log("Delete show error:", err));
-
-  };
-
-
+  const inputCls = "w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500 placeholder-gray-500";
 
   return (
-    <div className="bg-black min-h-screen text-white p-10">
+    <div className="min-h-screen bg-gray-950 text-white p-6 md:p-10">
+      <h1 className="text-3xl font-bold mb-2 text-center">🎬 Admin Dashboard</h1>
+      <p className="text-center text-gray-400 mb-8">Manage movies and shows</p>
 
-      <h1 className="text-3xl font-bold mb-10 text-center">
-        Admin Dashboard
-      </h1>
+      {/* Flash Message */}
+      {msg && (
+        <div className="max-w-5xl mx-auto mb-6 bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 text-sm text-center">
+          {msg}
+        </div>
+      )}
 
-      {/* ===== FORMS ===== */}
-      <div className="grid grid-cols-2 gap-10">
+      {/* ── Forms ── */}
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
 
         {/* Add Movie */}
-        <div className="bg-gray-900 p-6 rounded-xl">
-          <h2 className="text-xl mb-4">Add Movie</h2>
-
-          <input name="title" placeholder="Title"
-            onChange={handleMovieChange}
-            className="w-full mb-2 p-2 bg-gray-800 rounded"
-          />
-
-          <input name="description" placeholder="Description"
-            onChange={handleMovieChange}
-            className="w-full mb-2 p-2 bg-gray-800 rounded"
-          />
-
-          <input name="duration" placeholder="Duration"
-            onChange={handleMovieChange}
-            className="w-full mb-2 p-2 bg-gray-800 rounded"
-          />
-
-          <input name="poster" placeholder="Poster URL"
-            onChange={handleMovieChange}
-            className="w-full mb-2 p-2 bg-gray-800 rounded"
-          />
-
-          <input name="genre" placeholder="Genre"
-            onChange={handleMovieChange}
-            className="w-full mb-4 p-2 bg-gray-800 rounded"
-          />
-
-          <button
-            onClick={addMovie}
-            className="bg-red-600 w-full py-2 rounded"
-          >
-            Add Movie
-          </button>
+        <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
+          <h2 className="text-xl font-semibold mb-5 text-red-400">➕ Add Movie</h2>
+          <div className="space-y-3">
+            <input name="title" placeholder="Movie Title" value={movie.title}
+              onChange={(e) => setMovie({ ...movie, title: e.target.value })} className={inputCls} />
+            <input name="description" placeholder="Description" value={movie.description}
+              onChange={(e) => setMovie({ ...movie, description: e.target.value })} className={inputCls} />
+            <input name="duration" placeholder="Duration (e.g. 2h 30m)" value={movie.duration}
+              onChange={(e) => setMovie({ ...movie, duration: e.target.value })} className={inputCls} />
+            <input name="poster" placeholder="Poster Image URL" value={movie.poster}
+              onChange={(e) => setMovie({ ...movie, poster: e.target.value })} className={inputCls} />
+            <input name="genre" placeholder="Genre (e.g. Action, Drama)" value={movie.genre}
+              onChange={(e) => setMovie({ ...movie, genre: e.target.value })} className={inputCls} />
+            <button onClick={addMovie} disabled={loading}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-700 text-white font-semibold py-2.5 rounded-lg transition">
+              {loading ? "Adding..." : "Add Movie"}
+            </button>
+          </div>
         </div>
-
 
         {/* Add Show */}
-        <div className="bg-gray-900 p-6 rounded-xl">
-          <h2 className="text-xl mb-4">Add Show</h2>
-
-          <select name="movieId"
-            onChange={handleShowChange}
-            className="w-full mb-2 p-2 bg-gray-800 rounded"
-          >
-            <option>Select Movie</option>
-
-            {movies.map(m => (
-              <option key={m._id} value={m._id}>
-                {m.title}
-              </option>
-            ))}
-
-          </select>
-
-          <input name="theatre"
-            placeholder="Theatre"
-            onChange={handleShowChange}
-            className="w-full mb-2 p-2 bg-gray-800 rounded"
-          />
-
-          <input type="date"
-            name="date"
-            onChange={handleShowChange}
-            className="w-full mb-2 p-2 bg-gray-800 rounded"
-          />
-
-          <input name="time"
-            placeholder="Time"
-            onChange={handleShowChange}
-            className="w-full mb-4 p-2 bg-gray-800 rounded"
-          />
-
-          <button
-            onClick={addShow}
-            className="bg-green-600 w-full py-2 rounded"
-          >
-            Add Show
-          </button>
+        <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
+          <h2 className="text-xl font-semibold mb-5 text-green-400">➕ Add Show</h2>
+          <div className="space-y-3">
+            <select name="movieId" value={show.movieId}
+              onChange={(e) => setShow({ ...show, movieId: e.target.value })} className={inputCls}>
+              <option value="">Select Movie</option>
+              {movies.map((m) => <option key={m._id} value={m._id}>{m.title}</option>)}
+            </select>
+            <input name="theatre" placeholder="Theatre Name" value={show.theatre}
+              onChange={(e) => setShow({ ...show, theatre: e.target.value })} className={inputCls} />
+            <input type="date" name="date" value={show.date}
+              onChange={(e) => setShow({ ...show, date: e.target.value })} className={inputCls} />
+            <input name="time" placeholder="Show Time (e.g. 7:00 PM)" value={show.time}
+              onChange={(e) => setShow({ ...show, time: e.target.value })} className={inputCls} />
+            <div className="grid grid-cols-3 gap-2">
+              <input type="number" placeholder="Balcony ₹" value={show.balconyPrice}
+                onChange={(e) => setShow({ ...show, balconyPrice: +e.target.value })} className={inputCls} />
+              <input type="number" placeholder="1st Class ₹" value={show.firstClassPrice}
+                onChange={(e) => setShow({ ...show, firstClassPrice: +e.target.value })} className={inputCls} />
+              <input type="number" placeholder="2nd Class ₹" value={show.secondClassPrice}
+                onChange={(e) => setShow({ ...show, secondClassPrice: +e.target.value })} className={inputCls} />
+            </div>
+            <button onClick={addShow} disabled={loading}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-700 text-white font-semibold py-2.5 rounded-lg transition">
+              {loading ? "Adding..." : "Add Show"}
+            </button>
+          </div>
         </div>
-
       </div>
 
-
-      {/* ===== MOVIES ===== */}
-      <div className="bg-gray-900 p-6 rounded-xl mt-12">
-        <h2 className="text-xl mb-4">Movies</h2>
-
-        {movies.map(m => (
-          <div
-            key={m._id}
-            className="flex justify-between border-b border-gray-800 py-2"
-          >
-            <span>{m.title}</span>
-
-            <button
-              onClick={() => deleteMovie(m._id)}
-              className="bg-red-600 px-3 py-1 rounded"
-            >
-              Delete
-            </button>
+      {/* ── Movie List ── */}
+      <div className="max-w-5xl mx-auto bg-gray-900 border border-gray-800 p-6 rounded-2xl mb-8">
+        <h2 className="text-xl font-semibold mb-4">🎬 Movies ({movies.length})</h2>
+        {movies.length === 0 ? (
+          <p className="text-gray-500 text-sm">No movies yet. Add one above.</p>
+        ) : (
+          <div className="space-y-2">
+            {movies.map((m) => (
+              <div key={m._id} className="flex items-center justify-between border-b border-gray-800 py-2">
+                <div className="flex items-center gap-3">
+                  {m.poster && <img src={m.poster} alt={m.title} className="w-10 h-14 object-cover rounded" onError={(e) => (e.target.style.display = "none")} />}
+                  <div>
+                    <p className="font-medium">{m.title}</p>
+                    <p className="text-gray-400 text-xs">{m.genre} · {m.duration}</p>
+                  </div>
+                </div>
+                <button onClick={() => deleteMovie(m._id)}
+                  className="bg-red-600 hover:bg-red-700 px-3 py-1 text-sm rounded-lg transition">
+                  Delete
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-
+        )}
       </div>
 
-
-      {/* ===== SHOWS ===== */}
-      <div className="bg-gray-900 p-6 rounded-xl mt-12">
-        <h2 className="text-xl mb-4">Shows</h2>
-
-        {shows.map(s => (
-          <div
-            key={s._id}
-            className="flex justify-between border-b border-gray-800 py-2"
-          >
-            <span>
-              {s.theatre} — {s.date} — {s.time}
-            </span>
-
-            <button
-              onClick={() => deleteShow(s._id)}
-              className="bg-red-600 px-3 py-1 rounded"
-            >
-              Delete
-            </button>
+      {/* ── Show List ── */}
+      <div className="max-w-5xl mx-auto bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+        <h2 className="text-xl font-semibold mb-4">🎭 Shows ({shows.length})</h2>
+        {shows.length === 0 ? (
+          <p className="text-gray-500 text-sm">No shows yet. Add one above.</p>
+        ) : (
+          <div className="space-y-2">
+            {shows.map((s) => (
+              <div key={s._id} className="flex items-center justify-between border-b border-gray-800 py-2">
+                <div>
+                  <p className="font-medium">{s.theatre}</p>
+                  <p className="text-gray-400 text-xs">{s.date} · {s.time}</p>
+                </div>
+                <button onClick={() => deleteShow(s._id)}
+                  className="bg-red-600 hover:bg-red-700 px-3 py-1 text-sm rounded-lg transition">
+                  Delete
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-
+        )}
       </div>
-
     </div>
   );
 }
-
-export default Admin;
