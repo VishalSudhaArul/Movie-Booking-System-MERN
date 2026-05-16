@@ -258,30 +258,39 @@ import { Link } from "react-router-dom";
 
 function Home() {
   const [movies, setMovies] = useState([]);
+  const [stats, setStats] = useState({
+    totalMovies: 0,
+    totalShows: 0,
+    totalTickets: 0
+  });
   const [selectedGenre, setSelectedGenre] = useState("All");
 
   // Get logged-in user safely
   const user = JSON.parse(localStorage.getItem("user"));
 
-  // useEffect(() => {
-  //   axios
-  //     .get("http://localhost:5000/api/movies")
-  //     .then((res) => setMovies(res.data))
-  //     .catch((err) => console.log(err));
-  // }, []);
-
   useEffect(() => {
+    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  const API_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000";
+    // Fetch Movies
+    axios
+      .get(`${API_URL}/api/movies`)
+      .then((res) => setMovies(res.data))
+      .catch((err) => console.log("Home movies fetch error:", err));
 
-  axios
-    .get(`${API_URL}/api/movies`)
-    .then((res) => setMovies(res.data))
-    .catch((err) => console.log("Home fetch error:", err));
-
-}, []);
-
+    // Fetch Stats
+    axios
+      .get(`${API_URL}/api/analytics`)
+      .then((res) => {
+        if (res.data && res.data.summary) {
+          setStats({
+            totalMovies: res.data.summary.totalMovies || 0,
+            totalShows: res.data.summary.totalShows || 0,
+            totalTickets: res.data.summary.totalTickets || 0
+          });
+        }
+      })
+      .catch((err) => console.log("Home stats fetch error:", err));
+  }, []);
 
   // Genre filtering logic
   const filteredMovies =
@@ -293,16 +302,13 @@ function Home() {
 
   return (
     <div className="relative min-h-screen text-white bg-[#0B0B0F] overflow-hidden">
-
       {/* Background Glow */}
       <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-red-900/30 to-transparent"></div>
       <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-900/20 blur-[160px] rounded-full"></div>
 
       <div className="relative z-10 px-6 md:px-24">
-
         {/* ================= HERO ================= */}
         <section className="min-h-[75vh] flex flex-col justify-center items-center text-center">
-
           <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight leading-tight">
             <span className="bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
               Experience
@@ -341,19 +347,16 @@ function Home() {
 
         {/* ================= STATS ================= */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-32">
-
           {[
-            { label: "Movies Live", value: movies.length },
-            { label: "Active Shows", value: movies.length * 3 },
-            { label: "Tickets Booked", value: movies.length * 12 }
+            { label: "Movies Live", value: stats.totalMovies },
+            { label: "Active Shows", value: stats.totalShows },
+            { label: "Tickets Booked", value: stats.totalTickets },
           ].map((item, index) => (
             <div
               key={index}
               className="bg-[#111118] border border-white/10 rounded-3xl p-10 hover:border-red-500 transition duration-300 shadow-xl"
             >
-              <h2 className="text-5xl font-bold text-red-500">
-                {item.value}
-              </h2>
+              <h2 className="text-5xl font-bold text-red-500">{item.value}</h2>
               <p className="text-gray-400 mt-3 uppercase tracking-widest text-sm">
                 {item.label}
               </p>

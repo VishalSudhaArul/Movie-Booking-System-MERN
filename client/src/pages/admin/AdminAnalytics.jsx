@@ -22,7 +22,7 @@ const [endDate,setEndDate] = useState("");
 // };
 
 
-  const API_URL = process.env.REACT_APP_API_URL;
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   useEffect(() => {
     fetchAnalytics();
@@ -224,24 +224,26 @@ flex flex-col justify-between
 {/* ---------- SUMMARY ---------- */}
 <h2 className="text-xl mt-12 mb-6">📈 Overall Summary</h2>
 
-<div className="grid md:grid-cols-3 gap-6">
-
-<Card title="Total Bookings" value={data.summary?.totalBookings}/>
-<Card title="Total Revenue" value={data.summary?.totalRevenue}/>
-
+<div className="grid md:grid-cols-4 gap-6">
+  <Card title="Total Movies" value={data.summary?.totalMovies} isCurrency={false} />
+  <Card title="Active Shows" value={data.summary?.totalShows} isCurrency={false} />
+  <Card title="Tickets Booked" value={data.summary?.totalTickets} isCurrency={false} />
+  <Card title="Total Revenue" value={data.summary?.totalRevenue} isCurrency={true} />
 </div>
 
 </div>
 );
 }
 
-function Card({title,value}){
-return(
-<div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-xl shadow-lg">
-<h3 className="text-gray-400">{title}</h3>
-<p className="text-3xl font-bold text-red-500 mt-2">₹{value || 0}</p>
-</div>
-);
+function Card({ title, value, isCurrency }) {
+  return (
+    <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-xl shadow-lg border border-gray-800">
+      <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider">{title}</h3>
+      <p className="text-3xl font-bold text-red-500 mt-2">
+        {isCurrency ? `₹${value?.toLocaleString() || 0}` : value || 0}
+      </p>
+    </div>
+  );
 }
 
 export default AdminAnalytics;
