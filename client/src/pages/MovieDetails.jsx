@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useParams, Link } from "react-router-dom";
+import API from "../api";
 import TrailerModal from "../components/TrailerModal";
 
 function MovieDetails() {
@@ -19,19 +19,16 @@ function MovieDetails() {
   const [userComment, setUserComment] = useState("");
   const [reviewMsg, setReviewMsg] = useState("");
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const token = localStorage.getItem("token");
 
   useEffect(() => {
     // 🎬 Get movie info
-    axios
-      .get(`${API_URL}/api/movies/${movieId}`)
+    API.get(`/api/movies/${movieId}`)
       .then((res) => setMovie(res.data))
       .catch((err) => console.log("Movie fetch error:", err));
 
     // 🎭 Get shows
-    axios
-      .get(`${API_URL}/api/shows/movie/${movieId}`)
+    API.get(`/api/shows/movie/${movieId}`)
       .then((res) => setShows(res.data))
       .catch((err) => console.log("Shows fetch error:", err));
 
@@ -40,27 +37,28 @@ function MovieDetails() {
 
     // 💖 Check watchlist status if logged in
     if (token) {
-      axios
-        .get(`${API_URL}/api/users/watchlist`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+      API.get(`/api/users/watchlist`)
         .then((res) => {
-          const found = res.data.some((m) => m._id === movieId || m === movieId);
+          const found = (res.data || []).some((m) => m._id === movieId || m === movieId);
           setIsBookmarked(found);
         })
         .catch(() => {});
     }
-  }, [movieId]);
+  }, [movieId, token]);
 
   const fetchReviews = () => {
-    axios
-      .get(`${API_URL}/api/reviews/movie/${movieId}`)
+    API.get(`/api/reviews/movie/${movieId}`)
       .then((res) => {
         setReviews(res.data.reviews || []);
         setAvgRating(res.data.avgRating || 0);
         setTotalRatings(res.data.totalRatings || 0);
       })
-      .catch((err) => console.log("Reviews fetch error:", err));
+      .catch((err) => {
+        console.log("Reviews fetch error:", err);
+        setReviews([]);
+        setAvgRating(0);
+        setTotalRatings(0);
+      });
   };
 
   const handleToggleWatchlist = async () => {
@@ -69,11 +67,7 @@ function MovieDetails() {
       return;
     }
     try {
-      const res = await axios.post(
-        `${API_URL}/api/users/watchlist/toggle`,
-        { movieId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await API.post(`/api/users/watchlist/toggle`, { movieId });
       setIsBookmarked(res.data.isBookmarked);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to update watchlist");
@@ -89,17 +83,17 @@ function MovieDetails() {
     if (!userComment.trim()) return;
 
     try {
-      await axios.post(
-        `${API_URL}/api/reviews`,
-        { movieId, rating: userRating, comment: userComment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await API.post(`/api/reviews`, {
+        movieId,
+        rating: userRating,
+        comment: userComment,
+      });
       setReviewMsg("Review submitted successfully! 🎉");
       setUserComment("");
       fetchReviews();
       setTimeout(() => setReviewMsg(""), 3000);
     } catch (err) {
-      setReviewMsg(err.response?.data?.message || "Failed to post review");
+      setReviewMsg(err.response?.data?.message || "Route updating... Please retry in a moment.");
     }
   };
 
