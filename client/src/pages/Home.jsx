@@ -1,540 +1,447 @@
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import { Link, useNavigate } from "react-router-dom";
-
-// function Home() {
-
-//   const [movies, setMovies] = useState([]);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     axios.get("http://localhost:5000/api/movies")
-//       .then(res => setMovies(res.data))
-//       .catch(err => console.log(err));
-//   }, []);
-
-//   return (
-//     <div className="bg-black min-h-screen text-white px-12 py-10">
-
-//       {/* Header Section */}
-//       <div className="flex justify-between items-center mb-8">
-
-//         <h1 className="text-3xl font-bold">
-//           Now Showing
-//         </h1>
-
-//         {/* View All Button */}
-//         <button
-//           onClick={() => navigate("/movies")}
-//           className="text-red-400 hover:text-red-500 transition"
-//         >
-//           View All →
-//         </button>
-
-//       </div>
-
-//       {/* Movies Grid */}
-//       <div className="grid grid-cols-5 gap-8">
-
-//         {/* ⭐ Showing Only First 4 Movies */}
-//         {movies.slice(0, 5).map(movie => (
-//           <div
-//             key={movie._id}
-//             className="bg-gray-900 rounded-xl overflow-hidden shadow-lg hover:scale-105 transition duration-300"
-//           >
-
-//             {/* Poster */}
-//             <img
-//               src={movie.poster}
-//               alt={movie.title}
-//               className="w-full h-72 "
-//             />
-
-//             {/* Movie Info */}
-//             <div className="p-4">
-
-//               <h3 className="text-xl font-semibold">
-//                 {movie.title}
-//               </h3>
-
-//               <p className="text-gray-400">
-//                 {movie.genre}
-//               </p>
-
-//               {/* View Shows Button */}
-//               {/* <Link to={`/movie/${movie._id}`}> */}
-//               {/* <Link to={`/shows/${movie._id}`}> */}
-//               <Link to={`/movie/${movie._id}`}>
-//                 <button className="bg-red-600 px-4 py-2 mt-4 rounded hover:bg-red-700 w-full">
-//                   View Shows
-//                 </button>
-//               </Link>
-
-//             </div>
-
-//           </div>
-//         ))}
-
-//       </div>
-
-//       {/* ⭐ Show More Button (Center Bottom) */}
-//       {movies.length > 4 && (
-//         <div className="flex justify-center mt-12">
-//           <button
-//             onClick={() => navigate("/movies")}
-//             className="bg-red-500 px-8 py-3 rounded-lg hover:bg-red-600 transition"
-//           >
-//             Show More
-//           </button>
-//         </div>
-//       )}
-
-//     </div>
-//   );
-// }
-
-// export default Home;
-
-
-
-
-
-
-
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import { Link } from "react-router-dom";
-
-// function Home() {
-//   const [movies, setMovies] = useState([]);
-
-//   useEffect(() => {
-//     axios
-//       .get("http://localhost:5000/api/movies")
-//       .then((res) => setMovies(res.data))
-//       .catch((err) => console.log(err));
-//   }, []);
-
-//   return (
-//     <div className="relative bg-black min-h-screen text-white overflow-hidden">
-
-//       {/* ================= BACKGROUND GLOW ================= */}
-//       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-900/20 via-black to-red-900/20 blur-3xl opacity-40"></div>
-
-//       <div className="relative z-10 px-8 md:px-20 py-16">
-
-//         {/* ================= HERO SECTION ================= */}
-//         <div className="mb-24">
-//           <h1 className="text-5xl md:text-7xl font-extrabold leading-tight bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
-//             Experience Cinema
-//           </h1>
-
-//           <p className="mt-6 text-gray-400 text-lg max-w-2xl">
-//             Discover, explore and book immersive cinematic journeys with
-//             cutting-edge seat selection and real-time availability.
-//           </p>
-
-//           <div className="mt-10 flex gap-6">
-//             <Link
-//               to="/movies"
-//               className="px-8 py-3 bg-red-600 rounded-xl hover:bg-red-700 transition shadow-lg shadow-red-600/30"
-//             >
-//               Explore Movies
-//             </Link>
-
-//             <Link
-//               to="/mybookings"
-//               className="px-8 py-3 border border-gray-700 rounded-xl hover:border-red-500 transition"
-//             >
-//               My Bookings
-//             </Link>
-//           </div>
-//         </div>
-
-//         {/* ================= FLOATING STATS ================= */}
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-28">
-
-//           {[
-//             { label: "Total Movies", value: movies.length },
-//             { label: "Active Shows", value: movies.length * 3 },
-//             { label: "Bookings Today", value: movies.length * 12 }
-//           ].map((item, index) => (
-//             <div
-//               key={index}
-//               className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 hover:border-red-500 transition duration-300 shadow-xl"
-//             >
-//               <h2 className="text-4xl font-bold text-red-500">
-//                 {item.value}
-//               </h2>
-//               <p className="text-gray-400 mt-2">{item.label}</p>
-//             </div>
-//           ))}
-//         </div>
-
-//         {/* ================= DISCOVER SECTION ================= */}
-//         <h2 className="text-3xl font-semibold mb-10">
-//           Discover Experiences
-//         </h2>
-
-//         <div className="flex gap-8 overflow-x-auto pb-10">
-
-//           {movies.slice(0, 8).map((movie) => (
-//             <Link
-//               key={movie._id}
-//               to={`/movie/${movie._id}`}
-//               className="min-w-[250px] group relative"
-//             >
-//               <div className="rounded-2xl overflow-hidden border border-white/10 hover:border-red-500 transition duration-300">
-
-//                 <img
-//                   src={movie.poster}
-//                   alt={movie.title}
-//                   className="w-full h-80 object-cover group-hover:scale-110 transition duration-500"
-//                 />
-
-//               </div>
-
-//               <div className="mt-4">
-//                 <h3 className="text-lg font-semibold">
-//                   {movie.title}
-//                 </h3>
-//                 <p className="text-gray-500 text-sm">
-//                   {movie.genre}
-//                 </p>
-//               </div>
-//             </Link>
-//           ))}
-
-//         </div>
-
-//         {/* ================= FEATURE SPOTLIGHT ================= */}
-//         {movies[0] && (
-//           <div className="mt-32 grid md:grid-cols-2 gap-16 items-center">
-
-//             <div>
-//               <h2 className="text-4xl font-bold mb-6">
-//                 Featured Spotlight
-//               </h2>
-//               <h3 className="text-2xl text-red-500 mb-4">
-//                 {movies[0].title}
-//               </h3>
-//               <p className="text-gray-400 mb-8">
-//                 {movies[0].genre}
-//               </p>
-
-//               <Link
-//                 to={`/movie/${movies[0]._id}`}
-//                 className="px-8 py-3 bg-red-600 rounded-xl hover:bg-red-700 transition shadow-lg"
-//               >
-//                 Book Now
-//               </Link>
-//             </div>
-
-//             <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-//               <img
-//                 src={movies[0].poster}
-//                 alt={movies[0].title}
-//                 className="w-full h-[450px] object-cover"
-//               />
-//             </div>
-
-//           </div>
-//         )}
-
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default Home;
-
-
-
-
-
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import API from "../api";
+import TrailerModal from "../components/TrailerModal";
 
 function Home() {
+  const navigate = useNavigate();
   const [movies, setMovies] = useState([]);
-  const [stats, setStats] = useState({
-    totalMovies: 0,
-    totalShows: 0,
-    totalTickets: 0
-  });
+  const [loading, setLoading] = useState(true);
+  const [activeHero, setActiveHero] = useState(0);
+  const [trailerMovie, setTrailerMovie] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("All");
+  const [selectedLanguage, setSelectedLanguage] = useState("All");
+  const [watchlistIds, setWatchlistIds] = useState([]);
+  const [toastMsg, setToastMsg] = useState("");
 
-  // Get logged-in user safely
-  const user = JSON.parse(localStorage.getItem("user"));
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
     // Fetch Movies
-    axios
-      .get(`${API_URL}/api/movies`)
-      .then((res) => setMovies(res.data))
-      .catch((err) => console.log("Home movies fetch error:", err));
-
-    // Fetch Stats
-    axios
-      .get(`${API_URL}/api/analytics`)
+    API.get("/api/movies")
       .then((res) => {
-        if (res.data && res.data.summary) {
-          setStats({
-            totalMovies: res.data.summary.totalMovies || 0,
-            totalShows: res.data.summary.totalShows || 0,
-            totalTickets: res.data.summary.totalTickets || 0
-          });
-        }
+        setMovies(res.data || []);
+        setLoading(false);
       })
-      .catch((err) => console.log("Home stats fetch error:", err));
+      .catch((err) => {
+        console.error("Home movies fetch error:", err);
+        setLoading(false);
+      });
+
+    // Fetch Watchlist
+    if (token) {
+      API.get("/api/users/watchlist")
+        .then((res) => {
+          const ids = (res.data || []).map((m) => m._id || m);
+          setWatchlistIds(ids);
+        })
+        .catch(() => {});
+    }
+  }, [token]);
+
+  // Auto Rotation for Hero Banner
+  useEffect(() => {
+    if (!movies.length) return;
+    const timer = setInterval(() => {
+      setActiveHero((prev) => (prev + 1) % Math.min(movies.length, 5));
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [movies]);
+
+  // Watchlist Toggle
+  const handleToggleWatchlist = async (e, movieId, movieTitle) => {
+    e.stopPropagation();
+    if (!token) {
+      setToastMsg("Please log in to save movies to your watchlist!");
+      setTimeout(() => setToastMsg(""), 3500);
+      return;
+    }
+    try {
+      const res = await API.post("/api/users/watchlist/toggle", { movieId });
+      const updated = (res.data.watchlist || []).map((m) => m._id || m);
+      setWatchlistIds(updated);
+
+      const isAdded = updated.includes(movieId);
+      setToastMsg(isAdded ? `❤️ Added "${movieTitle}" to Watchlist!` : `Removed "${movieTitle}" from Watchlist`);
+      setTimeout(() => setToastMsg(""), 3500);
+    } catch (err) {
+      console.error("Watchlist error:", err);
+    }
+  };
+
+  // Unique Genres
+  const genres = useMemo(() => {
+    return ["All", "Action", "Drama", "Sci-Fi", "Comedy", "Thriller", "Horror"];
   }, []);
 
-  // Genre filtering logic
-  const filteredMovies =
-    selectedGenre === "All"
-      ? movies
-      : movies.filter((movie) =>
-          movie.genre?.toLowerCase().includes(selectedGenre.toLowerCase())
-        );
+  // Filtered Movies
+  const filteredMovies = useMemo(() => {
+    return movies.filter((movie) => {
+      const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            movie.genre?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesGenre = selectedGenre === "All" || movie.genre?.toLowerCase().includes(selectedGenre.toLowerCase());
+      const matchesLang = selectedLanguage === "All" || (movie.language && movie.language.toLowerCase() === selectedLanguage.toLowerCase());
+      return matchesSearch && matchesGenre && matchesLang;
+    });
+  }, [movies, searchQuery, selectedGenre, selectedLanguage]);
+
+  const currentHero = movies[activeHero];
 
   return (
-    <div className="relative min-h-screen text-white bg-[#0B0B0F] overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-red-900/30 to-transparent"></div>
-      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-900/20 blur-[160px] rounded-full"></div>
+    <div className="relative min-h-screen text-white bg-[#06060A] overflow-hidden selection:bg-red-600/40">
+      
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            className="fixed top-24 right-6 z-50 bg-[#161622] border border-red-500/40 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-2xl shadow-red-950 flex items-center gap-3"
+          >
+            <span>✨</span>
+            <span>{toastMsg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="relative z-10 px-6 md:px-24">
-        {/* ================= HERO ================= */}
-        <section className="min-h-[75vh] flex flex-col justify-center items-center text-center">
-          <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight leading-tight">
-            <span className="bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
-              Experience
-            </span>{" "}
-            <span className="text-white">Cinema</span>
-          </h1>
-
-          <p className="mt-6 text-gray-400 text-lg max-w-2xl">
-            Discover immersive cinematic journeys with seamless seat booking
-            and premium theatre experiences.
-          </p>
-
-          {/* Welcome User */}
-          {user && (
-            <p className="mt-4 text-green-400 text-lg font-medium">
-              Welcome, {user.name}
-            </p>
-          )}
-
-          <div className="mt-10 flex gap-6">
-            <Link
-              to="/movies"
-              className="px-10 py-4 bg-red-600 rounded-2xl hover:bg-red-700 transition shadow-xl shadow-red-600/40"
-            >
-              Explore Movies
-            </Link>
-
-            <Link
-              to="/mybookings"
-              className="px-10 py-4 border border-white/20 rounded-2xl hover:border-red-500 transition"
-            >
-              My Bookings
-            </Link>
+      {/* ================= HERO BACKDROP & CAROUSEL ================= */}
+      <section className="relative h-[85vh] md:h-[90vh] w-full overflow-hidden">
+        {loading ? (
+          <div className="h-full flex items-center justify-center bg-gray-950">
+            <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-        </section>
-
-        {/* ================= STATS ================= */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-32">
-          {[
-            { label: "Movies Live", value: stats.totalMovies },
-            { label: "Active Shows", value: stats.totalShows },
-            { label: "Tickets Booked", value: stats.totalTickets },
-          ].map((item, index) => (
-            <div
-              key={index}
-              className="bg-[#111118] border border-white/10 rounded-3xl p-10 hover:border-red-500 transition duration-300 shadow-xl"
-            >
-              <h2 className="text-5xl font-bold text-red-500">{item.value}</h2>
-              <p className="text-gray-400 mt-3 uppercase tracking-widest text-sm">
-                {item.label}
-              </p>
-            </div>
-          ))}
-        </section>
-
-        {/* ================= DISCOVER EXPERIENCES ================= */}
-        <section className="mb-36">
-          <h2 className="text-3xl font-semibold mb-12 tracking-wide">
-            Discover Experiences
-          </h2>
-
-          <div className="flex gap-10 overflow-x-auto pb-6">
-
-            {movies.slice(0, 7).map((movie) => (
-              <Link
-                key={movie._id}
-                to={`/movies/${movie._id}`}
-                className="min-w-[300px] group"
+        ) : (
+          <AnimatePresence mode="wait">
+            {currentHero && (
+              <motion.div
+                key={activeHero}
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2 }}
+                className="absolute inset-0"
               >
-                <div className="rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 hover:border-red-500 transition duration-300">
-                  <img
-                    src={movie.poster}
-                    alt={movie.title}
-                    className="w-full h-[450px] object-cover group-hover:scale-110 transition duration-500"
-                  />
-                </div>
+                <img
+                  src={currentHero.poster}
+                  alt={currentHero.title}
+                  className="w-full h-full object-cover brightness-[0.35] filter blur-xs md:blur-none"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#06060A] via-[#06060A]/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#06060A] via-[#06060A]/80 to-transparent" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
 
-                <div className="mt-5">
-                  <h3 className="text-lg font-semibold tracking-wide">
-                    {movie.title}
-                  </h3>
-                  <p className="text-gray-500 text-sm">
-                    {movie.genre}
-                  </p>
-                </div>
-              </Link>
-            ))}
+        {/* Hero Info Overlay */}
+        {!loading && currentHero && (
+          <div className="relative z-10 max-w-7xl mx-auto h-full flex flex-col justify-end pb-20 px-6 md:px-12">
+            <motion.div
+              key={`text-${activeHero}`}
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              className="max-w-3xl"
+            >
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span className="bg-red-600 text-white text-[11px] font-black uppercase px-3 py-1 rounded-md tracking-wider shadow-lg shadow-red-600/40">
+                  🔥 TOP BLOCKBUSTER
+                </span>
+                <span className="bg-white/10 backdrop-blur-md text-gray-200 border border-white/15 text-xs font-semibold px-3 py-1 rounded-full">
+                  {currentHero.genre || "Action / Adventure"}
+                </span>
+                <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
+                  ★ {currentHero.rating || "4.9"} / 5
+                </span>
+              </div>
 
-          </div>
-        </section>
+              <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight mb-4 drop-shadow-2xl">
+                {currentHero.title}
+              </h1>
 
-        {/* ================= GENRE EXPLORER ================= */}
-        <section className="mb-36">
+              <p className="text-gray-300 text-sm md:text-base line-clamp-3 mb-8 max-w-2xl font-normal leading-relaxed">
+                {currentHero.description ||
+                  "Immerse yourself in cinematic greatness. Book early access tickets now for an unmissable experience with state-of-the-art Surround Sound and Recliner Comfort."}
+              </p>
 
-          <h2 className="text-3xl font-semibold mb-8 tracking-wide">
-            Explore by Genre
-          </h2>
-
-          <div className="flex flex-wrap gap-4 mb-12">
-
-            {["All", "Action", "Drama", "Thriller", "Fantasy", "Comedy"].map(
-              (genre) => (
+              <div className="flex flex-wrap items-center gap-4">
                 <button
-                  key={genre}
-                  onClick={() => setSelectedGenre(genre)}
-                  className={`px-6 py-2 rounded-full text-sm transition ${
-                    selectedGenre === genre
-                      ? "bg-red-600 text-white shadow-lg shadow-red-600/40"
-                      : "border border-white/20 hover:border-red-500 hover:text-red-500"
+                  onClick={() => navigate(`/movies/${currentHero._id}`)}
+                  className="px-8 py-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-extrabold text-sm rounded-2xl transition shadow-xl shadow-red-600/30 flex items-center gap-3 group"
+                >
+                  <span>🎟️ BOOK TICKETS NOW</span>
+                  <span className="group-hover:translate-x-1 transition">→</span>
+                </button>
+
+                <button
+                  onClick={() => setTrailerMovie(currentHero)}
+                  className="px-6 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white font-bold text-sm rounded-2xl transition flex items-center gap-2"
+                >
+                  <span>▶</span> Watch Trailer
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Slider Indicator Dots */}
+            <div className="flex items-center gap-3 mt-12">
+              {movies.slice(0, 5).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveHero(i)}
+                  className={`h-2 transition-all duration-300 rounded-full ${
+                    activeHero === i ? "w-10 bg-red-600" : "w-3 bg-white/30 hover:bg-white/60"
+                  }`}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ================= SEARCH & CATEGORY BAR ================= */}
+      <section className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 -mt-10 mb-20">
+        <div className="bg-[#12121B]/90 backdrop-blur-2xl border border-gray-800 p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
+          
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Search Box */}
+            <div className="relative w-full md:w-1/2">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔍</span>
+              <input
+                type="text"
+                placeholder="Search movies, genres, or keywords..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-950 border border-gray-800 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition shadow-inner"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-xs"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Language Chips */}
+            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 custom-scrollbar">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mr-2 shrink-0">
+                Language:
+              </span>
+              {["All", "English", "Hindi", "Tamil", "Telugu"].map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setSelectedLanguage(lang)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition shrink-0 ${
+                    selectedLanguage === lang
+                      ? "bg-red-600 text-white shadow-md shadow-red-600/30"
+                      : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
                   }`}
                 >
-                  {genre}
+                  {lang}
                 </button>
-              )
-            )}
-
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
-
-            {filteredMovies.slice(0, 6).map((movie) => (
-              <Link
-                key={movie._id}
-                to={`/movies/${movie._id}`}
-                className="bg-[#111118] border border-white/10 rounded-3xl overflow-hidden hover:border-red-500 transition"
+          {/* Genre Pills */}
+          <div className="flex items-center gap-3 overflow-x-auto pt-2 border-t border-gray-800/80 custom-scrollbar">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 shrink-0">
+              Genre:
+            </span>
+            {genres.map((g) => (
+              <button
+                key={g}
+                onClick={() => setSelectedGenre(g)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition shrink-0 ${
+                  selectedGenre === g
+                    ? "bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold shadow-md shadow-red-600/30"
+                    : "bg-gray-900/80 border border-gray-800/80 text-gray-400 hover:border-gray-700 hover:text-white"
+                }`}
               >
-                <img
-                  src={movie.poster}
-                  alt={movie.title}
-                  className="w-full h-64 object-cover"
-                />
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold">
-                    {movie.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm">
-                    {movie.genre}
-                  </p>
-                </div>
-              </Link>
+                {g}
+              </button>
             ))}
-
           </div>
 
-        </section>
+        </div>
+      </section>
 
-        {/* ================= NOW STREAMING ================= */}
-        <section className="mb-40">
+      {/* ================= NOW SHOWING & EXPLORE GRID ================= */}
+      <section className="max-w-7xl mx-auto px-6 md:px-12 mb-28">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-red-500 font-extrabold text-xs tracking-widest uppercase mb-1">
+              <span>🍿</span> EXPLORE SHOWTIMES
+            </div>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+              Now Showing in Theatres
+            </h2>
+          </div>
 
-          <h2 className="text-3xl font-semibold mb-12 tracking-wide">
-            Now Streaming This Week
-          </h2>
+          <Link
+            to="/movies"
+            className="text-xs font-bold text-gray-400 hover:text-red-400 transition flex items-center gap-1 bg-gray-900 border border-gray-800 px-4 py-2.5 rounded-2xl w-fit"
+          >
+            <span>View All {movies.length} Movies</span>
+            <span>→</span>
+          </Link>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        {/* Movie Cards Grid */}
+        {filteredMovies.length === 0 ? (
+          <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-16 text-center">
+            <span className="text-5xl mb-4 block">🎬</span>
+            <h3 className="text-xl font-bold text-white mb-2">No movies match your filters</h3>
+            <p className="text-gray-400 text-sm mb-6">Try searching for a different title or resetting genre filters.</p>
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedGenre("All");
+                setSelectedLanguage("All");
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-6 py-3 rounded-xl transition"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {filteredMovies.map((movie) => {
+              const isSaved = watchlistIds.includes(movie._id);
+              return (
+                <motion.div
+                  key={movie._id}
+                  whileHover={{ y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-[#111119] border border-gray-800/80 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between group hover:border-red-500/40 transition duration-300"
+                >
+                  {/* Poster Header */}
+                  <div className="relative aspect-[2/3] overflow-hidden bg-gray-900">
+                    <img
+                      src={movie.poster}
+                      alt={movie.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#111119] via-transparent to-transparent opacity-80" />
 
-            {movies.slice(0, 2).map((movie) => (
-              <Link
-                key={movie._id}
-                to={`/movies/${movie._id}`}
-                className="relative rounded-3xl overflow-hidden group"
-              >
-                <img
-                  src={movie.poster}
-                  alt={movie.title}
-                  className="w-full h-[400px] object-cover group-hover:scale-105 transition duration-500"
-                />
+                    {/* Heart Watchlist Toggle */}
+                    <button
+                      onClick={(e) => handleToggleWatchlist(e, movie._id, movie.title)}
+                      className={`absolute top-4 left-4 p-2.5 rounded-2xl backdrop-blur-xl border transition ${
+                        isSaved
+                          ? "bg-red-950/90 border-red-500 text-red-500"
+                          : "bg-black/60 border-white/10 text-gray-300 hover:text-white hover:border-red-500/50"
+                      }`}
+                      title={isSaved ? "Remove from Watchlist" : "Add to Watchlist"}
+                    >
+                      {isSaved ? "❤️" : "🤍"}
+                    </button>
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent flex items-end p-8">
-                  <div>
-                    <h3 className="text-2xl font-bold">
-                      {movie.title}
-                    </h3>
-                    <p className="text-gray-300">
-                      {movie.genre}
-                    </p>
+                    {/* Rating Pill */}
+                    <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5">
+                      <span className="text-yellow-400 text-xs">★</span>
+                      <span className="text-white text-xs font-bold">
+                        {movie.rating || "4.8"}
+                      </span>
+                    </div>
+
+                    {/* Play Trailer Button overlay */}
+                    <button
+                      onClick={() => setTrailerMovie(movie)}
+                      className="absolute bottom-4 right-4 bg-red-600/90 hover:bg-red-600 text-white p-3 rounded-2xl shadow-lg transition opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0"
+                      title="Play Trailer"
+                    >
+                      ▶
+                    </button>
                   </div>
-                </div>
 
-              </Link>
-            ))}
+                  {/* Card Content */}
+                  <div className="p-6 flex flex-col flex-1 justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-md border border-red-500/20">
+                          {movie.genre || "Action"}
+                        </span>
+                        <span className="text-xs text-gray-400 font-semibold">
+                          ⏱ {movie.duration ? `${movie.duration}m` : "2h 15m"}
+                        </span>
+                      </div>
 
+                      <h3 className="text-lg font-bold text-white group-hover:text-red-400 transition line-clamp-1 mb-2">
+                        {movie.title}
+                      </h3>
+
+                      <p className="text-gray-400 text-xs line-clamp-2 mb-6 leading-relaxed">
+                        {movie.description || "Catch this blockbuster movie on the big screen today."}
+                      </p>
+                    </div>
+
+                    <Link
+                      to={`/movies/${movie._id}`}
+                      className="w-full bg-gray-900 hover:bg-red-600 text-gray-200 hover:text-white font-bold text-xs py-3 rounded-2xl border border-gray-800 hover:border-red-500 transition text-center shadow-md block"
+                    >
+                      SELECT SHOWTIME →
+                    </Link>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ================= PROMO / EXPERIENCE CARDS ================= */}
+      <section className="max-w-7xl mx-auto px-6 md:px-12 mb-28">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          
+          <div className="bg-gradient-to-br from-red-950/40 via-[#13131D] to-[#0A0A0F] border border-red-500/20 p-8 rounded-3xl relative overflow-hidden shadow-xl">
+            <div className="text-3xl mb-4">🛋️</div>
+            <h3 className="text-xl font-bold text-white mb-2">VIP Recliner Experience</h3>
+            <p className="text-gray-400 text-xs leading-relaxed mb-6">
+              Plush luxury leather recliners with personal serving call buttons and Dolby Atmos audio setup.
+            </p>
+            <Link to="/movies" className="text-xs font-bold text-red-400 hover:text-red-300">
+              Browse VIP Theatres →
+            </Link>
           </div>
 
-        </section>
-
-        {/* ================= WHY QUICKSHOW ================= */}
-        <section className="mb-40">
-
-          <h2 className="text-3xl font-semibold mb-12 tracking-wide text-center">
-            Why Choose QuickShow
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-
-            {[
-              {
-                title: "Real-Time Booking",
-                desc: "Live seat availability with instant confirmation."
-              },
-              {
-                title: "Secure Payments",
-                desc: "Safe and encrypted transactions for worry-free booking."
-              },
-              {
-                title: "Smart Discovery",
-                desc: "Find trending and popular movies instantly."
-              }
-            ].map((feature, index) => (
-              <div
-                key={index}
-                className="bg-[#111118] border border-white/10 rounded-3xl p-10 hover:border-red-500 transition duration-300"
-              >
-                <h3 className="text-xl font-semibold mb-4">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-400">
-                  {feature.desc}
-                </p>
-              </div>
-            ))}
-
+          <div className="bg-gradient-to-br from-purple-950/40 via-[#13131D] to-[#0A0A0F] border border-purple-500/20 p-8 rounded-3xl relative overflow-hidden shadow-xl">
+            <div className="text-3xl mb-4">🍿</div>
+            <h3 className="text-xl font-bold text-white mb-2">Combos & Gourmet Snacks</h3>
+            <p className="text-gray-400 text-xs leading-relaxed mb-6">
+              Pre-order hot buttered popcorn, nachos, and cold drinks straight to your seat with no queue!
+            </p>
+            <Link to="/movies" className="text-xs font-bold text-purple-400 hover:text-purple-300">
+              View Snack Menu →
+            </Link>
           </div>
 
-        </section>
+          <div className="bg-gradient-to-br from-amber-950/40 via-[#13131D] to-[#0A0A0F] border border-amber-500/20 p-8 rounded-3xl relative overflow-hidden shadow-xl">
+            <div className="text-3xl mb-4">🎟️</div>
+            <h3 className="text-xl font-bold text-white mb-2">Instant Digital QR Ticket</h3>
+            <p className="text-gray-400 text-xs leading-relaxed mb-6">
+              No paper printouts needed. Scan your QR code ticket at the theatre gates directly from your smartphone.
+            </p>
+            <Link to="/my-bookings" className="text-xs font-bold text-amber-400 hover:text-amber-300">
+              Check My Tickets →
+            </Link>
+          </div>
 
-      </div>
+        </div>
+      </section>
+
+      {/* Trailer Modal */}
+      <TrailerModal
+        isOpen={!!trailerMovie}
+        onClose={() => setTrailerMovie(null)}
+        trailerUrl={trailerMovie?.trailerUrl}
+        movieTitle={trailerMovie?.title}
+      />
     </div>
   );
 }
