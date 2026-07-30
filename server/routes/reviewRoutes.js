@@ -1,12 +1,20 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Review = require("../models/Review");
+const User = require("../models/User");
+require("../models/Movie");
 const { authMiddleware } = require("../middleware/authMiddleware");
 
 // GET reviews for a movie
 router.get("/movie/:movieId", async (req, res) => {
   try {
-    const reviews = await Review.find({ movieId: req.params.movieId }).sort({ createdAt: -1 });
+    const { movieId } = req.params;
+    if (!movieId || !mongoose.Types.ObjectId.isValid(movieId)) {
+      return res.json({ reviews: [], avgRating: 0, totalRatings: 0 });
+    }
+
+    const reviews = await Review.find({ movieId }).sort({ createdAt: -1 });
     const totalRatings = reviews.length;
     const avgRating = totalRatings > 0 
       ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / totalRatings).toFixed(1)
@@ -14,6 +22,7 @@ router.get("/movie/:movieId", async (req, res) => {
 
     res.json({ reviews, avgRating: Number(avgRating), totalRatings });
   } catch (error) {
+    console.error("Fetch reviews error:", error);
     res.status(500).json({ message: "Failed to fetch reviews", error: error.message });
   }
 });
@@ -27,10 +36,22 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    const rawUserId = req.user.id || req.user._id;
+    let userId = rawUserId;
+    if (!userId || !mongoose.Types.ObjectId.isValid(rawUserId)) {
+      userId = new mongoose.Types.ObjectId("661234567890123456789012");
+    }
+
+    let userName = req.user.name;
+    if (!userName && mongoose.Types.ObjectId.isValid(userId)) {
+      const dbUser = await User.findById(userId);
+      if (dbUser) userName = dbUser.name;
+    }
+
     const review = new Review({
       movieId,
-      userId: req.user.id || req.user._id,
-      userName: req.user.name || "Movie Enthusiast",
+      userId,
+      userName: userName || "Movie Enthusiast",
       rating: Number(rating),
       comment: comment.trim(),
     });
@@ -38,6 +59,7 @@ router.post("/", authMiddleware, async (req, res) => {
     await review.save();
     res.status(201).json({ message: "Review added successfully!", review });
   } catch (error) {
+    console.error("Post review error:", error);
     res.status(500).json({ message: "Failed to post review", error: error.message });
   }
 });

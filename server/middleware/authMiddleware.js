@@ -5,7 +5,12 @@ const authMiddleware = (req, res, next) => {
 
   // Support for the 123456 bypass password via Authorization header
   if (authHeader === "Bypass 123456") {
-    req.user = { role: "admin", name: "Guest Admin", id: "admin_bypass_id" };
+    req.user = {
+      role: "admin",
+      name: "Guest Admin",
+      id: "661234567890123456789012",
+      _id: "661234567890123456789012"
+    };
     return next();
   }
 
