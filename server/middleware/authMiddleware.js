@@ -1,11 +1,11 @@
 const jwt = require("jsonwebtoken");
 
-exports.authMiddleware = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   // Support for the 123456 bypass password via Authorization header
   if (authHeader === "Bypass 123456") {
-    req.user = { role: "admin", name: "Guest Admin" };
+    req.user = { role: "admin", name: "Guest Admin", id: "admin_bypass_id" };
     return next();
   }
 
@@ -15,7 +15,7 @@ exports.authMiddleware = (req, res, next) => {
 
   try {
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret");
     req.user = decoded;
     next();
   } catch (err) {
@@ -23,7 +23,5 @@ exports.authMiddleware = (req, res, next) => {
   }
 };
 
-
-// Checks JWT token
-// Verifies user login
-// Adds req.user
+module.exports = authMiddleware;
+module.exports.authMiddleware = authMiddleware;

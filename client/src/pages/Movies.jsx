@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import API from "../api";
+import TrailerModal from "../components/TrailerModal";
 
 function Movies() {
   const [movies, setMovies] = useState([]);
@@ -10,23 +11,32 @@ function Movies() {
   const [trailerMovie, setTrailerMovie] = useState(null);
   const [activeHero, setActiveHero] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [watchlistIds, setWatchlistIds] = useState([]);
   const navigate = useNavigate();
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const token = localStorage.getItem("token");
 
   /* ================= FETCH DATA ================= */
   useEffect(() => {
-    axios
-      .get(`${API_URL}/api/movies`)
+    API.get(`/api/movies`)
       .then((res) => {
-        setMovies(res.data);
+        setMovies(res.data || []);
         setLoading(false);
       })
       .catch((err) => {
         console.error("Fetch error:", err);
         setLoading(false);
       });
-  }, [API_URL]);
+
+    if (token) {
+      API.get(`/api/users/watchlist`)
+        .then((res) => {
+          const ids = (res.data || []).map((m) => m._id || m);
+          setWatchlistIds(ids);
+        })
+        .catch(() => {});
+    }
+  }, [token]);
 
   /* ================= AUTO HERO ROTATION ================= */
   useEffect(() => {
@@ -36,6 +46,22 @@ function Movies() {
     }, 8000);
     return () => clearInterval(interval);
   }, [movies]);
+
+  /* ================= WATCHLIST TOGGLE ================= */
+  const handleToggleWatchlist = async (e, movieId) => {
+    e.stopPropagation();
+    if (!token) {
+      alert("Please log in to add movies to your watchlist!");
+      return;
+    }
+    try {
+      const res = await API.post(`/api/users/watchlist/toggle`, { movieId });
+      const updatedList = (res.data.watchlist || []).map((m) => m._id || m);
+      setWatchlistIds(updatedList);
+    } catch (err) {
+      console.log("Watchlist toggle error:", err);
+    }
+  };
 
   /* ================= GENRES ================= */
   const genres = useMemo(() => {
@@ -131,14 +157,12 @@ function Movies() {
                     </span>
                   </button>
 
-                  {movies[activeHero].trailerUrl && (
-                    <button
-                      onClick={() => setTrailerMovie(movies[activeHero])}
-                      className="px-10 py-4 border border-white/20 bg-white/5 backdrop-blur-md rounded-full font-bold hover:bg-white/10 transition"
-                    >
-                      WATCH TRAILER
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setTrailerMovie(movies[activeHero])}
+                    className="px-10 py-4 border border-white/20 bg-white/5 backdrop-blur-md rounded-full font-bold hover:bg-white/10 transition"
+                  >
+                    ▶ WATCH TRAILER
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -173,7 +197,7 @@ function Movies() {
                 placeholder="Find a movie..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white/5 border-b border-white/10 py-3 outline-none focus:border-red-600 transition text-xl font-light placeholder:text-gray-700"
+                className="w-full bg-white/5 border-b border-white/10 py-3 outline-none focus:border-red-600 transition text-xl font-light placeholder:text-gray-700 text-white"
               />
             </div>
 
@@ -201,51 +225,67 @@ function Movies() {
           className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-8 gap-y-16"
         >
           <AnimatePresence>
-            {filteredMovies.map((movie, index) => (
-              <motion.div
-                key={movie._id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.5, delay: index * 0.05 }}
-                className="group relative"
-              >
-                <div
-                  onClick={() => navigate(`/movies/${movie._id}`)}
-                  className="relative aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer bg-[#1a1a1f] shadow-2xl shadow-black"
+            {filteredMovies.map((movie, index) => {
+              const isSaved = watchlistIds.includes(movie._id);
+              return (
+                <motion.div
+                  key={movie._id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                  className="group relative"
                 >
-                  <img
-                    src={movie.poster}
-                    alt={movie.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
-                    <button className="w-full py-3 bg-red-600 text-white font-bold rounded-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                      QUICK BOOK
+                  <div
+                    onClick={() => navigate(`/movies/${movie._id}`)}
+                    className="relative aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer bg-[#1a1a1f] shadow-2xl shadow-black"
+                  >
+                    <img
+                      src={movie.poster}
+                      alt={movie.title}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
+                      <button className="w-full py-3 bg-red-600 text-white font-bold rounded-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                        QUICK BOOK
+                      </button>
+                    </div>
+
+                    {/* Bookmark / Watchlist Heart Button */}
+                    <button
+                      onClick={(e) => handleToggleWatchlist(e, movie._id)}
+                      className={`absolute top-4 left-4 p-2 rounded-full backdrop-blur-md border transition ${
+                        isSaved
+                          ? "bg-red-950/80 border-red-500 text-red-500"
+                          : "bg-black/60 border-white/10 text-gray-300 hover:text-white"
+                      }`}
+                      title={isSaved ? "Remove from Watchlist" : "Add to Watchlist"}
+                    >
+                      {isSaved ? "❤️" : "🤍"}
                     </button>
+
+                    {/* Rating Badge */}
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 flex items-center gap-1.5">
+                      <span className="text-yellow-500 text-xs">★</span>
+                      <span className="text-white text-[10px] font-bold">
+                        {movie.rating || "4.8"}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Rating Badge */}
-                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 flex items-center gap-1.5">
-                    <span className="text-yellow-500 text-xs">★</span>
-                    <span className="text-white text-[10px] font-bold">
-                      {movie.rating || "8.5"}
-                    </span>
+                  <div className="mt-6">
+                    <h3 className="text-lg font-bold truncate tracking-tight mb-1 group-hover:text-red-500 transition-colors">
+                      {movie.title}
+                    </h3>
+                    <div className="flex items-center justify-between text-gray-500 text-[10px] font-bold tracking-[0.1em] uppercase">
+                      <span>{movie.genre}</span>
+                      <span>{movie.duration ? `${movie.duration}m` : "2h 15m"}</span>
+                    </div>
                   </div>
-                </div>
-
-                <div className="mt-6">
-                  <h3 className="text-lg font-bold truncate tracking-tight mb-1 group-hover:text-red-500 transition-colors">
-                    {movie.title}
-                  </h3>
-                  <div className="flex items-center justify-between text-gray-500 text-[10px] font-bold tracking-[0.1em] uppercase">
-                    <span>{movie.genre}</span>
-                    <span>{movie.duration || "2h 15m"}</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </motion.div>
 
@@ -258,36 +298,12 @@ function Movies() {
       </div>
 
       {/* ================= TRAILER MODAL ================= */}
-      <AnimatePresence>
-        {trailerMovie && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/10"
-            >
-              <button
-                onClick={() => setTrailerMovie(null)}
-                className="absolute top-6 right-6 z-10 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-red-600 rounded-full transition-colors text-xl"
-              >
-                ✕
-              </button>
-              <iframe
-                src={trailerMovie.trailerUrl}
-                title={trailerMovie.title}
-                className="w-full h-full"
-                allowFullScreen
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <TrailerModal
+        isOpen={!!trailerMovie}
+        onClose={() => setTrailerMovie(null)}
+        trailerUrl={trailerMovie?.trailerUrl}
+        movieTitle={trailerMovie?.title}
+      />
     </div>
   );
 }
