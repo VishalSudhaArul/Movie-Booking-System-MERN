@@ -23,6 +23,10 @@ const movieSchema = new mongoose.Schema(
     genre: {
       type: String,
       required: true
+    },
+    trailerUrl: {
+      type: String,
+      default: ""
     }
   },
   { timestamps: true }

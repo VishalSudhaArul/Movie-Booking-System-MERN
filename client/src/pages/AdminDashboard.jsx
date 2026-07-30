@@ -8,7 +8,7 @@ function AdminDashboard() {
     totalMovies: 0,
     totalShows: 0,
     totalTickets: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
   });
 
   useEffect(() => {
@@ -28,21 +28,50 @@ function AdminDashboard() {
     navigate("/login");
   };
 
+  const exportCSVReport = () => {
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      ["Metric,Value",
+        `Total Movies,${stats.totalMovies}`,
+        `Total Shows,${stats.totalShows}`,
+        `Total Tickets Sold,${stats.totalTickets}`,
+        `Total Revenue (INR),${stats.totalRevenue}`,
+        `Report Generated,${new Date().toLocaleString()}`
+      ].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `CineBook_Analytics_Report_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="bg-[#0B0B0F] min-h-screen text-white p-6 md:p-10">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-10">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-10">
           <div>
-            <h1 className="text-3xl font-bold">⚙️ Admin Panel</h1>
-            <p className="text-gray-400 mt-1">Real-time system overview</p>
+            <h1 className="text-3xl font-bold">⚙️ Admin Control Panel</h1>
+            <p className="text-gray-400 mt-1">Real-time theater performance & operations</p>
           </div>
 
-          <button
-            onClick={logoutAdmin}
-            className="bg-red-600/10 text-red-500 border border-red-500/20 px-6 py-2 rounded-xl hover:bg-red-600 hover:text-white transition font-medium"
-          >
-            Logout
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={exportCSVReport}
+              className="bg-green-600/20 text-green-400 border border-green-500/30 px-5 py-2 rounded-xl hover:bg-green-600 hover:text-white transition font-medium text-sm flex items-center gap-2"
+            >
+              📥 Export CSV Report
+            </button>
+
+            <button
+              onClick={logoutAdmin}
+              className="bg-red-600/10 text-red-500 border border-red-500/20 px-6 py-2 rounded-xl hover:bg-red-600 hover:text-white transition font-medium text-sm"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Quick Stats Summary */}

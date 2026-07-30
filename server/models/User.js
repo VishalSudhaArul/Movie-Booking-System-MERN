@@ -24,7 +24,14 @@ const userSchema = new mongoose.Schema(
         type:String,
         enum:["user","admin","theaterOwner"],
         default:"user"
-    }
+    },
+
+    watchlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Movie"
+      }
+    ]
 
 },
 {

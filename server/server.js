@@ -55,6 +55,8 @@ app.use("/api/snacks",    require("./routes/snackRoutes"));
 app.use("/api/parking",   require("./routes/parkingRoutes"));
 app.use("/api/users",     require("./routes/userRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/reviews",   require("./routes/reviewRoutes"));
+app.use("/api/coupons",   require("./routes/couponRoutes"));
 
 // ── 404 Handler ───────────────────────────────────────────────────────────
 app.use((req, res) => {
