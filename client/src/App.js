@@ -28,6 +28,9 @@ import AdminSnacks from "./pages/admin/AdminSnacks";
 import AdminParking from "./pages/admin/AdminParking";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 
+import GiftCards from "./pages/GiftCards";
+import LoyaltyWallet from "./pages/LoyaltyWallet";
+
 function App() {
   return (
     <Router>
@@ -38,6 +41,8 @@ function App() {
         <Route path="/movies" element={<Movies />} />
         <Route path="/movies/:movieId" element={<MovieDetails />} />
         <Route path="/movie/:movieId" element={<MovieDetails />} />
+        <Route path="/gift-cards" element={<GiftCards />} />
+        <Route path="/loyalty" element={<LoyaltyWallet />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify/:bookingId" element={<VerifyTicket />} />

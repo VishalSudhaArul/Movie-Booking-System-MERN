@@ -284,9 +284,14 @@ function MovieDetails() {
                   className="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white text-sm">
-                      {rev.userName}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white text-sm">
+                        {rev.userName}
+                      </span>
+                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span>🎟️</span> Verified Buyer
+                      </span>
+                    </div>
                     <span className="text-yellow-400 font-bold text-sm">
                       {"★".repeat(rev.rating)}
                       <span className="text-gray-600">

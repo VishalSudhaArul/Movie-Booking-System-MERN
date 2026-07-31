@@ -141,9 +141,32 @@ export default function Seats() {
             </div>
           </div>
 
-          {/* Quick Seat Selection Chips */}
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-gray-400 uppercase hidden sm:inline">Quick Select:</span>
+          {/* Quick Seat Selection Chips & Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url);
+                alert("🎟️ Group Booking Link copied! Send it to your friends so they can pick adjacent seats.");
+              }}
+              className="bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-300 font-bold text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
+              title="Share Booking Link with Friends"
+            >
+              <span>🤝</span> Share Seats Link
+            </button>
+
+            <button
+              onClick={() => {
+                const query = encodeURIComponent(`${show?.theatre || "PVR Cinema"}`);
+                window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank");
+              }}
+              className="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-bold text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
+              title="Get GPS Directions"
+            >
+              <span>🗺️</span> GPS Directions
+            </button>
+
+            <span className="text-[11px] font-bold text-gray-400 uppercase hidden sm:inline ml-2">Quick Select:</span>
             {[1, 2, 3, 4, 6].map((count) => (
               <button
                 key={count}

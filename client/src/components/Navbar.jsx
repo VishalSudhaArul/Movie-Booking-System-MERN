@@ -152,6 +152,26 @@ export default function Navbar() {
               >
                 <span>🍿</span> Food & Snacks
               </Link>
+              <Link
+                to="/gift-cards"
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 ${
+                  isActive("/gift-cards")
+                    ? "bg-red-600/10 text-red-500 border border-red-500/20"
+                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+                }`}
+              >
+                <span>🎁</span> Gift Cards
+              </Link>
+              <Link
+                to="/loyalty"
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 ${
+                  isActive("/loyalty")
+                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    : "text-amber-300 hover:text-amber-200 hover:bg-gray-800/50"
+                }`}
+              >
+                <span>👑</span> CineClub
+              </Link>
             </div>
           </div>
 
