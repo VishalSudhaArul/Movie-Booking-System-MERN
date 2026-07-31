@@ -113,3 +113,41 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// ✅ GOOGLE AUTH (LOGIN / REGISTER)
+exports.googleAuth = async (req, res) => {
+  try {
+    const { name, email, googleId } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required for Google login" });
+    }
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Auto-register user with Google profile
+      const randomPassword = Math.random().toString(36).slice(-10) + "Aa1!";
+      const hash = await bcrypt.hash(randomPassword, 10);
+
+      user = await User.create({
+        name: name || email.split("@")[0],
+        email: email.toLowerCase(),
+        password: hash,
+        role: "user",
+      });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role || "user",
+      token: generateToken(user._id),
+    });
+
+  } catch (err) {
+    console.error("Google Auth Error:", err);
+    res.status(500).json({ message: err.message || "Google auth failed" });
+  }
+};
