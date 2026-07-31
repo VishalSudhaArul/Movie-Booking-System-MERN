@@ -13,6 +13,7 @@ export default function Admin() {
     duration: "",
     poster: "",
     genre: "",
+    trailerUrl: "",
   });
 
   const [show, setShow] = useState({
@@ -44,7 +45,7 @@ export default function Admin() {
       await API.post("/api/movies", movie);
       const { data } = await API.get("/api/movies");
       setMovies(data);
-      setMovie({ title: "", description: "", duration: "", poster: "", genre: "" });
+      setMovie({ title: "", description: "", duration: "", poster: "", genre: "", trailerUrl: "" });
       flash("✅ Movie added successfully!");
     } catch (err) {
       flash("❌ " + (err.response?.data?.message || "Failed to add movie"));
@@ -127,6 +128,8 @@ export default function Admin() {
               onChange={(e) => setMovie({ ...movie, poster: e.target.value })} className={inputCls} />
             <input name="genre" placeholder="Genre (e.g. Action, Drama)" value={movie.genre}
               onChange={(e) => setMovie({ ...movie, genre: e.target.value })} className={inputCls} />
+            <input name="trailerUrl" placeholder="🎬 YouTube Trailer Link (URL)" value={movie.trailerUrl}
+              onChange={(e) => setMovie({ ...movie, trailerUrl: e.target.value })} className={inputCls} />
             <button onClick={addMovie} disabled={loading}
               className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-700 text-white font-semibold py-2.5 rounded-lg transition">
               {loading ? "Adding..." : "Add Movie"}
