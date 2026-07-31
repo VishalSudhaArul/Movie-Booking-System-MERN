@@ -31,6 +31,7 @@ import AdminIoTConsole from "./pages/admin/AdminIoTConsole";
 
 import GiftCards from "./pages/GiftCards";
 import LoyaltyWallet from "./pages/LoyaltyWallet";
+import Watchlist from "./pages/Watchlist";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
         <Route path="/movies" element={<Movies />} />
         <Route path="/movies/:movieId" element={<MovieDetails />} />
         <Route path="/movie/:movieId" element={<MovieDetails />} />
+        <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/gift-cards" element={<GiftCards />} />
         <Route path="/loyalty" element={<LoyaltyWallet />} />
         <Route path="/login" element={<Login />} />

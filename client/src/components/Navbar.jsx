@@ -139,6 +139,19 @@ export default function Navbar() {
               Movies & Shows
             </Link>
             <Link
+              to="/watchlist"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${
+                isActive("/watchlist") ? "bg-red-600/15 text-red-400 border border-red-500/30" : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+              }`}
+            >
+              <span>❤️</span> Watchlist
+              {watchlistItems.length > 0 && (
+                <span className="bg-red-600 text-white text-[9px] font-black px-1.5 rounded-full">
+                  {watchlistItems.length}
+                </span>
+              )}
+            </Link>
+            <Link
               to="/snacks"
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${
                 isActive("/snacks") || isActive("/food-beverages") ? "bg-red-600/15 text-red-400 border border-red-500/30" : "text-gray-300 hover:text-white hover:bg-gray-800/50"
