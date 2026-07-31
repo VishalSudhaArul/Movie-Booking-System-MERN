@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import API from "../api";
+import SpotlightSearch from "./SpotlightSearch";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -8,6 +9,19 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+
+  // Global Ctrl + K listener for Spotlight Search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setSpotlightOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
   
   const cities = ["Mumbai", "Delhi NCR", "Bengaluru", "Chennai", "Hyderabad", "Kochi", "Pune", "Kolkata"];
   const [selectedCity, setSelectedCity] = useState(
@@ -143,6 +157,19 @@ export default function Navbar() {
 
           {/* Right Controls */}
           <div className="hidden md:flex items-center gap-4">
+            
+            {/* Spotlight Search trigger button */}
+            <button
+              onClick={() => setSpotlightOpen(true)}
+              className="flex items-center gap-3 bg-gray-900/90 border border-gray-800 hover:border-red-500/50 px-4 py-2 rounded-2xl text-xs font-medium text-gray-400 hover:text-white transition shadow-inner"
+              title="Search Movies & Snacks (Ctrl+K)"
+            >
+              <span>🔍</span>
+              <span className="hidden sm:inline">Search CineBook...</span>
+              <kbd className="bg-gray-800 text-gray-400 text-[10px] px-2 py-0.5 rounded-lg border border-gray-700 font-mono">
+                ⌘K
+              </kbd>
+            </button>
             
             {/* Watchlist Quick Button */}
             {isLoggedIn && (
@@ -388,6 +415,12 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* 🔍 Global Spotlight Search Modal */}
+      <SpotlightSearch
+        isOpen={spotlightOpen}
+        onClose={() => setSpotlightOpen(false)}
+      />
     </nav>
   );
 }
