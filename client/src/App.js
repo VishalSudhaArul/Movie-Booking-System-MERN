@@ -27,6 +27,7 @@ import AdminShows from "./pages/admin/AdminShows";
 import AdminSnacks from "./pages/admin/AdminSnacks";
 import AdminParking from "./pages/admin/AdminParking";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminIoTConsole from "./pages/admin/AdminIoTConsole";
 
 import GiftCards from "./pages/GiftCards";
 import LoyaltyWallet from "./pages/LoyaltyWallet";
@@ -145,6 +146,14 @@ function App() {
           element={
             <AdminGate>
               <AdminAnalytics />
+            </AdminGate>
+          }
+        />
+        <Route
+          path="/admin/iot"
+          element={
+            <AdminGate>
+              <AdminIoTConsole />
             </AdminGate>
           }
         />

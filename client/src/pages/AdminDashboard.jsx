@@ -191,6 +191,14 @@ export default function AdminDashboard() {
               accentColor="hover:border-red-500/60"
               btnText="Launch QR Scanner →"
             />
+            <ModuleCard
+              icon="📡"
+              title="Smart IoT Hardware Console"
+              desc="Hardware turnstile relays, ANPR parking barriers, seat pressure sensors, and AC dimmers."
+              path="/admin/iot"
+              accentColor="hover:border-cyan-500/60"
+              btnText="Launch IoT Hardware Console →"
+            />
           </div>
         </div>
 
