@@ -54,3 +54,4 @@ This document outlines the feature recommendations and enhancement roadmap for t
 - [x] Promo Code / Discount Coupon Engine
 - [x] Watchlist / Bookmark Functionality
 - [x] Booking Analytics CSV Export
+- [x] Standalone F&B Express Pantry (Theater & Movie filtered Food & Beverage ordering + Digital Snack Pass QR)

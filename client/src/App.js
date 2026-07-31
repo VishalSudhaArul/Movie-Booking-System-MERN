@@ -15,6 +15,7 @@ import Seats from "./pages/Seats";
 import AddOns from "./pages/AddOns";
 import MyBookings from "./pages/MyBookings";
 import VerifyTicket from "./pages/VerifyTicket";
+import SnacksHub from "./pages/SnacksHub";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminScan from "./pages/AdminScan";
@@ -40,6 +41,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify/:bookingId" element={<VerifyTicket />} />
+        <Route path="/snacks" element={<SnacksHub />} />
+        <Route path="/food-beverages" element={<SnacksHub />} />
 
         {/* ── Protected User Routes ── */}
         <Route

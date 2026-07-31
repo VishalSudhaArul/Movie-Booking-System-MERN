@@ -128,6 +128,16 @@ export default function Navbar() {
               >
                 Movies & Shows
               </Link>
+              <Link
+                to="/snacks"
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 ${
+                  isActive("/snacks") || isActive("/food-beverages")
+                    ? "bg-red-600/10 text-red-500 border border-red-500/20"
+                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+                }`}
+              >
+                <span>🍿</span> Food & Snacks
+              </Link>
             </div>
           </div>
 
@@ -310,6 +320,13 @@ export default function Navbar() {
             className="block text-gray-200 hover:text-red-400 font-bold text-sm"
           >
             Movies & Shows
+          </Link>
+          <Link
+            to="/snacks"
+            onClick={() => setMenuOpen(false)}
+            className="block text-gray-200 hover:text-red-400 font-bold text-sm"
+          >
+            🍿 Food & Snacks
           </Link>
           {isLoggedIn && (
             <Link

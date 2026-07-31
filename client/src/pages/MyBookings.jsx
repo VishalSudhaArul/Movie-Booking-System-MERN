@@ -10,6 +10,7 @@ function MyBookings() {
   const [activeTab, setActiveTab] = useState("bookings");
   const [bookings, setBookings] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
+  const [snackOrders, setSnackOrders] = useState([]);
 
   const userString = localStorage.getItem("user");
   const user = userString ? JSON.parse(userString) : null;
@@ -17,13 +18,17 @@ function MyBookings() {
   const token = localStorage.getItem("token");
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  /* ---------- Load Bookings & Watchlist ---------- */
+  /* ---------- Load Bookings, Watchlist & Snack Orders ---------- */
   useEffect(() => {
     if (!userId) return;
 
     API.get(`/api/bookings/user/${userId}`)
       .then((res) => setBookings(res.data))
       .catch((err) => console.log("Bookings load error:", err));
+
+    API.get(`/api/snack-orders/user/${userId}`)
+      .then((res) => setSnackOrders(res.data))
+      .catch((err) => console.log("Snack orders load error:", err));
 
     if (token) {
       axios
@@ -108,6 +113,16 @@ function MyBookings() {
             }`}
           >
             🎟 My Bookings ({bookings.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("snacks")}
+            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition ${
+              activeTab === "snacks"
+                ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            🍿 Snack Passes ({snackOrders.length})
           </button>
           <button
             onClick={() => setActiveTab("watchlist")}
@@ -203,6 +218,97 @@ function MyBookings() {
                         >
                           Download Ticket
                         </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : activeTab === "snacks" ? (
+          /* ---------- SNACK ORDERS TAB ---------- */
+          <>
+            {snackOrders.length === 0 ? (
+              <div className="text-center py-16 border border-dashed border-gray-800 rounded-3xl space-y-3">
+                <p className="text-gray-400 font-semibold">
+                  No food & beverage orders placed yet.
+                </p>
+                <Link
+                  to="/snacks"
+                  className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-6 py-3 rounded-2xl transition shadow-lg shadow-red-600/30"
+                >
+                  Browse CinePantry & Order Food 🍿
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {snackOrders.map((so) => (
+                  <div
+                    key={so._id}
+                    id={`snack-pass-${so._id}`}
+                    className="bg-gradient-to-br from-[#180e1a] to-[#090a14] border border-gray-800 p-6 rounded-2xl shadow-2xl space-y-4"
+                  >
+                    <div className="flex justify-between gap-6">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="bg-red-950/80 border border-red-800/80 text-red-400 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                            🍿 F&B Express Pass
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-mono">
+                            {so.orderPassId}
+                          </span>
+                        </div>
+
+                        <h2 className="text-lg font-bold text-white">
+                          {so.theatre} Multiplex
+                        </h2>
+                        <p className="text-xs text-red-400 font-semibold">
+                          🎬 {so.movieTitle || "General Theater Order"}
+                        </p>
+
+                        <p className="text-xs text-gray-300">
+                          🚶 Delivery: <span className="text-white font-semibold">{so.deliveryType}</span> {so.seatNumber ? `(Seat: ${so.seatNumber})` : ""}
+                        </p>
+
+                        <div className="text-xs text-gray-300">
+                          <span className="font-bold text-gray-400">Items Ordered:</span>
+                          <ul className="list-disc list-inside mt-1 space-y-0.5 text-gray-200">
+                            {so.items?.map((item, idx) => (
+                              <li key={idx}>
+                                {item.name} x{item.qty} (₹{item.price * item.qty})
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-3 border-t border-gray-800">
+                          <p className="text-red-500 font-extrabold text-lg">
+                            ₹ {so.totalPrice}
+                          </p>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              so.status === "COMPLETED"
+                                ? "bg-gray-500/20 text-gray-400"
+                                : so.status === "READY_FOR_PICKUP"
+                                ? "bg-green-500/20 text-green-400 animate-pulse"
+                                : "bg-amber-500/20 text-amber-400"
+                            }`}
+                          >
+                            {so.status || "CONFIRMED"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center justify-between">
+                        <div className="bg-white p-2.5 rounded-xl shadow-lg">
+                          <QRCodeCanvas
+                            value={`${window.location.origin}/verify-snack/${so.orderPassId}`}
+                            size={100}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-500 font-mono mt-2">
+                          Counter QR Pass
+                        </span>
                       </div>
                     </div>
                   </div>
