@@ -10,6 +10,7 @@ export default function Navbar() {
   const [cityOpen, setCityOpen] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // Global Ctrl + K listener for Spotlight Search
   useEffect(() => {
@@ -22,12 +23,12 @@ export default function Navbar() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-  
+
   const cities = ["Mumbai", "Delhi NCR", "Bengaluru", "Chennai", "Hyderabad", "Kochi", "Pune", "Kolkata"];
   const [selectedCity, setSelectedCity] = useState(
     localStorage.getItem("selectedCity") || "Mumbai"
   );
-  
+
   const [watchlistItems, setWatchlistItems] = useState([]);
 
   const userId = localStorage.getItem("userId");
@@ -59,30 +60,28 @@ export default function Navbar() {
     localStorage.clear();
     sessionStorage.removeItem("admin_bypass");
     setWatchlistItems([]);
+    setUserMenuOpen(false);
     navigate("/login");
   };
 
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="bg-[#0B0B0F]/90 backdrop-blur-xl border-b border-gray-800/80 sticky top-0 z-50 shadow-2xl transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+    <nav className="bg-[#0B0B0F]/95 backdrop-blur-2xl border-b border-gray-800/80 sticky top-0 z-50 shadow-2xl transition-all">
+      <div className="max-w-[1500px] mx-auto px-3 sm:px-6">
+        <div className="flex items-center justify-between h-20 gap-2">
           
-          {/* Logo & Main Nav */}
-          <div className="flex items-center gap-8">
-            <Link
-              to="/"
-              className="flex items-center gap-3 group"
-            >
-              <div className="w-10 h-10 bg-gradient-to-tr from-red-600 to-pink-500 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-red-600/30 group-hover:scale-105 transition transform">
+          {/* Left: Brand Logo & City Selector */}
+          <div className="flex items-center gap-3 xl:gap-5 shrink-0">
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-red-600 to-pink-500 rounded-2xl flex items-center justify-center text-white text-lg sm:text-xl font-black shadow-lg shadow-red-600/30 group-hover:scale-105 transition transform">
                 🎬
               </div>
               <div className="flex flex-col">
-                <span className="text-white font-black text-xl tracking-tight leading-none group-hover:text-red-400 transition">
+                <span className="text-white font-black text-lg sm:text-xl tracking-tight leading-none group-hover:text-red-400 transition">
                   CineBook
                 </span>
-                <span className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-0.5">
+                <span className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-0.5">
                   Cinema Booking
                 </span>
               </div>
@@ -92,11 +91,11 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setCityOpen(!cityOpen)}
-                className="flex items-center gap-2 bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-300 hover:text-white transition shadow-sm"
+                className="flex items-center gap-1.5 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-3 py-1.5 rounded-full text-xs font-semibold text-gray-300 hover:text-white transition"
               >
-                <span className="text-red-500 text-sm">📍</span>
-                <span>{selectedCity}</span>
-                <span className="text-[10px] text-gray-500">▼</span>
+                <span className="text-red-500 text-xs">📍</span>
+                <span className="truncate max-w-[80px] sm:max-w-[110px]">{selectedCity}</span>
+                <span className="text-[9px] text-gray-500">▼</span>
               </button>
 
               {cityOpen && (
@@ -108,7 +107,7 @@ export default function Navbar() {
                     <button
                       key={city}
                       onClick={() => handleCitySelect(city)}
-                      className={`w-full text-left px-4 py-2.5 text-xs font-medium flex items-center justify-between hover:bg-red-600 hover:text-white transition ${
+                      className={`w-full text-left px-4 py-2 text-xs font-medium flex items-center justify-between hover:bg-red-600 hover:text-white transition ${
                         selectedCity === city ? "text-red-400 font-bold bg-red-950/20" : "text-gray-300"
                       }`}
                     >
@@ -119,115 +118,97 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-
-            {/* Nav links */}
-            <div className="hidden lg:flex items-center gap-2">
-              <Link
-                to="/"
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  isActive("/")
-                    ? "bg-red-600/10 text-red-500 border border-red-500/20"
-                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
-                }`}
-              >
-                Home
-              </Link>
-              <Link
-                to="/movies"
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  isActive("/movies")
-                    ? "bg-red-600/10 text-red-500 border border-red-500/20"
-                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
-                }`}
-              >
-                Movies & Shows
-              </Link>
-              <Link
-                to="/snacks"
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 ${
-                  isActive("/snacks") || isActive("/food-beverages")
-                    ? "bg-red-600/10 text-red-500 border border-red-500/20"
-                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
-                }`}
-              >
-                <span>🍿</span> Food & Snacks
-              </Link>
-              <Link
-                to="/gift-cards"
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 ${
-                  isActive("/gift-cards")
-                    ? "bg-red-600/10 text-red-500 border border-red-500/20"
-                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
-                }`}
-              >
-                <span>🎁</span> Gift Cards
-              </Link>
-              <Link
-                to="/loyalty"
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 ${
-                  isActive("/loyalty")
-                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                    : "text-amber-300 hover:text-amber-200 hover:bg-gray-800/50"
-                }`}
-              >
-                <span>👑</span> CineClub
-              </Link>
-            </div>
           </div>
 
-          {/* Right Controls */}
-          <div className="hidden md:flex items-center gap-4">
+          {/* Center: Desktop Navigation Links (Visible on 2XL / Desktop) */}
+          <div className="hidden 2xl:flex items-center gap-1">
+            <Link
+              to="/"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                isActive("/") ? "bg-red-600/15 text-red-400 border border-red-500/30" : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+              }`}
+            >
+              Home
+            </Link>
+            <Link
+              to="/movies"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                isActive("/movies") ? "bg-red-600/15 text-red-400 border border-red-500/30" : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+              }`}
+            >
+              Movies & Shows
+            </Link>
+            <Link
+              to="/snacks"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${
+                isActive("/snacks") || isActive("/food-beverages") ? "bg-red-600/15 text-red-400 border border-red-500/30" : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+              }`}
+            >
+              <span>🍿</span> Snacks
+            </Link>
+            <Link
+              to="/gift-cards"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${
+                isActive("/gift-cards") ? "bg-red-600/15 text-red-400 border border-red-500/30" : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+              }`}
+            >
+              <span>🎁</span> Gift Cards
+            </Link>
+            <Link
+              to="/loyalty"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${
+                isActive("/loyalty") ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" : "text-amber-300 hover:text-amber-200 hover:bg-gray-800/50"
+              }`}
+            >
+              <span>👑</span> CineClub
+            </Link>
+          </div>
+
+          {/* Right: Quick Actions & User Dropdown */}
+          <div className="hidden xl:flex items-center gap-2.5 shrink-0">
             
-            {/* Spotlight Search trigger button */}
+            {/* Spotlight Search trigger */}
             <button
               onClick={() => setSpotlightOpen(true)}
-              className="flex items-center gap-3 bg-gray-900/90 border border-gray-800 hover:border-red-500/50 px-4 py-2 rounded-2xl text-xs font-medium text-gray-400 hover:text-white transition shadow-inner"
+              className="flex items-center gap-2 bg-gray-900/90 border border-gray-800 hover:border-red-500/50 px-3 py-1.5 rounded-xl text-xs font-medium text-gray-400 hover:text-white transition"
               title="Search Movies & Snacks (Ctrl+K)"
             >
               <span>🔍</span>
-              <span className="hidden sm:inline">Search CineBook...</span>
-              <kbd className="bg-gray-800 text-gray-400 text-[10px] px-2 py-0.5 rounded-lg border border-gray-700 font-mono">
+              <span className="hidden xl:inline text-xs">Search...</span>
+              <kbd className="bg-gray-800 text-gray-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
                 ⌘K
               </kbd>
             </button>
-            
+
             {/* Watchlist Quick Button */}
             {isLoggedIn && (
               <div className="relative">
                 <button
                   onClick={() => setWatchlistOpen(!watchlistOpen)}
-                  className="flex items-center gap-2 bg-gray-900 border border-gray-800 hover:border-red-500/50 px-3.5 py-2 rounded-2xl text-xs font-bold text-gray-300 hover:text-white transition"
-                  title="My Watchlist"
+                  className="flex items-center gap-1.5 bg-gray-900 border border-gray-800 hover:border-red-500/50 px-3 py-1.5 rounded-xl text-xs font-bold text-gray-300 hover:text-white transition"
                 >
-                  <span className="text-red-500 text-sm">❤️</span>
+                  <span className="text-red-500 text-xs">❤️</span>
                   <span>Watchlist</span>
                   {watchlistItems.length > 0 && (
-                    <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                    <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
                       {watchlistItems.length}
                     </span>
                   )}
                 </button>
 
-                {/* Watchlist Dropdown Drawer */}
+                {/* Watchlist Dropdown */}
                 {watchlistOpen && (
                   <div className="absolute right-0 mt-3 w-80 bg-[#121219] border border-gray-800 rounded-3xl shadow-2xl p-4 z-50">
                     <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-white flex items-center gap-2">
                         <span>❤️</span> My Watchlist ({watchlistItems.length})
                       </h4>
-                      <button
-                        onClick={() => setWatchlistOpen(false)}
-                        className="text-gray-400 hover:text-white text-xs"
-                      >
-                        ✕
-                      </button>
+                      <button onClick={() => setWatchlistOpen(false)} className="text-gray-400 hover:text-white text-xs">✕</button>
                     </div>
 
-                    <div className="max-h-64 overflow-y-auto space-y-3 my-3 pr-1 custom-scrollbar">
+                    <div className="max-h-64 overflow-y-auto space-y-2 my-3 pr-1 custom-scrollbar">
                       {watchlistItems.length === 0 ? (
-                        <p className="text-gray-500 text-xs text-center py-6">
-                          Your watchlist is empty. Click ❤️ on movies to save them!
-                        </p>
+                        <p className="text-gray-500 text-xs text-center py-6">Your watchlist is empty.</p>
                       ) : (
                         watchlistItems.map((item) => {
                           const movieObj = item._id ? item : { _id: item, title: "Saved Movie" };
@@ -241,13 +222,9 @@ export default function Navbar() {
                               className="flex items-center gap-3 p-2 bg-gray-900/60 hover:bg-gray-800 border border-gray-800/80 rounded-2xl cursor-pointer transition"
                             >
                               {movieObj.poster ? (
-                                <img
-                                  src={movieObj.poster}
-                                  alt={movieObj.title}
-                                  className="w-10 h-14 object-cover rounded-xl"
-                                />
+                                <img src={movieObj.poster} alt="" className="w-9 h-12 object-cover rounded-xl" />
                               ) : (
-                                <div className="w-10 h-14 bg-gray-800 rounded-xl flex items-center justify-center text-xs">🎬</div>
+                                <div className="w-9 h-12 bg-gray-800 rounded-xl flex items-center justify-center text-xs">🎬</div>
                               )}
                               <div className="flex-1 min-w-0">
                                 <h5 className="text-xs font-bold text-white truncate">{movieObj.title}</h5>
@@ -259,14 +236,6 @@ export default function Navbar() {
                         })
                       )}
                     </div>
-
-                    <Link
-                      to="/movies"
-                      onClick={() => setWatchlistOpen(false)}
-                      className="block w-full text-center bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs font-bold py-2 rounded-xl transition"
-                    >
-                      Browse More Movies
-                    </Link>
                   </div>
                 )}
               </div>
@@ -275,10 +244,8 @@ export default function Navbar() {
             {isLoggedIn && (
               <Link
                 to="/my-bookings"
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  isActive("/my-bookings")
-                    ? "bg-red-600/10 text-red-500 border border-red-500/20"
-                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                  isActive("/my-bookings") ? "bg-red-600/15 text-red-400 border border-red-500/30" : "text-gray-300 hover:text-white hover:bg-gray-800/50"
                 }`}
               >
                 🎟️ My Tickets
@@ -287,7 +254,7 @@ export default function Navbar() {
 
             <Link
               to="/admin/dashboard"
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
                 isAdmin
                   ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20"
                   : "text-gray-400 hover:text-gray-200"
@@ -296,44 +263,80 @@ export default function Navbar() {
               <span>⚙️</span> Admin
             </Link>
 
+            {/* Profile Dropdown */}
             {isLoggedIn ? (
-              <div className="flex items-center gap-3 border-l border-gray-800 pl-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 bg-gray-900 border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-2xl transition"
+                >
+                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
                     {userName ? userName.charAt(0).toUpperCase() : "U"}
                   </div>
-                  <span className="text-gray-200 text-xs font-bold truncate max-w-[100px]">
+                  <span className="text-gray-200 text-xs font-bold truncate max-w-[90px]">
                     {userName || "User"}
                   </span>
-                </div>
-
-                <button
-                  onClick={handleLogout}
-                  className="bg-gray-900 hover:bg-red-600/20 border border-gray-800 hover:border-red-500/40 text-gray-300 hover:text-red-400 text-xs font-bold px-3 py-2 rounded-xl transition"
-                >
-                  Logout
+                  <span className="text-[9px] text-gray-500">▼</span>
                 </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-[#13131a] border border-gray-800 rounded-2xl shadow-2xl py-2 z-50 animate-fadeIn">
+                    <div className="px-4 py-2 border-b border-gray-800">
+                      <p className="text-xs font-bold text-white truncate">{userName}</p>
+                      <p className="text-[10px] text-gray-500">CineBook Member</p>
+                    </div>
+                    <Link
+                      to="/my-bookings"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white"
+                    >
+                      🎟️ My Bookings
+                    </Link>
+                    <Link
+                      to="/loyalty"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2 text-xs text-amber-400 hover:bg-gray-800"
+                    >
+                      👑 CineClub Points
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-950/40 hover:text-red-300 font-bold border-t border-gray-800 mt-1"
+                    >
+                      Logout Account
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Link
                   to="/login"
-                  className="text-gray-300 hover:text-white text-xs font-bold px-4 py-2 rounded-xl border border-gray-800 hover:border-gray-700 transition"
+                  className="text-gray-300 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-gray-800 hover:border-gray-700 transition"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white text-xs font-extrabold px-5 py-2.5 rounded-2xl transition shadow-lg shadow-red-600/30"
+                  className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white text-xs font-extrabold px-4 py-1.5 rounded-xl transition shadow-lg shadow-red-600/30"
                 >
-                  Create Account
+                  Register
                 </Link>
               </div>
             )}
+
           </div>
 
-          {/* Mobile Hamburger */}
-          <div className="flex items-center gap-3 lg:hidden">
+          {/* Mobile / Tablet Hamburger Button (Visible up to XL screens) */}
+          <div className="flex items-center gap-2 xl:hidden">
+            <button
+              onClick={() => setSpotlightOpen(true)}
+              className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 text-sm"
+              title="Search"
+            >
+              🔍
+            </button>
+
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="text-gray-300 hover:text-white p-2 rounded-xl bg-gray-900 border border-gray-800"
@@ -348,12 +351,13 @@ export default function Navbar() {
               </svg>
             </button>
           </div>
+
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile / Tablet Responsive Drawer Menu */}
       {menuOpen && (
-        <div className="lg:hidden bg-[#0D0D12] border-t border-gray-800 px-6 py-6 space-y-4 shadow-2xl animate-fadeIn">
+        <div className="xl:hidden bg-[#0D0D12] border-t border-gray-800 px-6 py-6 space-y-4 shadow-2xl animate-fadeIn">
           <Link
             to="/"
             onClick={() => setMenuOpen(false)}
@@ -375,6 +379,21 @@ export default function Navbar() {
           >
             🍿 Food & Snacks
           </Link>
+          <Link
+            to="/gift-cards"
+            onClick={() => setMenuOpen(false)}
+            className="block text-gray-200 hover:text-red-400 font-bold text-sm"
+          >
+            🎁 Gift Cards
+          </Link>
+          <Link
+            to="/loyalty"
+            onClick={() => setMenuOpen(false)}
+            className="block text-amber-400 font-bold text-sm"
+          >
+            👑 CineClub Points
+          </Link>
+
           {isLoggedIn && (
             <Link
               to="/my-bookings"
@@ -384,6 +403,7 @@ export default function Navbar() {
               🎟️ My Tickets
             </Link>
           )}
+
           <Link
             to="/admin/dashboard"
             onClick={() => setMenuOpen(false)}
@@ -401,7 +421,7 @@ export default function Navbar() {
                   </div>
                   <div>
                     <p className="text-white text-sm font-bold">{userName}</p>
-                    <p className="text-xs text-gray-500">Active Cinema Member</p>
+                    <p className="text-xs text-gray-500">CineBook Member</p>
                   </div>
                 </div>
                 <button
