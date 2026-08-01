@@ -127,10 +127,19 @@ function Home() {
                 <img
                   src={currentHero.poster}
                   alt={currentHero.title}
-                  className="w-full h-full object-cover brightness-[0.35] filter blur-xs md:blur-none"
+                  className="w-full h-full object-cover filter brightness-[0.75] contrast-[1.05]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#06060A] via-[#06060A]/60 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#06060A] via-[#06060A]/80 to-transparent" />
+                {/* Refined gradient overlays for clear background visibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#06060A] via-[#06060A]/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#06060A]/90 via-[#06060A]/50 to-transparent" />
+                
+                {/* Dynamic Ambient Backlight Glow */}
+                <div 
+                  className="absolute bottom-10 left-20 w-[450px] h-[450px] rounded-full blur-[140px] pointer-events-none opacity-30"
+                  style={{
+                    background: `radial-gradient(circle, rgba(239,68,68,0.7) 0%, rgba(219,39,119,0.3) 60%, transparent 80%)`
+                  }}
+                />
               </motion.div>
             )}
           </AnimatePresence>

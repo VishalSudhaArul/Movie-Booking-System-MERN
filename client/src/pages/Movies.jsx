@@ -38,6 +38,10 @@ function Movies() {
     }
   }, [token]);
 
+  const [backdropBrightness, setBackdropBrightness] = useState(75);
+  const [ambientGlow, setAmbientGlow] = useState(true);
+  const [showControls, setShowControls] = useState(false);
+
   /* ================= AUTO HERO ROTATION ================= */
   useEffect(() => {
     if (!movies.length) return;
@@ -105,18 +109,111 @@ function Movies() {
               className="absolute inset-0"
             >
               <motion.img
-                initial={{ scale: 1.1 }}
+                initial={{ scale: 1.08 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 10, ease: "linear" }}
                 src={movies[activeHero].poster}
                 alt="Hero Background"
-                className="w-full h-full object-cover brightness-[0.4]"
+                className="w-full h-full object-cover transition-all duration-500"
+                style={{ filter: `brightness(${backdropBrightness / 100}) contrast(1.08)` }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050507] via-transparent to-[#050507]/40" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#050507] via-[#050507]/60 to-transparent" />
+              {/* Dynamic Gradient Overlays - Feathered to keep backdrop visible while maintaining text contrast */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#050507] via-[#050507]/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#050507]/85 via-[#050507]/45 to-transparent" />
+
+              {/* Ambient Neon Aura Backdrop Effect */}
+              {ambientGlow && (
+                <div 
+                  className="absolute -bottom-20 left-10 w-96 h-96 rounded-full blur-[120px] pointer-events-none opacity-40 transition-all duration-1000"
+                  style={{
+                    background: `radial-gradient(circle, rgba(239,68,68,0.8) 0%, rgba(147,51,234,0.4) 50%, transparent 80%)`
+                  }}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Backdrop Visual Enhancement Control Pill */}
+        <div className="absolute top-8 right-8 z-30 flex items-center gap-3">
+          <button
+            onClick={() => setShowControls(!showControls)}
+            className="flex items-center gap-2 bg-black/60 hover:bg-black/80 backdrop-blur-xl border border-white/20 px-4 py-2 rounded-full text-xs font-bold transition shadow-xl hover:scale-105"
+          >
+            <span>🎨</span>
+            <span>Poster Lighting & FX</span>
+            <span className="text-[10px] text-red-400">({backdropBrightness}%)</span>
+          </button>
+
+          <AnimatePresence>
+            {showControls && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                className="absolute right-0 top-12 bg-[#12121c]/95 border border-white/20 p-5 rounded-2xl backdrop-blur-2xl shadow-2xl w-72 space-y-4 text-xs z-40"
+              >
+                <div className="flex items-center justify-between font-bold border-b border-white/10 pb-2">
+                  <span className="flex items-center gap-1.5 text-red-400">
+                    <span>💡</span> Poster Brightness
+                  </span>
+                  <span className="text-gray-300 font-mono">{backdropBrightness}%</span>
+                </div>
+
+                {/* Brightness Slider */}
+                <div>
+                  <input
+                    type="range"
+                    min="30"
+                    max="100"
+                    value={backdropBrightness}
+                    onChange={(e) => setBackdropBrightness(Number(e.target.value))}
+                    className="w-full accent-red-600 cursor-pointer h-1.5 bg-gray-700 rounded-lg"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-semibold">
+                    <span>Dim (30%)</span>
+                    <span>Standard (75%)</span>
+                    <span>Vivid (100%)</span>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Cinema", val: 45 },
+                    { label: "Clear", val: 75 },
+                    { label: "Vivid ⚡", val: 95 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      onClick={() => setBackdropBrightness(preset.val)}
+                      className={`py-1.5 px-2 rounded-lg font-bold text-[11px] border transition ${
+                        backdropBrightness === preset.val
+                          ? "bg-red-600 text-white border-red-500 shadow-md"
+                          : "bg-white/5 border-white/10 hover:bg-white/10 text-gray-300"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Ambient Aura Toggle */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <span className="text-gray-300 font-medium">Ambient Cinema Glow</span>
+                  <button
+                    onClick={() => setAmbientGlow(!ambientGlow)}
+                    className={`w-10 h-5 flex items-center rounded-full p-1 transition duration-300 ${
+                      ambientGlow ? "bg-red-600 justify-end" : "bg-gray-700 justify-start"
+                    }`}
+                  >
+                    <div className="w-3.5 h-3.5 bg-white rounded-full shadow-md" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <div className="relative z-10 h-full flex flex-col justify-center px-6 md:px-24 max-w-5xl">
           <AnimatePresence mode="wait">
@@ -129,19 +226,19 @@ function Movies() {
                 transition={{ duration: 0.8, ease: "easeOut" }}
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-sm uppercase tracking-widest">
+                  <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-sm uppercase tracking-widest shadow-md shadow-red-600/40">
                     Hot Pick
                   </span>
-                  <span className="text-gray-300 text-sm font-medium tracking-wide">
+                  <span className="text-gray-300 text-sm font-medium tracking-wide bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
                     {movies[activeHero].genre}
                   </span>
                 </div>
 
-                <h1 className="text-6xl md:text-8xl font-black mb-6 leading-none tracking-tighter">
+                <h1 className="text-6xl md:text-8xl font-black mb-6 leading-none tracking-tighter drop-shadow-2xl">
                   {movies[activeHero].title}
                 </h1>
 
-                <p className="text-gray-400 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light">
+                <p className="text-gray-200 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light drop-shadow-lg bg-black/30 backdrop-blur-sm p-4 rounded-2xl border border-white/5">
                   {movies[activeHero].description ||
                     "An epic journey awaits in this cinematic masterpiece. Experience the thrill, the emotion, and the action on the big screen."}
                 </p>
@@ -149,7 +246,7 @@ function Movies() {
                 <div className="flex flex-wrap gap-5">
                   <button
                     onClick={() => navigate(`/movies/${movies[activeHero]._id}`)}
-                    className="group relative px-10 py-4 bg-red-600 text-white font-bold rounded-full overflow-hidden transition-all hover:pr-14"
+                    className="group relative px-10 py-4 bg-red-600 text-white font-bold rounded-full overflow-hidden transition-all hover:pr-14 shadow-xl shadow-red-600/30"
                   >
                     <span className="relative z-10">BOOK TICKETS</span>
                     <span className="absolute right-6 opacity-0 group-hover:opacity-100 transition-all">
@@ -159,7 +256,7 @@ function Movies() {
 
                   <button
                     onClick={() => setTrailerMovie(movies[activeHero])}
-                    className="px-10 py-4 border border-white/20 bg-white/5 backdrop-blur-md rounded-full font-bold hover:bg-white/10 transition"
+                    className="px-10 py-4 border border-white/30 bg-black/40 hover:bg-black/60 backdrop-blur-xl rounded-full font-bold transition shadow-lg flex items-center gap-2"
                   >
                     ▶ WATCH TRAILER
                   </button>
@@ -176,7 +273,7 @@ function Movies() {
               key={i}
               onClick={() => setActiveHero(i)}
               className={`h-1.5 transition-all duration-500 rounded-full ${
-                activeHero === i ? "w-12 bg-red-600" : "w-3 bg-white/20 hover:bg-white/40"
+                activeHero === i ? "w-12 bg-red-600 shadow-md shadow-red-600" : "w-3 bg-white/30 hover:bg-white/60"
               }`}
             />
           ))}
