@@ -129,8 +129,7 @@ npm start
 ## 🔐 Authorized Admin Gate Access
 For demonstration or administrative auditing without creating a theater owner account:
 1. Click **`⚙️ Admin`** in the navigation bar.
-2. Enter the authorized session key: `123456`.
-3. Access full operational control over shows, movies, parking rates, snacks, analytics, and IoT telemetry.
+2. Access full operational control over shows, movies, parking rates, snacks, analytics, and IoT telemetry.
 
 ---
 
