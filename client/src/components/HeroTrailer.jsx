@@ -122,9 +122,10 @@ const HeroTrailer = ({ onLaunchClick }) => {
       posters.push(img);
     });
 
-    // Particle Engine
+    // Particle Engine - Scale down on mobile screens for 60FPS performance
     const particles = [];
-    const particleCount = 120;
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const particleCount = isMobile ? 35 : 120;
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * 1920,
@@ -511,7 +512,9 @@ const HeroTrailer = ({ onLaunchClick }) => {
         ctx.restore();
       }
 
-      animFrameRef.current = requestAnimationFrame(renderLoop);
+      if (stateRef.current.isVisible) {
+        animFrameRef.current = requestAnimationFrame(renderLoop);
+      }
     };
 
     const handleResize = () => {
@@ -521,12 +524,35 @@ const HeroTrailer = ({ onLaunchClick }) => {
       }
     };
 
+    stateRef.current.isVisible = true;
+
+    // IntersectionObserver to pause heavy rAF canvas loop when offscreen
+    let observer;
+    if (typeof IntersectionObserver !== "undefined" && containerRef.current) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          const isIntersecting = entry ? entry.isIntersecting : true;
+          stateRef.current.isVisible = isIntersecting;
+          if (isIntersecting && !animFrameRef.current) {
+            animFrameRef.current = requestAnimationFrame(renderLoop);
+          } else if (!isIntersecting && animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current);
+            animFrameRef.current = null;
+          }
+        },
+        { threshold: 0.1 }
+      );
+      observer.observe(containerRef.current);
+    }
+
     handleResize();
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
     animFrameRef.current = requestAnimationFrame(renderLoop);
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (observer && containerRef.current) observer.unobserve(containerRef.current);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, []);

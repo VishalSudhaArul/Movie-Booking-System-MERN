@@ -137,9 +137,9 @@ function Home() {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#06060A] via-[#06060A]/40 to-transparent" />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#06060A]/90 via-[#06060A]/50 to-transparent" />
                 
-                {/* Dynamic Ambient Backlight Glow */}
+                {/* Dynamic Ambient Backlight Glow - Lightweight blur on mobile for max GPU performance */}
                 <div 
-                  className="absolute bottom-10 left-20 w-[450px] h-[450px] rounded-full blur-[140px] pointer-events-none opacity-30"
+                  className="absolute bottom-10 left-10 md:left-20 w-64 h-64 md:w-[450px] md:h-[450px] rounded-full blur-2xl md:blur-[140px] pointer-events-none opacity-30"
                   style={{
                     background: `radial-gradient(circle, rgba(239,68,68,0.7) 0%, rgba(219,39,119,0.3) 60%, transparent 80%)`
                   }}
