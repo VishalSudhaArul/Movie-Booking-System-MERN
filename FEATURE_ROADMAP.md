@@ -55,3 +55,4 @@ This document outlines the feature recommendations and enhancement roadmap for t
 - [x] Watchlist / Bookmark Functionality
 - [x] Booking Analytics CSV Export
 - [x] Standalone F&B Express Pantry (Theater & Movie filtered Food & Beverage ordering + Digital Snack Pass QR)
+- [x] 4K 60FPS AI Motion Controller Launch Trailer (MediaPipe 21-Joint Holographic Hand Skeleton Tracking + Web Audio SFX Engine)

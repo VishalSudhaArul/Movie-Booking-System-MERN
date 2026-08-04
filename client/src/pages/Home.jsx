@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import API from "../api";
 import TrailerModal from "../components/TrailerModal";
+import HeroTrailer from "../components/HeroTrailer";
 
 function Home() {
   const navigate = useNavigate();
@@ -211,8 +212,36 @@ function Home() {
         )}
       </section>
 
+      {/* ================= AI MOTION CONTROLLER 4K HERO LAUNCH TRAILER ================= */}
+      <section className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 my-12">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs tracking-widest uppercase mb-1">
+              <span>⚡</span> PRODUCT LAUNCH TRAILER
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
+              AI Motion-Controlled Cinema Booking
+            </h2>
+            <p className="text-gray-400 text-xs md:text-sm mt-1">
+              Experience the world's first touchless movie ticket booking system powered by MediaPipe LiDAR tracking.
+            </p>
+          </div>
+          <a
+            href="/hero-video.html"
+            target="_blank"
+            rel="noreferrer"
+            className="px-6 py-3 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-bold text-xs rounded-2xl border border-cyan-500/40 transition shrink-0 flex items-center gap-2"
+          >
+            <span>⛶ Launch Standalone 4K Trailer</span>
+          </a>
+        </div>
+
+        {/* Hero Trailer Canvas Component */}
+        <HeroTrailer />
+      </section>
+
       {/* ================= SEARCH & CATEGORY BAR ================= */}
-      <section className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 -mt-10 mb-20">
+      <section className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 mb-20">
         <div className="bg-[#12121B]/90 backdrop-blur-2xl border border-gray-800 p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
           
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
