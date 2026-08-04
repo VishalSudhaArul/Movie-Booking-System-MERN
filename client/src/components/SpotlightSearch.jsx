@@ -38,8 +38,8 @@ export default function SpotlightSearch({ isOpen, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start justify-center pt-20 p-4 animate-fadeIn">
-      <div className="bg-[#0F0F17] border border-gray-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl space-y-0">
+    <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xl flex items-start justify-center pt-16 sm:pt-20 p-4 animate-fadeIn">
+      <div className="bg-[#0F0F17] border border-cyan-500/30 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl space-y-0 animate-modalScaleIn">
         
         {/* Search Header */}
         <div className="p-4 border-b border-gray-800/80 flex items-center gap-3 bg-[#0A0A0F]">
