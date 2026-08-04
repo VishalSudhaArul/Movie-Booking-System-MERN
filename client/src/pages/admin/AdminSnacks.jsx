@@ -218,20 +218,23 @@ export default function AdminSnacks() {
 
         {/* DELETE MODAL */}
         {deleteId && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
-            <div className="bg-[#0F0F17] border border-gray-800 p-8 rounded-3xl text-center space-y-4 max-w-sm w-full shadow-2xl">
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 z-[100] animate-fadeIn">
+            <div className="bg-[#0F0F17] border border-red-500/40 p-8 rounded-3xl text-center space-y-4 max-w-sm w-full shadow-2xl animate-modalScaleIn">
+              <div className="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 text-red-500 flex items-center justify-center text-xl mx-auto">
+                🍿
+              </div>
               <h2 className="text-base font-extrabold text-white">Delete this snack item?</h2>
               <p className="text-xs text-gray-400">This item will be removed from customer add-on options.</p>
               <div className="flex justify-center gap-3 pt-2">
                 <button
                   onClick={confirmDeleteSnack}
-                  className="bg-red-600 hover:bg-red-700 px-6 py-2.5 rounded-2xl text-white font-bold text-xs transition shadow-lg shadow-red-600/30"
+                  className="flex-1 bg-red-600 hover:bg-red-700 px-6 py-2.5 rounded-2xl text-white font-bold text-xs transition shadow-lg shadow-red-600/30"
                 >
                   Confirm Delete
                 </button>
                 <button
                   onClick={() => setDeleteId(null)}
-                  className="bg-gray-800 hover:bg-gray-700 px-6 py-2.5 rounded-2xl text-white font-bold text-xs transition"
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 px-6 py-2.5 rounded-2xl text-white font-bold text-xs transition"
                 >
                   Cancel
                 </button>
