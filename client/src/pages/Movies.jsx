@@ -341,6 +341,10 @@ function Movies() {
                     <img
                       src={movie.poster}
                       alt={movie.title}
+                      loading="lazy"
+                      decoding="async"
+                      width="300"
+                      height="450"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">

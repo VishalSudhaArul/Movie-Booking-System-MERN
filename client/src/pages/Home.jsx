@@ -363,6 +363,10 @@ function Home() {
                     <img
                       src={movie.poster}
                       alt={movie.title}
+                      loading="lazy"
+                      decoding="async"
+                      width="300"
+                      height="450"
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#111119] via-transparent to-transparent opacity-80" />
