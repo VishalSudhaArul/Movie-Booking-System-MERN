@@ -8,6 +8,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isInteractive, setIsInteractive] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [fps, setFps] = useState(60.0);
   const [currentGesture, setCurrentGesture] = useState("SWIPE_LEFT");
@@ -624,6 +625,13 @@ const HeroTrailer = ({ onLaunchClick }) => {
               >
                 {audioEnabled ? "🔊 SOUND FX ON" : "🔇 SOUND FX OFF"}
               </button>
+
+              <button
+                onClick={() => setShowGuide(!showGuide)}
+                className="px-3.5 py-2 bg-cyan-500/10 hover:bg-cyan-500/25 text-cyan-300 rounded-xl border border-cyan-500/30 transition font-mono"
+              >
+                🎮 GESTURE GUIDE
+              </button>
             </div>
 
             <div className="flex items-center gap-3 font-mono text-gray-400 text-[11px]">
@@ -641,6 +649,51 @@ const HeroTrailer = ({ onLaunchClick }) => {
             </div>
           </div>
         </div>
+
+        {/* Gesture Quick Guide Overlay Modal */}
+        {showGuide && (
+          <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
+            <div className="bg-[#0b1021] border border-cyan-500/40 rounded-3xl p-6 max-w-lg w-full text-white shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 className="text-base font-extrabold font-mono text-cyan-300 flex items-center gap-2">
+                  <span>🖐️</span> CINEBOOK AI MOTION GESTURES
+                </h3>
+                <button
+                  onClick={() => setShowGuide(false)}
+                  className="text-gray-400 hover:text-white text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                  <div className="text-cyan-400 font-bold mb-1">🖐️ OPEN PALM</div>
+                  <div className="text-gray-300">Swipe horizontally left/right to browse movies</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                  <div className="text-cyan-400 font-bold mb-1">👆 POINT FINGER</div>
+                  <div className="text-gray-300">Aim target reticle to expand movie details & showtimes</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                  <div className="text-cyan-400 font-bold mb-1">🤏 PINCH FINGERS</div>
+                  <div className="text-gray-300">Pinch index + thumb to precision lock recliner seats</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                  <div className="text-cyan-400 font-bold mb-1">👍 THUMBS UP</div>
+                  <div className="text-gray-300">Hold thumbs up for 1s to trigger biometric express booking</div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowGuide(false)}
+                className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-extrabold rounded-xl hover:opacity-90 transition text-xs"
+              >
+                GOT IT, LET'S CONTROL!
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

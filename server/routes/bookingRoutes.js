@@ -33,13 +33,13 @@ router.post("/", bookingController.bookSeats);
 /* ── USER BOOKING HISTORY ── */
 router.get("/user/:userId", bookingController.getUserBookings);
 
+/* ── PARKING REVENUE ── */
+router.get("/parking-revenue", bookingController.getParkingRevenue);
+
 /* ── GET SINGLE BOOKING ── */
 router.get("/:id", bookingController.getBookingById);
 
 /* ── MARK TICKET AS USED ── */
 router.put("/use/:id", bookingController.markAsUsed);
-
-/* ── PARKING REVENUE ── */
-router.get("/parking-revenue", bookingController.getParkingRevenue);
 
 module.exports = router;
