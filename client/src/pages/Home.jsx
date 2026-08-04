@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import API from "../api";
-import TrailerModal from "../components/TrailerModal";
-import HeroTrailer from "../components/HeroTrailer";
+
+const TrailerModal = lazy(() => import("../components/TrailerModal"));
+const HeroTrailer = lazy(() => import("../components/HeroTrailer"));
 
 function Home() {
   const navigate = useNavigate();
@@ -128,6 +129,8 @@ function Home() {
                 <img
                   src={currentHero.poster}
                   alt={currentHero.title}
+                  fetchpriority="high"
+                  decoding="async"
                   className="w-full h-full object-cover filter brightness-[0.75] contrast-[1.05]"
                 />
                 {/* Refined gradient overlays for clear background visibility */}
@@ -237,7 +240,9 @@ function Home() {
         </div>
 
         {/* Hero Trailer Canvas Component */}
-        <HeroTrailer />
+        <Suspense fallback={<div className="h-64 bg-gray-950/80 rounded-3xl animate-pulse flex items-center justify-center text-xs text-gray-500">Loading AI Motion Trailer...</div>}>
+          <HeroTrailer />
+        </Suspense>
       </section>
 
       {/* ================= SEARCH & CATEGORY BAR ================= */}
@@ -478,12 +483,14 @@ function Home() {
       </section>
 
       {/* Trailer Modal */}
-      <TrailerModal
-        isOpen={!!trailerMovie}
-        onClose={() => setTrailerMovie(null)}
-        trailerUrl={trailerMovie?.trailerUrl}
-        movieTitle={trailerMovie?.title}
-      />
+      <Suspense fallback={null}>
+        <TrailerModal
+          isOpen={!!trailerMovie}
+          onClose={() => setTrailerMovie(null)}
+          trailerUrl={trailerMovie?.trailerUrl}
+          movieTitle={trailerMovie?.title}
+        />
+      </Suspense>
     </div>
   );
 }
