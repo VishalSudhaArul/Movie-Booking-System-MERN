@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineBook AI - The Future of Movie Booking | Product Launch Trailer</title>
+  <meta name="description" content="Cinematic 4K launch trailer for futuristic AI motion-controlled movie ticket booking system.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #030308;
+      --neon-cyan: #00f0ff;
+      --neon-blue: #0066ff;
+      --neon-crimson: #ff0055;
+      --gold-accent: #ffb703;
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-bg: rgba(10, 15, 30, 0.65);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-dark);
+      color: #ffffff;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Container 16:9 Aspect Ratio */
+    .trailer-stage {
+      position: relative;
+      width: 100vw;
+      height: 56.25vw; /* 16:9 aspect ratio */
+      max-height: 100vh;
+      max-width: 177.78vh;
+      background: radial-gradient(circle at 50% 30%, #0c1228 0%, #030308 80%);
+      box-shadow: 0 0 100px rgba(0, 240, 255, 0.15), 0 0 120px rgba(255, 0, 85, 0.1);
+      overflow: hidden;
+      border-radius: 12px;
+    }
+
+    /* Canvas for WebGL / Particle & Visual Rendering */
+    #trailerCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Holographic Overlay Layer */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5vw;
+    }
+
+    /* Header Bar */
+    .brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      opacity: 0.95;
+    }
+
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 8px 18px;
+      border-radius: 30px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      background-color: var(--neon-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--neon-cyan);
+      animation: pulseDot 1.5s infinite alternate;
+    }
+
+    @keyframes pulseDot {
+      0% { transform: scale(0.8); opacity: 0.6; }
+      100% { transform: scale(1.3); opacity: 1; }
+    }
+
+    .brand-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.9vw;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .hud-metrics {
+      display: flex;
+      gap: 20px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.7vw;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(10, 10, 20, 0.7);
+      padding: 8px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+    }
+
+    .hud-metrics span {
+      color: var(--neon-cyan);
+      font-weight: 700;
+    }
+
+    /* Scene Indicator Header */
+    .scene-tag {
+      position: absolute;
+      top: 6vw;
+      left: 2.5vw;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.75vw;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      background: rgba(0, 240, 255, 0.07);
+      border-left: 3px solid var(--neon-cyan);
+      padding: 6px 14px;
+      border-radius: 0 8px 8px 0;
+      backdrop-filter: blur(8px);
+      transition: all 0.5s ease;
+    }
+
+    /* Control Bar Footer */
+    .controls-footer {
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: rgba(6, 9, 20, 0.85);
+      border: 1px solid var(--glass-border);
+      padding: 14px 24px;
+      border-radius: 20px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(0, 240, 255, 0.1);
+      transition: opacity 0.3s;
+    }
+
+    .progress-bar-container {
+      position: relative;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-crimson));
+      border-radius: 4px;
+      box-shadow: 0 0 10px var(--neon-cyan);
+      transition: width 0.1s linear;
+    }
+
+    .timeline-markers {
+      display: flex;
+      justify-content: space-between;
+      position: absolute;
+      width: 100%;
+      top: -12px;
+      pointer-events: none;
+    }
+
+    .marker {
+      width: 2px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.3);
+      position: relative;
+    }
+
+    .marker-label {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      font-family: 'Space Grotesk', monospace;
+      color: rgba(255, 255, 255, 0.6);
+      white-space: nowrap;
+    }
+
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .control-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--glass-border);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 0.75vw;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .control-btn.active {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
+      color: #000;
+      border-color: transparent;
+      font-weight: 800;
+    }
+
+    .time-display {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.8vw;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Ambient Lighting Flares */
+    .flare-cyan {
+      position: absolute;
+      top: -10%;
+      left: -10%;
+      width: 40vw;
+      height: 40vw;
+      background: radial-gradient(circle, rgba(0, 240, 255, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .flare-crimson {
+      position: absolute;
+      bottom: -10%;
+      right: -10%;
+      width: 45vw;
+      height: 45vw;
+      background: radial-gradient(circle, rgba(255, 0, 85, 0.1) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Watermark / Badge - NONE as requested, purely high-end startup presentation */
+
+    /* Responsive scaling adjustments */
+    @media (max-width: 768px) {
+      .brand-title { font-size: 11px; }
+      .hud-metrics { font-size: 9px; }
+      .control-btn { font-size: 10px; padding: 6px 10px; }
+      .scene-tag { font-size: 10px; top: 12vw; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="trailer-stage" id="stageContainer">
+    <!-- Ambient Volumetric Lens Flares -->
+    <div class="flare-cyan"></div>
+    <div class="flare-crimson"></div>
+
+    <!-- Main Rendering Canvas -->
+    <canvas id="trailerCanvas"></canvas>
+
+    <!-- Holographic Glass UI Layer -->
+    <div class="ui-layer">
+      <!-- Top Brand Header -->
+      <div class="brand-header">
+        <div class="brand-badge">
+          <div class="brand-dot"></div>
+          <span class="brand-title">CINEBOOK AI • GESTURE ENGINE 4.0</span>
+        </div>
+
+        <div class="hud-metrics">
+          <div>FPS: <span id="hudFps">60.0</span></div>
+          <div>HAND: <span id="hudHand">RIGHT DETECTED</span></div>
+          <div>GESTURE: <span id="hudGesture">SWIPE_LEFT</span></div>
+          <div>CONFIDENCE: <span id="hudConf">99.8%</span></div>
+        </div>
+      </div>
+
+      <!-- Current Scene Tag HUD -->
+      <div class="scene-tag" id="sceneTag">
+        SCENE 01 // SWIPE GESTURE — BROWSE BLOCKBUSTERS
+      </div>
+
+      <!-- Bottom Interactive Control Dock -->
+      <div class="controls-footer">
+        <div class="progress-bar-container" id="progressBar">
+          <div class="progress-bar-fill" id="progressFill"></div>
+          <div class="timeline-markers">
+            <div class="marker" style="left: 0%"><span class="marker-label">01: SWIPE</span></div>
+            <div class="marker" style="left: 20%"><span class="marker-label">02: POINT</span></div>
+            <div class="marker" style="left: 40%"><span class="marker-label">03: SEATS</span></div>
+            <div class="marker" style="left: 60%"><span class="marker-label">04: THUMBS UP</span></div>
+            <div class="marker" style="left: 80%"><span class="marker-label">05: QR PASS</span></div>
+            <div class="marker" style="left: 95%"><span class="marker-label">06: LAUNCH</span></div>
+          </div>
+        </div>
+
+        <div class="controls-row">
+          <div class="btn-group">
+            <button class="control-btn" id="playBtn">
+              <span id="playIcon">⏸</span> <span id="playText">PAUSE</span>
+            </button>
+            <button class="control-btn" id="restartBtn">
+              🔄 REPLAY
+            </button>
+            <button class="control-btn" id="interactiveBtn">
+              🖐️ INTERACTIVE HAND MODE
+            </button>
+            <button class="control-btn" id="audioBtn">
+              🔊 SOUND FX ON
+            </button>
+          </div>
+
+          <div class="time-display">
+            <span id="currentTime">00:00.00</span> / <span id="totalTime">00:15.00</span> | <span style="color:var(--neon-cyan); font-weight:bold;">4K 60FPS</span>
+          </div>
+
+          <div class="btn-group">
+            <button class="control-btn" id="fullscreenBtn">
+              ⛶ FULLSCREEN
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Audio Synthesis Script & Main Animation Loop Script -->
+  <script>
+    // =========================================================================
+    // WEB AUDIO API SOUND EFFECTS SYNTHESIZER
+    // =========================================================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playTone(freq, type = 'sine', duration = 0.15, vol = 0.1) {
+        if (!this.enabled) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+
+      playSwipe() {
+        if (!this.enabled) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.3);
+        } catch(e) {}
+      }
+
+      playLock() {
+        this.playTone(880, 'sine', 0.08, 0.15);
+        setTimeout(() => this.playTone(1760, 'triangle', 0.12, 0.12), 60);
+      }
+
+      playPinch() {
+        this.playTone(523.25, 'sine', 0.1, 0.12);
+        setTimeout(() => this.playTone(1046.50, 'sine', 0.15, 0.1), 80);
+      }
+
+      playConfirm() {
+        this.playTone(440, 'triangle', 0.1, 0.15);
+        setTimeout(() => this.playTone(659.25, 'triangle', 0.1, 0.15), 80);
+        setTimeout(() => this.playTone(880, 'sine', 0.3, 0.2), 160);
+      }
+
+      playWhoosh() {
+        if (!this.enabled) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.4);
+          gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.4);
+        } catch(e) {}
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // =========================================================================
+    // MOVIE POSTER ASSETS LOADING
+    // =========================================================================
+    const posterImages = [];
+    const posterSources = [
+      'posters/cyber_genesis.png',
+      'posters/chronos_rift.png',
+      'posters/neon_skyline.png'
+    ];
+
+    posterSources.forEach((src, idx) => {
+      const img = new Image();
+      img.src = src;
+      posterImages.push(img);
+    });
+
+    // =========================================================================
+    // MAIN CANVAS ANIMATION ENGINE
+    // =========================================================================
+    const canvas = document.getElementById('trailerCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = 1920;
+    let height = 1080;
+
+    function resizeCanvas() {
+      const stage = document.getElementById('stageContainer');
+      width = stage.clientWidth;
+      height = stage.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Trailer State Variables
+    let duration = 15.0; // 15 seconds video length
+    let currentTime = 0;
+    let isPlaying = true;
+    let isInteractive = false;
+    let lastTimestamp = performance.now();
+
+    // Interactive mouse coordinates
+    let mouseX = width * 0.7;
+    let mouseY = height * 0.5;
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+    });
+
+    // Ambient Particles Engine
+    const particles = [];
+    for (let i = 0; i < 180; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 2.5 + 0.5,
+        color: Math.random() > 0.4 ? '#00f0ff' : '#ff0055',
+        alpha: Math.random() * 0.7 + 0.2,
+        speedY: -(Math.random() * 0.6 + 0.2),
+        speedX: (Math.random() - 0.5) * 0.4
+      });
+    }
+
+    function updateParticles() {
+      particles.forEach(p => {
+        p.y += p.speedY;
+        p.x += p.speedX;
+        if (p.y < 0) {
+          p.y = height + 10;
+          p.x = Math.random() * width;
+        }
+        if (p.x < 0 || p.x > width) p.x = Math.random() * width;
+      });
+    }
+
+    function drawParticles() {
+      particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // =========================================================================
+    // HAND SKELETON GENERATOR (MediaPipe 21 Joint Model)
+    // =========================================================================
+    function getHandJoints(baseX, baseY, gesture = 'NORMAL', scale = 1.0) {
+      // 21 joint landmark topology relative to wrist
+      // gesture types: 'NORMAL', 'OPEN_SWIPE', 'POINT', 'PINCH', 'THUMBS_UP'
+      const joints = [];
+      const s = scale * (height / 1080);
+
+      let wrist = { x: baseX, y: baseY };
+
+      // Finger offsets based on gesture
+      let offsets = [];
+
+      if (gesture === 'OPEN_SWIPE') {
+        offsets = [
+          // Thumb
+          { x: -35 * s, y: -40 * s }, { x: -65 * s, y: -65 * s }, { x: -90 * s, y: -95 * s }, { x: -115 * s, y: -125 * s },
+          // Index
+          { x: -20 * s, y: -70 * s }, { x: -30 * s, y: -130 * s }, { x: -40 * s, y: -180 * s }, { x: -50 * s, y: -230 * s },
+          // Middle
+          { x: 5 * s, y: -75 * s }, { x: 5 * s, y: -140 * s }, { x: 5 * s, y: -195 * s }, { x: 5 * s, y: -245 * s },
+          // Ring
+          { x: 30 * s, y: -70 * s }, { x: 35 * s, y: -130 * s }, { x: 40 * s, y: -180 * s }, { x: 45 * s, y: -225 * s },
+          // Pinky
+          { x: 50 * s, y: -60 * s }, { x: 60 * s, y: -110 * s }, { x: 70 * s, y: -150 * s }, { x: 80 * s, y: -190 * s }
+        ];
+      } else if (gesture === 'POINT') {
+        offsets = [
+          // Thumb folded
+          { x: -25 * s, y: -20 * s }, { x: -35 * s, y: -40 * s }, { x: -20 * s, y: -50 * s }, { x: -5 * s, y: -55 * s },
+          // Index fully extended pointing
+          { x: -20 * s, y: -70 * s }, { x: -35 * s, y: -140 * s }, { x: -50 * s, y: -210 * s }, { x: -65 * s, y: -270 * s },
+          // Middle folded
+          { x: 5 * s, y: -60 * s }, { x: 10 * s, y: -80 * s }, { x: 5 * s, y: -70 * s }, { x: 0 * s, y: -60 * s },
+          // Ring folded
+          { x: 25 * s, y: -55 * s }, { x: 30 * s, y: -75 * s }, { x: 25 * s, y: -65 * s }, { x: 20 * s, y: -55 * s },
+          // Pinky folded
+          { x: 45 * s, y: -45 * s }, { x: 50 * s, y: -65 * s }, { x: 45 * s, y: -55 * s }, { x: 40 * s, y: -45 * s }
+        ];
+      } else if (gesture === 'PINCH') {
+        offsets = [
+          // Thumb touching index tip
+          { x: -30 * s, y: -40 * s }, { x: -50 * s, y: -70 * s }, { x: -40 * s, y: -110 * s }, { x: -20 * s, y: -140 * s },
+          // Index curving down to touch thumb
+          { x: -20 * s, y: -70 * s }, { x: -30 * s, y: -110 * s }, { x: -25 * s, y: -135 * s }, { x: -18 * s, y: -142 * s },
+          // Middle extended slightly
+          { x: 10 * s, y: -65 * s }, { x: 20 * s, y: -110 * s }, { x: 30 * s, y: -140 * s }, { x: 40 * s, y: -165 * s },
+          // Ring
+          { x: 30 * s, y: -60 * s }, { x: 40 * s, y: -95 * s }, { x: 50 * s, y: -125 * s }, { x: 60 * s, y: -145 * s },
+          // Pinky
+          { x: 50 * s, y: -50 * s }, { x: 60 * s, y: -80 * s }, { x: 70 * s, y: -105 * s }, { x: 80 * s, y: -125 * s }
+        ];
+      } else if (gesture === 'THUMBS_UP') {
+        offsets = [
+          // Thumb pointing straight up!
+          { x: -40 * s, y: -30 * s }, { x: -70 * s, y: -70 * s }, { x: -90 * s, y: -130 * s }, { x: -100 * s, y: -200 * s },
+          // Index curled in fist
+          { x: -15 * s, y: -50 * s }, { x: -20 * s, y: -70 * s }, { x: 0 * s, y: -65 * s }, { x: 10 * s, y: -50 * s },
+          // Middle curled in fist
+          { x: 10 * s, y: -50 * s }, { x: 15 * s, y: -70 * s }, { x: 30 * s, y: -65 * s }, { x: 35 * s, y: -50 * s },
+          // Ring curled in fist
+          { x: 30 * s, y: -45 * s }, { x: 35 * s, y: -65 * s }, { x: 50 * s, y: -60 * s }, { x: 55 * s, y: -45 * s },
+          // Pinky curled in fist
+          { x: 50 * s, y: -40 * s }, { x: 55 * s, y: -60 * s }, { x: 70 * s, y: -55 * s }, { x: 75 * s, y: -40 * s }
+        ];
+      } else {
+        // Normal open hand
+        offsets = [
+          { x: -30 * s, y: -35 * s }, { x: -55 * s, y: -60 * s }, { x: -75 * s, y: -85 * s }, { x: -95 * s, y: -110 * s },
+          { x: -15 * s, y: -65 * s }, { x: -25 * s, y: -120 * s }, { x: -35 * s, y: -165 * s }, { x: -45 * s, y: -210 * s },
+          { x: 5 * s, y: -70 * s }, { x: 5 * s, y: -130 * s }, { x: 5 * s, y: -180 * s }, { x: 5 * s, y: -225 * s },
+          { x: 25 * s, y: -65 * s }, { x: 30 * s, y: -120 * s }, { x: 35 * s, y: -165 * s }, { x: 40 * s, y: -205 * s },
+          { x: 45 * s, y: -55 * s }, { x: 55 * s, y: -100 * s }, { x: 65 * s, y: -135 * s }, { x: 75 * s, y: -170 * s }
+        ];
+      }
+
+      joints.push(wrist);
+      offsets.forEach(off => {
+        joints.push({ x: wrist.x + off.x, y: wrist.y + off.y });
+      });
+
+      return joints;
+    }
+
+    function drawHandSkeleton(joints, confidence = 0.998) {
+      if (!joints || joints.length < 21) return;
+
+      ctx.save();
+
+      // Connections topology (MediaPipe hand bone links)
+      const connections = [
+        [0,1],[1,2],[2,3],[3,4], // Thumb
+        [0,5],[5,6],[6,7],[7,8], // Index
+        [9,10],[10,11],[11,12],  // Middle
+        [13,14],[14,15],[15,16], // Ring
+        [0,17],[17,18],[18,19],[19,20], // Pinky
+        [5,9],[9,13],[13,17] // Palm cross-links
+      ];
+
+      // Draw Glowing Blue Cyan Bone Lines
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#00f0ff';
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#00f0ff';
+
+      connections.forEach(([i, j]) => {
+        ctx.beginPath();
+        ctx.moveTo(joints[i].x, joints[i].y);
+        ctx.lineTo(joints[j].x, joints[j].y);
+        ctx.stroke();
+      });
+
+      // Draw Joint Nodes with Concentric Circles
+      joints.forEach((pt, idx) => {
+        const isTip = [4, 8, 12, 16, 20].includes(idx);
+        const radius = isTip ? 6 : 4;
+
+        // Outer glow aura
+        ctx.fillStyle = isTip ? '#ffffff' : '#00f0ff';
+        ctx.shadowBlur = isTip ? 18 : 10;
+        ctx.shadowColor = isTip ? '#ffffff' : '#00f0ff';
+
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outer ring for fingertips
+        if (isTip) {
+          ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, radius + 4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+
+      // Draw Hand Tracking HUD Text next to index tip
+      const tip = joints[8];
+      ctx.fillStyle = '#00f0ff';
+      ctx.font = '700 11px "Space Grotesk", monospace';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#00f0ff';
+      ctx.fillText(`POINT [8]: (${Math.round(tip.x)}, ${Math.round(tip.y)})`, tip.x + 15, tip.y - 10);
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // SCENE RENDERERS (SCENE 1 TO 6)
+    // =========================================================================
+
+    // -------------------------------------------------------------------------
+    // SCENE 1: MOVIE POSTER HORIZONTAL CAROUSEL & SWIPE GESTURE (0.0s - 2.5s)
+    // -------------------------------------------------------------------------
+    function renderScene1(t) {
+      // t ranges 0.0 to 2.5
+      const progress = t / 2.5;
+
+      // Update HUD
+      document.getElementById('sceneTag').innerText = 'SCENE 01 // SWIPE GESTURE — HORIZONTAL MOVIE CAROUSEL';
+      document.getElementById('hudGesture').innerText = 'SWIPE_LEFT';
+      document.getElementById('hudHand').innerText = 'RIGHT HAND DETECTED';
+      document.getElementById('hudConf').innerText = (99.2 + Math.sin(t*5)*0.5).toFixed(1) + '%';
+
+      // Hand Position: Swiping from Right (0.85*width) to Left (0.35*width)
+      let handX = isInteractive ? mouseX : width * (0.85 - progress * 0.45);
+      let handY = isInteractive ? mouseY : height * (0.55 + Math.sin(progress * Math.PI) * 0.05);
+
+      // Carousel Horizontal Offset: moves smoothly left
+      const carouselOffset = -progress * width * 0.35;
+
+      // Draw 3D Floating Movie Poster Carousel
+      const posterWidth = width * 0.22;
+      const posterHeight = posterWidth * 1.5;
+      const centerY = height * 0.45;
+
+      const postersData = [
+        { title: 'CYBER GENESIS', rating: '9.8', genre: 'SCI-FI IMAX 4K', img: posterImages[0], x: width * 0.38 },
+        { title: 'CHRONOS RIFT', rating: '9.6', genre: 'SPACE THRILLER', img: posterImages[1], x: width * 0.65 },
+        { title: 'NEON SKYLINE 2099', rating: '9.7', genre: 'CYBERPUNK ACTION', img: posterImages[2], x: width * 0.92 }
+      ];
+
+      postersData.forEach((p, idx) => {
+        const posX = p.x + carouselOffset;
+        const distFromCenter = Math.abs(posX - width * 0.5) / (width * 0.5);
+        const scale = 1 - Math.min(distFromCenter * 0.25, 0.3);
+
+        ctx.save();
+        ctx.translate(posX, centerY);
+        ctx.scale(scale, scale);
+
+        // Glassmorphism Card Frame Glow
+        ctx.shadowBlur = idx === 0 ? 30 : 15;
+        ctx.shadowColor = idx === 0 ? '#00f0ff' : 'rgba(0, 240, 255, 0.3)';
+
+        // Draw Card Background / Image
+        ctx.fillStyle = '#0a0d1a';
+        ctx.beginPath();
+        ctx.roundRect(-posterWidth/2, -posterHeight/2, posterWidth, posterHeight, 20);
+        ctx.fill();
+
+        if (p.img && p.img.complete && p.img.naturalWidth !== 0) {
+          ctx.clip();
+          ctx.drawImage(p.img, -posterWidth/2, -posterHeight/2, posterWidth, posterHeight);
+        } else {
+          // Fallback graphic if image is loading
+          ctx.fillStyle = idx === 0 ? '#003366' : '#220033';
+          ctx.fillRect(-posterWidth/2, -posterHeight/2, posterWidth, posterHeight);
+          ctx.fillStyle = '#fff';
+          ctx.font = '800 24px "Outfit"';
+          ctx.textAlign = 'center';
+          ctx.fillText(p.title, 0, 0);
+        }
+
+        // Overlay Card Glass Border
+        ctx.strokeStyle = idx === 0 ? '#00f0ff' : 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = idx === 0 ? 3 : 1;
+        ctx.strokeRect(-posterWidth/2, -posterHeight/2, posterWidth, posterHeight);
+
+        // Title Tag Pill
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillRect(-posterWidth/2 + 15, posterHeight/2 - 60, posterWidth - 30, 45);
+        ctx.fillStyle = '#00f0ff';
+        ctx.font = '700 14px "Space Grotesk"';
+        ctx.textAlign = 'left';
+        ctx.fillText(p.title, -posterWidth/2 + 25, posterHeight/2 - 35);
+        ctx.fillStyle = '#ffb703';
+        ctx.font = '600 12px "Space Grotesk"';
+        ctx.fillText(`★ ${p.rating}`, posterWidth/2 - 65, posterHeight/2 - 35);
+
+        ctx.restore();
+      });
+
+      // Swipe Gesture Motion Vector Trail
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(width * 0.85, height * 0.55);
+      ctx.lineTo(handX, handY);
+      ctx.stroke();
+      ctx.restore();
+
+      // Render Hand Skeleton
+      const joints = getHandJoints(handX, handY, 'OPEN_SWIPE', 1.1);
+      drawHandSkeleton(joints);
+    }
+
+    // -------------------------------------------------------------------------
+    // SCENE 2: POINT GESTURE & MOVIE SELECTION EXPANSION (2.5s - 5.0s)
+    // -------------------------------------------------------------------------
+    function renderScene2(t) {
+      const progress = (t - 2.5) / 2.5;
+
+      document.getElementById('sceneTag').innerText = 'SCENE 02 // POINT GESTURE — LOCK & EXPAND MOVIE DETAILS';
+      document.getElementById('hudGesture').innerText = 'POINT_SELECT';
+      document.getElementById('hudConf').innerText = '99.9%';
+
+      // Target Movie Location
+      const targetX = width * 0.35;
+      const targetY = height * 0.45;
+
+      // Hand moves towards target and points
+      let handX = isInteractive ? mouseX : width * 0.55 - progress * (width * 0.2);
+      let handY = isInteractive ? mouseY : height * 0.7 - progress * (height * 0.25);
+
+      // Selected Movie Poster (CYBER GENESIS) Glows & Scales Up
+      const posterWidth = width * 0.24 * (1 + progress * 0.08);
+      const posterHeight = posterWidth * 1.5;
+
+      ctx.save();
+      ctx.translate(targetX, targetY);
+      
+      // Intense Electric Blue Neon Glow & Pulsing Ring
+      ctx.shadowBlur = 40 + Math.sin(t * 8) * 15;
+      ctx.shadowColor = '#00f0ff';
+
+      ctx.fillStyle = '#060a17';
+      ctx.beginPath();
+      ctx.roundRect(-posterWidth/2, -posterHeight/2, posterWidth, posterHeight, 24);
+      ctx.fill();
+
+      if (posterImages[0] && posterImages[0].complete && posterImages[0].naturalWidth !== 0) {
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(posterImages[0], -posterWidth/2, -posterHeight/2, posterWidth, posterHeight);
+        ctx.restore();
+      }
+
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(-posterWidth/2, -posterHeight/2, posterWidth, posterHeight);
+      ctx.restore();
+
+      // Expanded Movie Details Panel (Appears on the right)
+      if (progress > 0.2) {
+        const panelAlpha = Math.min((progress - 0.2) * 2, 1);
+        const panelX = width * 0.52;
+        const panelY = height * 0.22;
+        const panelW = width * 0.42;
+        const panelH = height * 0.52;
+
+        ctx.save();
+        ctx.globalAlpha = panelAlpha;
+
+        // Glassmorphism Container
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = 'rgba(0, 240, 255, 0.2)';
+        ctx.beginPath();
+        ctx.roundRect(panelX, panelY, panelW, panelH, 24);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Details Content
+        ctx.fillStyle = '#ff0055';
+        ctx.font = '800 12px "Space Grotesk"';
+        ctx.fillText('FEATURED EXCLUSIVE • LASER 4K IMAX', panelX + 35, panelY + 45);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 36px "Outfit"';
+        ctx.fillText('CYBER GENESIS 2099', panelX + 35, panelY + 90);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = '400 14px "Outfit"';
+        ctx.fillText('In a dystopian city ruled by synthetic intelligence, a solitary rogue agent unravels', panelX + 35, panelY + 130);
+        ctx.fillText('the ultimate neural network key to humanity\'s rebirth.', panelX + 35, panelY + 152);
+
+        // Tags
+        const tags = ['IMAX 3D', 'DOLBY ATMOS', 'RATING 9.8', '148 MINS'];
+        tags.forEach((tag, idx) => {
+          const tx = panelX + 35 + idx * 115;
+          const ty = panelY + 185;
+          ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+          ctx.fillRect(tx, ty, 100, 30);
+          ctx.strokeStyle = '#00f0ff';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(tx, ty, 100, 30);
+          ctx.fillStyle = '#00f0ff';
+          ctx.font = '700 11px "Space Grotesk"';
+          ctx.textAlign = 'center';
+          ctx.fillText(tag, tx + 50, ty + 19);
+          ctx.textAlign = 'left';
+        });
+
+        // Showtime Selection Buttons
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 14px "Space Grotesk"';
+        ctx.fillText('SELECT SHOWTIME:', panelX + 35, panelY + 250);
+
+        ['07:30 PM (FULL)', '09:45 PM (IMAX)', '11:15 PM (3D)'].forEach((st, idx) => {
+          const sx = panelX + 35 + idx * 145;
+          const sy = panelY + 270;
+          const isSel = idx === 1;
+
+          ctx.fillStyle = isSel ? '#00f0ff' : 'rgba(255, 255, 255, 0.05)';
+          ctx.fillRect(sx, sy, 135, 45);
+          ctx.strokeStyle = isSel ? '#00f0ff' : 'rgba(255, 255, 255, 0.2)';
+          ctx.strokeRect(sx, sy, 135, 45);
+
+          ctx.fillStyle = isSel ? '#000000' : '#ffffff';
+          ctx.font = '700 12px "Space Grotesk"';
+          ctx.textAlign = 'center';
+          ctx.fillText(st, sx + 67, sy + 27);
+          ctx.textAlign = 'left';
+        });
+
+        ctx.restore();
+      }
+
+      // Pointing Reticle Laser Lock on Target
+      ctx.save();
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, 40 + Math.sin(t*10)*5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(targetX - 50, targetY); ctx.lineTo(targetX + 50, targetY);
+      ctx.moveTo(targetX, targetY - 50); ctx.lineTo(targetX, targetY + 50);
+      ctx.stroke();
+      ctx.restore();
+
+      // Render Pointing Hand
+      const joints = getHandJoints(handX, handY, 'POINT', 1.1);
+      drawHandSkeleton(joints);
+    }
+
+    // -------------------------------------------------------------------------
+    // SCENE 3: SEAT MAP & PINCH GESTURE SELECTION (5.0s - 7.5s)
+    // -------------------------------------------------------------------------
+    function renderScene3(t) {
+      const progress = (t - 5.0) / 2.5;
+
+      document.getElementById('sceneTag').innerText = 'SCENE 03 // PINCH GESTURE — SEAT MAP SELECTION';
+      document.getElementById('hudGesture').innerText = 'PINCH_SELECT';
+      document.getElementById('hudConf').innerText = '99.8%';
+
+      // Curved Screen Bar Top
+      const screenY = height * 0.18;
+      ctx.save();
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#00f0ff';
+      ctx.beginPath();
+      ctx.arc(width * 0.5, height * -0.5 + screenY, width * 0.45, Math.PI * 0.35, Math.PI * 0.65);
+      ctx.stroke();
+
+      ctx.fillStyle = '#00f0ff';
+      ctx.font = '700 13px "Space Grotesk"';
+      ctx.textAlign = 'center';
+      ctx.fillText('AUDITORIUM 1 — LASER IMAX CURVED SCREEN', width * 0.5, screenY + 25);
+      ctx.restore();
+
+      // Grid Seats Layout (6 Rows x 10 Columns)
+      const seatRows = 6;
+      const seatCols = 10;
+      const seatW = width * 0.035;
+      const seatH = seatW * 0.85;
+      const gridStartX = width * 0.5 - (seatCols * (seatW + 12)) / 2;
+      const gridStartY = height * 0.32;
+
+      // Target Seats to Pinch Select: E7 & E8 (Row 4, Col 6 & 7)
+      const isPinched = progress > 0.4;
+
+      for (let r = 0; r < seatRows; r++) {
+        for (let c = 0; c < seatCols; c++) {
+          const sx = gridStartX + c * (seatW + 12);
+          const sy = gridStartY + r * (seatH + 12);
+
+          const isTargetSeat = (r === 4 && (c === 6 || c === 7));
+          const isOccupied = (r === 1 && c === 3) || (r === 2 && c === 5) || (r === 3 && c === 2);
+
+          ctx.save();
+          if (isTargetSeat && isPinched) {
+            ctx.fillStyle = '#00f0ff';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00f0ff';
+          } else if (isOccupied) {
+            ctx.fillStyle = '#333b4f';
+          } else {
+            ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+          }
+
+          ctx.beginPath();
+          ctx.roundRect(sx, sy, seatW, seatH, 8);
+          ctx.fill();
+
+          ctx.strokeStyle = (isTargetSeat && isPinched) ? '#ffffff' : 'rgba(0, 240, 255, 0.3)';
+          ctx.lineWidth = (isTargetSeat && isPinched) ? 2 : 1;
+          ctx.stroke();
+
+          // Seat Number Text
+          ctx.fillStyle = (isTargetSeat && isPinched) ? '#000' : 'rgba(255, 255, 255, 0.7)';
+          ctx.font = '700 10px "Space Grotesk"';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${String.fromCharCode(65 + r)}${c + 1}`, sx + seatW / 2, sy + seatH / 2 + 3);
+
+          ctx.restore();
+        }
+      }
+
+      // Hand Pinching Position over E7/E8
+      const pinchTargetX = gridStartX + 6.5 * (seatW + 12);
+      const pinchTargetY = gridStartY + 4 * (seatH + 12) + seatH / 2;
+
+      let handX = isInteractive ? mouseX : width * 0.75 - progress * (width * 0.2);
+      let handY = isInteractive ? mouseY : height * 0.7 - progress * (height * 0.2);
+
+      // Pinch Energy Ray Line from Hand Finger Tips to Selected Seats
+      if (isPinched) {
+        ctx.save();
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f0ff';
+        ctx.beginPath();
+        ctx.moveTo(handX - 20, handY - 140);
+        ctx.lineTo(pinchTargetX, pinchTargetY);
+        ctx.stroke();
+
+        // Shockwave Ring around selected seats
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(pinchTargetX, pinchTargetY, 30 + Math.sin(t * 12) * 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Selected Seat Info HUD Pill
+        ctx.save();
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.9)';
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = 'rgba(0, 240, 255, 0.4)';
+        ctx.beginPath();
+        ctx.roundRect(width * 0.35, height * 0.78, width * 0.3, 50, 15);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.font = '700 14px "Space Grotesk"';
+        ctx.textAlign = 'center';
+        ctx.fillText('SEATS E7, E8 SELECTED (VIP RECLINERS) • TOTAL: $38.00', width * 0.5, height * 0.78 + 30);
+        ctx.restore();
+      }
+
+      // Render Pinch Hand Gesture
+      const joints = getHandJoints(handX, handY, isPinched ? 'PINCH' : 'NORMAL', 1.1);
+      drawHandSkeleton(joints);
+    }
+
+    // -------------------------------------------------------------------------
+    // SCENE 4: THUMBS-UP GESTURE & BOOK NOW ACTIVATION (7.5s - 9.8s)
+    // -------------------------------------------------------------------------
+    function renderScene4(t) {
+      const progress = (t - 7.5) / 2.3;
+
+      document.getElementById('sceneTag').innerText = 'SCENE 04 // THUMBS UP GESTURE — EXPRESS BIOMETRIC CONFIRMATION';
+      document.getElementById('hudGesture').innerText = 'THUMBS_UP';
+      document.getElementById('hudConf').innerText = '100.0% (VERIFIED)';
+
+      // Floating Glass BOOK NOW Button Center Screen
+      const btnX = width * 0.3;
+      const btnY = height * 0.38;
+      const btnW = width * 0.4;
+      const btnH = height * 0.16;
+
+      const isActivated = progress > 0.3;
+
+      ctx.save();
+      if (isActivated) {
+        ctx.fillStyle = 'linear-gradient(135deg, #00f0ff 0%, #ff0055 100%)';
+        ctx.shadowBlur = 50 + Math.sin(t * 15) * 20;
+        ctx.shadowColor = '#00f0ff';
+      } else {
+        ctx.fillStyle = 'rgba(10, 20, 40, 0.85)';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = 'rgba(0, 240, 255, 0.2)';
+      }
+
+      ctx.beginPath();
+      ctx.roundRect(btnX, btnY, btnW, btnH, 30);
+      ctx.fill();
+
+      ctx.strokeStyle = isActivated ? '#ffffff' : '#00f0ff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Button Text & Icon
+      ctx.fillStyle = isActivated ? '#000000' : '#ffffff';
+      ctx.font = '900 28px "Outfit"';
+      ctx.textAlign = 'center';
+      ctx.fillText(isActivated ? '✓ EXPRESS BOOKING CONFIRMED!' : '👍 HOLD THUMBS UP TO BOOK NOW', width * 0.5, btnY + btnH / 2 + 10);
+      ctx.restore();
+
+      // Hand Thumbs-Up Position Right Center
+      let handX = isInteractive ? mouseX : width * 0.5;
+      let handY = isInteractive ? mouseY : height * 0.72;
+
+      // Particle Flash Wave when confirmed
+      if (isActivated) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(width * 0.5, btnY + btnH / 2, (progress - 0.3) * width * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Render Thumbs-Up Hand Skeleton
+      const joints = getHandJoints(handX, handY, 'THUMBS_UP', 1.25);
+      drawHandSkeleton(joints, 1.0);
+    }
+
+    // -------------------------------------------------------------------------
+    // SCENE 5: 3D ROTATING HOLOGRAPHIC QR TICKET (9.8s - 12.5s)
+    // -------------------------------------------------------------------------
+    function renderScene5(t) {
+      const progress = (t - 9.8) / 2.7;
+
+      document.getElementById('sceneTag').innerText = 'SCENE 05 // 3D ROTATING HOLOGRAPHIC QR PASS';
+      document.getElementById('hudGesture').innerText = 'HOLO_PASS_ACTIVE';
+      document.getElementById('hudConf').innerText = '100.0%';
+
+      // 3D Rotation Angle
+      const angle = progress * Math.PI * 2;
+      const ticketW = width * 0.28;
+      const ticketH = ticketW * 1.5;
+      const centerX = width * 0.5;
+      const centerY = height * 0.45;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+
+      // Simulate 3D Y-Axis Rotation Perspective Scaling
+      const scaleX = Math.cos(angle);
+      ctx.scale(scaleX, 1);
+
+      // Floating Glass Hologram Card
+      ctx.shadowBlur = 40;
+      ctx.shadowColor = '#00f0ff';
+      ctx.fillStyle = 'rgba(8, 15, 35, 0.9)';
+      ctx.beginPath();
+      ctx.roundRect(-ticketW/2, -ticketH/2, ticketW, ticketH, 24);
+      ctx.fill();
+
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-ticketW/2, -ticketH/2, ticketW, ticketH);
+
+      // Holographic Ticket Header
+      if (Math.abs(scaleX) > 0.2) {
+        ctx.fillStyle = '#ff0055';
+        ctx.font = '800 12px "Space Grotesk"';
+        ctx.textAlign = 'center';
+        ctx.fillText('CINEBOOK VIP PASS • 4K IMAX', 0, -ticketH/2 + 40);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 24px "Outfit"';
+        ctx.fillText('CYBER GENESIS', 0, -ticketH/2 + 75);
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.font = '700 14px "Space Grotesk"';
+        ctx.fillText('SEATS: E7, E8 | AUDITORIUM 1', 0, -ticketH/2 + 105);
+
+        // QR Code Simulated Pattern Grid
+        const qrSize = ticketW * 0.45;
+        const qrY = -10;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-qrSize/2, qrY - qrSize/2, qrSize, qrSize);
+
+        // QR Position Markers
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(-qrSize/2 + 8, qrY - qrSize/2 + 8, 25, 25);
+        ctx.fillRect(qrSize/2 - 33, qrY - qrSize/2 + 8, 25, 25);
+        ctx.fillRect(-qrSize/2 + 8, qrY + qrSize/2 - 33, 25, 25);
+
+        // Simulated QR noise dots
+        for (let i = 0; i < 60; i++) {
+          const rx = -qrSize/2 + 10 + (i % 8) * 12;
+          const ry = qrY - qrSize/2 + 10 + Math.floor(i / 8) * 12;
+          if ((i % 3 === 0 || i % 7 === 0) && (rx < qrSize/2 - 10)) {
+            ctx.fillRect(rx, ry, 8, 8);
+          }
+        }
+
+        // Green/Cyan Holographic Scan Beam
+        const scanY = qrY - qrSize/2 + (progress * 4 % 1) * qrSize;
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#00f0ff';
+        ctx.beginPath();
+        ctx.moveTo(-qrSize/2, scanY);
+        ctx.lineTo(qrSize/2, scanY);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = '600 11px "Space Grotesk"';
+        ctx.fillText('SCAN AT CINEMA GATE TURNSTILE', 0, ticketH/2 - 30);
+      }
+
+      ctx.restore();
+
+      // Orbiting Holographic Ring Flares around the ticket
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, ticketW * 0.8, ticketW * 0.25, Math.PI * 0.1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // -------------------------------------------------------------------------
+    // SCENE 6: CINEMATIC TITLE SLATE & LAUNCH CALLOUT (12.5s - 15.0s)
+    // -------------------------------------------------------------------------
+    function renderScene6(t) {
+      const progress = (t - 12.5) / 2.5;
+
+      document.getElementById('sceneTag').innerText = 'SCENE 06 // PRODUCT LAUNCH TRAILER — THE FUTURE OF MOVIE BOOKING';
+      document.getElementById('hudGesture').innerText = 'LAUNCH_COMPLETE';
+      document.getElementById('hudConf').innerText = '100.0%';
+
+      ctx.save();
+      
+      // Dramatic Dark Background with Ambient Flare Fade
+      const centerX = width * 0.5;
+      const centerY = height * 0.42;
+
+      // Staggered Title Animations
+      ctx.textAlign = 'center';
+
+      // Line 1: THE FUTURE OF MOVIE BOOKING
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 4vw "Outfit"';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#00f0ff';
+      ctx.fillText('THE FUTURE OF MOVIE BOOKING', centerX, centerY - 40);
+
+      // Subtitle Pill: Book Movies Without Touching the Screen
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(centerX - width * 0.22, centerY + 15, width * 0.44, 45, 25);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#00f0ff';
+      ctx.font = '700 1.2vw "Space Grotesk"';
+      ctx.fillText('Book Movies Without Touching the Screen', centerX, centerY + 43);
+      ctx.restore();
+
+      // Line 3: AI Motion Controller
+      ctx.fillStyle = '#ff0055';
+      ctx.font = '800 1.6vw "Space Grotesk"';
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#ff0055';
+      ctx.fillText('AI MOTION CONTROLLER v4.2', centerX, centerY + 110);
+
+      // Line 4: COMING SOON BADGE
+      ctx.save();
+      const badgeW = 200;
+      const badgeH = 45;
+      ctx.fillStyle = 'linear-gradient(90deg, #00f0ff, #ff0055)';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#00f0ff';
+      ctx.beginPath();
+      ctx.roundRect(centerX - badgeW/2, centerY + 155, badgeW, badgeH, 25);
+      ctx.fill();
+
+      ctx.fillStyle = '#000000';
+      ctx.font = '900 15px "Space Grotesk"';
+      ctx.fillText('COMING SOON', centerX, centerY + 183);
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // MAIN LOOP & CONTROL LISTENERS
+    // =========================================================================
+    function animate(now) {
+      const delta = (now - lastTimestamp) / 1000;
+      lastTimestamp = now;
+
+      if (isPlaying) {
+        currentTime += delta;
+        if (currentTime >= duration) {
+          currentTime = 0; // Loop trailer continuously
+        }
+      }
+
+      // Update HUD & Timeline
+      document.getElementById('hudFps').innerText = (1 / Math.max(delta, 0.001)).toFixed(1);
+      document.getElementById('progressFill').style.width = `${(currentTime / duration) * 100}%`;
+
+      const curMin = Math.floor(currentTime / 60);
+      const curSec = (currentTime % 60).toFixed(2);
+      document.getElementById('currentTime').innerText = `${curMin < 10 ? '0' : ''}${curMin}:${curSec < 10 ? '0' : ''}${curSec}`;
+
+      // Clear Canvas
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw Ambient Floating Embers/Particles
+      updateParticles();
+      drawParticles();
+
+      // Render Scene based on Timeline
+      if (currentTime < 2.5) {
+        renderScene1(currentTime);
+      } else if (currentTime < 5.0) {
+        renderScene2(currentTime);
+      } else if (currentTime < 7.5) {
+        renderScene3(currentTime);
+      } else if (currentTime < 9.8) {
+        renderScene4(currentTime);
+      } else if (currentTime < 12.5) {
+        renderScene5(currentTime);
+      } else {
+        renderScene6(currentTime);
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+
+    // Timeline Drag & Scrubbing Listener
+    const progressBar = document.getElementById('progressBar');
+    progressBar.addEventListener('click', (e) => {
+      const rect = progressBar.getBoundingClientRect();
+      const clickRatio = (e.clientX - rect.left) / rect.width;
+      currentTime = clickRatio * duration;
+    });
+
+    // Control Buttons
+    const playBtn = document.getElementById('playBtn');
+    playBtn.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      document.getElementById('playIcon').innerText = isPlaying ? '⏸' : '▶';
+      document.getElementById('playText').innerText = isPlaying ? 'PAUSE' : 'PLAY';
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      currentTime = 0;
+      isPlaying = true;
+      document.getElementById('playIcon').innerText = '⏸';
+      document.getElementById('playText').innerText = 'PAUSE';
+      sound.playWhoosh();
+    });
+
+    const interactiveBtn = document.getElementById('interactiveBtn');
+    interactiveBtn.addEventListener('click', () => {
+      isInteractive = !isInteractive;
+      interactiveBtn.classList.toggle('active', isInteractive);
+      sound.playLock();
+    });
+
+    const audioBtn = document.getElementById('audioBtn');
+    audioBtn.addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      audioBtn.innerText = sound.enabled ? '🔊 SOUND FX ON' : '🔇 SOUND FX OFF';
+      if (sound.enabled) sound.playConfirm();
+    });
+
+    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+      const elem = document.getElementById('stageContainer');
+      if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => {});
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+  </script>
+</body>
+</html>

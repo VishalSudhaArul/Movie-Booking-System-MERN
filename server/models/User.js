@@ -1,24 +1,4 @@
-// User.js
 
-// const mongoose = require("mongoose");
-
-// const userSchema = new mongoose.Schema({
-//     name:String,
-//     email:String,
-//     password:String,
-//     role:{
-//         type:String,
-//         default:"user"
-//     }
-// });
-
-// module.exports = mongoose.model("User", userSchema);
-
-
-
-
-
-// models/User.js
 
 const mongoose = require("mongoose");
 
@@ -44,7 +24,14 @@ const userSchema = new mongoose.Schema(
         type:String,
         enum:["user","admin","theaterOwner"],
         default:"user"
-    }
+    },
+
+    watchlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Movie"
+      }
+    ]
 
 },
 {

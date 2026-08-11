@@ -450,45 +450,48 @@
 
 
 
-
-
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api";
 
 function VerifyTicket() {
-
-  const { id } = useParams();
+  const { bookingId } = useParams();
 
   const [booking, setBooking] = useState(undefined);
-
-  const API_URL =
-    process.env.REACT_APP_API_URL ||
-    "https://movie-booking-system-mern-1.onrender.com";
-
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
+    if (!bookingId) {
+      setBooking(null);
+      return;
+    }
 
-    if (!id) return;
+    const verifyTicket = async () => {
+      try {
+        const res = await API.get(`/api/bookings/verify/${bookingId}`);
 
-    axios
-      .get(`${API_URL}/api/bookings/verify/${id}`)
-      .then(res => {
-
-        console.log("Verify response:", res.data);
+        if (!res.data) {
+          setBooking(null);
+          return;
+        }
 
         setBooking(res.data);
 
-      })
-      .catch(err => {
-
-        console.log("Verify ticket error:", err);
-
+        if (res.data.used) {
+          setStatus("USED");
+        } else {
+          await API.put(`/api/bookings/use/${bookingId}`);
+          setStatus("VALID");
+        }
+      } catch (err) {
+        console.log(err);
         setBooking(null);
+      }
+    };
 
-      });
+    verifyTicket();
+  }, [bookingId]);
 
-  }, [id]);
 
 
   /* ---------- Loading ---------- */
@@ -496,7 +499,7 @@ function VerifyTicket() {
   if (booking === undefined)
     return (
       <div className="bg-black min-h-screen flex justify-center items-center text-white text-xl">
-        Loading Ticket...
+        Checking Ticket...
       </div>
     );
 
@@ -505,96 +508,134 @@ function VerifyTicket() {
 
   if (!booking)
     return (
-      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-xl">
-        Invalid Ticket
+      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-3xl font-bold">
+        ❌ INVALID TICKET
       </div>
     );
 
 
+  const snacks =
+    booking.snacks?.length > 0
+      ? booking.snacks
+          .map(s => `${s.name} x${s.qty}`)
+          .join(", ")
+      : "None";
+
+  const parking =
+    booking.parking
+      ? `${booking.parking.type}`
+      : "None";
+
+
   return (
 
-    <div className="bg-black min-h-screen flex justify-center items-center p-4">
+    <div className="bg-black min-h-screen flex justify-center items-center p-6">
 
-      <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
+      <div className="bg-[#0f172a] border border-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+
+        {/* Movie Poster */}
 
         <img
           src={booking.showId?.movieId?.poster}
           alt="poster"
-          className="w-full h-56 rounded-xl mb-4"
+          className="w-full h-56 object-cover"
         />
 
-        <h1 className="text-2xl font-bold">
-          {booking.showId?.movieId?.title}
-        </h1>
 
-        <p className="text-gray-400 mb-4">
-          {booking.showId?.movieId?.genre}
-        </p>
+        <div className="p-6 text-white">
 
-        <div className="space-y-2 border-t border-gray-700 pt-4">
+          {/* Movie Title */}
 
-          <p>
-            🎭 Theatre:
-            <span className="text-gray-300">
-              {" "}
-              {booking.showId?.theatre}
-            </span>
+          <h1 className="text-2xl font-bold text-center">
+            {booking.showId?.movieId?.title}
+          </h1>
+
+          <p className="text-gray-400 text-center mb-6">
+            {booking.showId?.movieId?.genre}
           </p>
 
-          <p>
-            📅 Date:
-            <span className="text-gray-300">
-              {" "}
-              {booking.showId?.date}
-            </span>
-          </p>
 
-          <p>
-            ⏰ Time:
-            <span className="text-gray-300">
-              {" "}
-              {booking.showId?.time}
-            </span>
-          </p>
+          {/* Ticket Divider */}
 
-          <p>
-            💺 Seats:
-            <span className="text-gray-300">
-              {" "}
-              {booking.seats?.join(", ")}
-            </span>
-          </p>
+          <div className="border-t border-dashed border-gray-600 mb-6"></div>
 
-          <p>
-            🍿 Snacks:
-            {booking.snacks?.length > 0
-              ? booking.snacks
-                  .map(
-                    s =>
-                      `${s.name} x${s.qty} (₹${s.price * s.qty})`
-                  )
-                  .join(", ")
-              : " None"}
-          </p>
 
-          <p>
-            🚗 Parking:
-            {booking.parking
-              ? `${booking.parking.type} (₹${booking.parking.price})`
-              : " None"}
-          </p>
+          {/* Ticket Info */}
 
-        </div>
+          <div className="space-y-3 text-sm">
 
-        <div className="border-t border-gray-700 mt-5 pt-4 text-center">
+            <div className="flex justify-between">
+              <span>🎭 Theatre</span>
+              <span>{booking.showId?.theatre}</span>
+            </div>
 
-          <h2 className="text-3xl font-bold text-red-500">
-            ₹ {booking.totalPrice}
-          </h2>
+            <div className="flex justify-between">
+              <span>📅 Date</span>
+              <span>{booking.showId?.date}</span>
+            </div>
 
-          <p className="text-green-400 mt-1 font-semibold">
-            Payment Successful ✔
-          </p>
+            <div className="flex justify-between">
+              <span>⏰ Time</span>
+              <span>{booking.showId?.time}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>💺 Seats</span>
+              <span className="text-green-400 font-semibold">
+                {booking.seats?.join(", ")}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>🍿 Snacks</span>
+              <span>{snacks}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>🚗 Parking</span>
+              <span>{parking}</span>
+            </div>
+
+          </div>
+
+
+          {/* Divider */}
+
+          <div className="border-t border-dashed border-gray-600 my-6"></div>
+
+
+          {/* Price */}
+
+          <div className="text-center">
+
+            <p className="text-gray-400 text-sm">
+              Total Amount
+            </p>
+
+            <h2 className="text-4xl font-bold text-red-500">
+              ₹ {booking.totalPrice}
+            </h2>
+
+          </div>
+
+
+          {/* Status */}
+
+          <div className="mt-6 text-center">
+
+            {status === "VALID" && (
+              <div className="bg-green-600 text-white py-3 rounded-xl text-lg font-bold shadow-lg">
+                ✅ ENTRY ALLOWED
+              </div>
+            )}
+
+            {status === "USED" && (
+              <div className="bg-red-600 text-white py-3 rounded-xl text-lg font-bold shadow-lg">
+                ❌ TICKET ALREADY USED
+              </div>
+            )}
+
+          </div>
 
         </div>
 
