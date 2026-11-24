@@ -20,6 +20,9 @@ const apiLimiter = jsonLimit(600, 15, "Too many requests. Please slow down and t
 // Sign-in and sign-up attempts, to slow down password guessing.
 const authLimiter = jsonLimit(20, 15, "Too many sign-in attempts. Please wait a few minutes and try again.");
 
+// Placing or changing seat holds (each "Continue" on the seat map).
+const holdLimiter = jsonLimit(120, 15, "Too many seat changes. Please wait a few minutes and try again.");
+
 // Bookings and orders.
 const bookingLimiter = jsonLimit(40, 15, "Too many booking attempts. Please wait a few minutes and try again.");
 
@@ -54,4 +57,4 @@ const sanitizeRequest = (req, res, next) => {
   next();
 };
 
-module.exports = { apiLimiter, authLimiter, bookingLimiter, sanitizeRequest, stripOperators };
+module.exports = { apiLimiter, authLimiter, bookingLimiter, holdLimiter, sanitizeRequest, stripOperators };

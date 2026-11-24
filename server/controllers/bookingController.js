@@ -6,6 +6,7 @@ const Snack = require("../models/Snack");
 const Parking = require("../models/Parking");
 const { evaluateCoupon } = require("../utils/coupons");
 const { findCombo } = require("../utils/combos");
+const { toObjectId, seatsFreeFor, unavailableSeats } = require("../utils/seatHolds");
 const { isObjectId, cleanNumber, exactInsensitive } = require("../utils/validate");
 const { isStaff } = require("../middleware/adminMiddleware");
 
@@ -16,7 +17,8 @@ const SEAT_NUMBER_RE = /^[A-Z]{1,2}\d{1,3}$/;
 
 const populateBooking = (query) =>
   query
-    .populate({ path: "showId", populate: { path: "movieId" } })
+    // Hold details of other users' seats never leave the server.
+    .populate({ path: "showId", select: "-seats.heldBy -seats.holdExpiresAt", populate: { path: "movieId" } })
     .populate("userId", "name email");
 
 const fail = (status, message, extra = {}) => {
@@ -140,21 +142,36 @@ exports.bookSeats = async (req, res, next) => {
     // MongoDB applies it and the update as one step on the show document, so two
     // simultaneous requests for the same seat can never both succeed.
 
+    // Seats on hold for someone else count as taken; this user's own holds
+    // (and expired holds) don't. Booking also clears this user's holds here.
+    const now = new Date();
+    const me = toObjectId(userId);
     const reserved = await Show.findOneAndUpdate(
+      { _id: showId, seats: seatsFreeFor(seats, userId, now) },
       {
-        _id: showId,
-        seats: { $not: { $elemMatch: { seatNumber: { $in: seats }, isBooked: true } } },
+        $set: {
+          "seats.$[seat].isBooked": true,
+          "seats.$[seat].heldBy": null,
+          "seats.$[seat].holdExpiresAt": null,
+          "seats.$[mine].heldBy": null,
+          "seats.$[mine].holdExpiresAt": null,
+        },
       },
-      { $set: { "seats.$[seat].isBooked": true } },
-      { arrayFilters: [{ "seat.seatNumber": { $in: seats } }], new: true }
+      {
+        arrayFilters: [
+          { "seat.seatNumber": { $in: seats } },
+          { "mine.heldBy": me, "mine.seatNumber": { $nin: seats } },
+        ],
+        new: true,
+      }
     );
 
     if (!reserved) {
       const latest = await Show.findById(showId).select("seats").lean();
-      const taken = (latest?.seats || [])
-        .filter((s) => seats.includes(s.seatNumber) && s.isBooked)
-        .map((s) => s.seatNumber);
-      return res.status(409).json({ message: "Some seats were just booked by someone else", seats: taken });
+      return res.status(409).json({
+        message: "Some seats were just booked or reserved by someone else",
+        seats: unavailableSeats(latest, seats, userId, now),
+      });
     }
 
     try {

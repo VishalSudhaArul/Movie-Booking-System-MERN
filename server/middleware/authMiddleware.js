@@ -50,5 +50,25 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+// For public pages that show extra detail to a signed-in user (e.g. their own
+// seat holds). A missing or invalid token just means "anonymous" — never a 401.
+const optionalAuth = async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) return next();
+  try {
+    const payload = jwt.verify(header.slice(7).trim(), getJwtSecret(), { algorithms: ["HS256"] });
+    const userId = payload && (payload.id || payload._id);
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) return next();
+    const user = await User.findById(userId).select("name email role").lean();
+    if (user) {
+      req.user = { id: String(user._id), _id: String(user._id), name: user.name, email: user.email, role: user.role || "user" };
+    }
+  } catch (err) {
+    // Invalid or expired token: carry on as anonymous.
+  }
+  return next();
+};
+
 module.exports = authMiddleware;
 module.exports.authMiddleware = authMiddleware;
+module.exports.optionalAuth = optionalAuth;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import API from "../api";
@@ -51,6 +51,35 @@ function AddOns() {
   const [payError, setPayError] = useState("");
   const [booking, setBooking] = useState(null);
   const [conflictSeats, setConflictSeats] = useState([]);
+
+  /* Seat hold: the server keeps these seats for this user for a few minutes. */
+  const [holdExpiresAt, setHoldExpiresAt] = useState(location.state?.holdExpiresAt || null);
+  const [holdBusy, setHoldBusy] = useState(false);
+  const now = useNow(1000);
+  const holdLeftMs = holdExpiresAt ? new Date(holdExpiresAt).getTime() - now : null;
+
+  // (Re)places the hold. Also runs on load, so a refresh or a direct link
+  // re-checks that the seats are still free and restarts the timer.
+  const ensureHold = useCallback(async () => {
+    if (!showId || selectedSeats.length === 0) return;
+    setHoldBusy(true);
+    try {
+      const { data } = await API.post(`/api/shows/${showId}/holds`, { seats: selectedSeats });
+      setHoldExpiresAt(data.expiresAt);
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setConflictSeats(Array.isArray(err.response.data?.seats) ? err.response.data.seats : []);
+        sessionStorage.removeItem(seatStorageKey(showId));
+        setPhase("conflict");
+      }
+    } finally {
+      setHoldBusy(false);
+    }
+  }, [showId, selectedSeats]);
+
+  useEffect(() => {
+    ensureHold();
+  }, [ensureHold]);
 
   /* Load show, movie, add-ons and coupons */
   useEffect(() => {
@@ -282,8 +311,8 @@ function AddOns() {
           <h1 className="mt-4 font-display text-2xl font-bold text-white">Those seats were just taken</h1>
           <p className="mt-2 text-sm text-gray-400">
             {conflictSeats.length > 0
-              ? `Someone else booked ${conflictSeats.join(", ")} while you were checking out. `
-              : "Someone else booked one or more of your seats while you were checking out. "}
+              ? `Someone else booked or reserved ${conflictSeats.join(", ")} while you were checking out. `
+              : "Someone else booked or reserved one or more of your seats while you were checking out. "}
             You haven't been charged.
           </p>
           <button className="btn-primary mt-6 w-full" onClick={() => navigate(`/seats/${showId}`, { replace: true })}>
@@ -519,6 +548,7 @@ function AddOns() {
               </div>
 
               <div className="border-t border-white/[0.07] p-5">
+                <HoldTimer leftMs={holdLeftMs} busy={holdBusy} onRenew={ensureHold} />
                 {payError && (
                   <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border border-brand-500/40 bg-brand-500/10 p-3 text-xs text-brand-300">
                     <Icon name="alert" className="mt-px h-4 w-4 shrink-0" />
@@ -597,5 +627,38 @@ function SummaryRow({ label, value, strong }) {
   );
 }
 
-export default AddOns;
 
+// Re-renders every `interval` ms so countdowns stay current.
+function useNow(interval) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), interval);
+    return () => clearInterval(id);
+  }, [interval]);
+  return now;
+}
+
+function HoldTimer({ leftMs, busy, onRenew }) {
+  if (leftMs === null) return null;
+  if (leftMs <= 0) {
+    return (
+      <div role="alert" className="mb-3 rounded-xl border border-gold-500/40 bg-gold-500/10 p-3 text-xs text-gold-400">
+        <p className="font-semibold">Your seat hold has expired.</p>
+        <p className="mt-0.5 text-gray-300">Others can now pick these seats. Hold them again to keep going.</p>
+        <button type="button" onClick={onRenew} disabled={busy} className="btn-ghost mt-2 w-full text-xs">
+          {busy ? "Checking seats…" : "Hold my seats again"}
+        </button>
+      </div>
+    );
+  }
+  const total = Math.ceil(leftMs / 1000);
+  const label = `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  return (
+    <p className={`mb-3 flex items-center justify-center gap-2 text-xs ${total <= 60 ? "text-gold-400" : "text-gray-400"}`} aria-live="off">
+      <Icon name="clock" className="h-4 w-4" />
+      Seats held for you for <span className="font-mono font-semibold text-white" data-testid="hold-timer">{label}</span>
+    </p>
+  );
+}
+
+export default AddOns;

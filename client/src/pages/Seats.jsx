@@ -5,10 +5,21 @@ import Icon from "../components/ui/Icon";
 import Poster from "../components/Poster";
 import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
-import { formatPrice, formatShowDate, formatShowTime, isUpcomingShow } from "../lib/format";
+import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../lib/format";
 
 export const MAX_SEATS = 10;
 export const seatStorageKey = (showId) => `cinebook:seats:${showId}`;
+
+// A seat someone else is holding is shown as "reserved" and can't be picked.
+// Seats this user holds stay selectable. isBooked here means "not available".
+const withHoldStates = (show) => ({
+  ...show,
+  seats: (show.seats || []).map((s) => ({
+    ...s,
+    reserved: !s.isBooked && !!s.isHeld,
+    isBooked: !!s.isBooked || !!s.isHeld,
+  })),
+});
 
 const rowOf = (seatNumber) => (String(seatNumber).match(/^[A-Za-z]+/) || ["?"])[0].toUpperCase();
 const numberOf = (seatNumber) => parseInt(String(seatNumber).replace(/^[A-Za-z]+/, ""), 10) || 0;
@@ -42,15 +53,20 @@ export default function Seats() {
           setStatus("missing");
           return;
         }
-        setShow(data);
+        const view = withHoldStates(data);
+        setShow(view);
         setStatus("ready");
 
-        // Drop any selected seats that have been booked in the meantime.
-        const free = new Set(data.seats.filter((s) => !s.isBooked).map((s) => s.seatNumber));
+        // Drop any selected seats that have been booked or reserved in the meantime.
+        const free = new Set(view.seats.filter((s) => !s.isBooked).map((s) => s.seatNumber));
         const kept = selectedRef.current.filter((n) => free.has(n));
         if (kept.length !== selectedRef.current.length) {
           setSelectedSeats(kept);
-          if (silent) toast.info("Some seats you picked were just booked, so we removed them.");
+          if (silent) toast.info("Some seats you picked were just taken, so we removed them.");
+        } else if (kept.length === 0) {
+          // Coming back to a show where this user still holds seats: restore them.
+          const mine = view.seats.filter((s) => s.heldByMe).map((s) => s.seatNumber);
+          if (mine.length) setSelectedSeats(mine);
         }
 
         if (data.movieId && typeof data.movieId === "object") {
@@ -169,11 +185,38 @@ export default function Seats() {
     }
   };
 
-  const handleProceed = () => {
-    if (selectedSeats.length === 0) return;
-    navigate(`/addons/${showId}`, {
-      state: { selectedSeats, totalPrice: total, show },
-    });
+  // Continue = hold the seats on the server for a few minutes, then go to checkout.
+  const [holding, setHolding] = useState(false);
+  const handleProceed = async () => {
+    if (selectedSeats.length === 0 || holding) return;
+    setHolding(true);
+    try {
+      const { data } = await API.post(`/api/shows/${showId}/holds`, { seats: selectedSeats });
+      navigate(`/addons/${showId}`, {
+        state: { selectedSeats, totalPrice: total, show, holdExpiresAt: data.expiresAt },
+      });
+    } catch (err) {
+      if (err.response?.status === 409) {
+        const taken = Array.isArray(err.response.data?.seats) ? err.response.data.seats : [];
+        setSelectedSeats((prev) => prev.filter((n) => !taken.includes(n)));
+        toast.error(
+          taken.length
+            ? `${taken.join(", ")} ${taken.length === 1 ? "was" : "were"} just taken. Please pick again.`
+            : "Some seats were just taken. Please pick again."
+        );
+        fetchShow(true);
+      } else {
+        toast.error(getErrorMessage(err, "We couldn't reserve your seats. Please try again."));
+      }
+    } finally {
+      setHolding(false);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedSeats([]);
+    // Let go of any seats this user was holding for this show.
+    API.delete(`/api/shows/${showId}/holds`).catch(() => {});
   };
 
   const handleShare = async () => {
@@ -412,6 +455,7 @@ export default function Seats() {
               <LegendItem className="border-white/25 bg-white/[0.03]" label="Available" />
               {premiumCategory && <LegendItem className="border-gold-500/60 bg-gold-500/[0.08]" label={`Premium (${premiumCategory})`} />}
               <LegendItem className="border-brand-500 bg-brand-500" label="Selected" />
+              <LegendItem className="border-dashed border-sky-400/50 bg-sky-400/[0.08]" label="Reserved (someone is checking out)" />
               <LegendItem className="border-transparent bg-white/[0.08]" label="Booked" />
             </div>
           </section>
@@ -427,16 +471,16 @@ export default function Seats() {
                 </span>
                 <span className="font-display text-2xl font-bold text-white">{formatPrice(total)}</span>
               </div>
-              <button onClick={handleProceed} disabled={selectedSeats.length === 0} className="btn-primary btn-lg mt-4 w-full">
-                Continue <Icon name="arrowRight" className="h-4 w-4" />
+              <button onClick={handleProceed} disabled={selectedSeats.length === 0 || holding} className="btn-primary btn-lg mt-4 w-full">
+                {holding ? <><Spinner className="h-5 w-5" /> Reserving seats…</> : <>Continue <Icon name="arrowRight" className="h-4 w-4" /></>}
               </button>
               {selectedSeats.length > 0 && (
-                <button onClick={() => setSelectedSeats([])} className="btn-ghost mt-2 w-full text-xs">
+                <button onClick={clearSelection} className="btn-ghost mt-2 w-full text-xs">
                   Clear selection
                 </button>
               )}
               <p className="mt-3 text-center text-[11px] text-gray-500">
-                Seats are confirmed when you complete checkout.
+                Continuing holds your seats for a few minutes. They're confirmed when you complete checkout.
               </p>
             </div>
           </aside>
@@ -454,8 +498,8 @@ export default function Seats() {
             </p>
             <p className="font-display text-xl font-bold text-white">{formatPrice(total)}</p>
           </div>
-          <button onClick={handleProceed} disabled={selectedSeats.length === 0} className="btn-primary btn-lg shrink-0">
-            Continue <Icon name="arrowRight" className="h-4 w-4" />
+          <button onClick={handleProceed} disabled={selectedSeats.length === 0 || holding} className="btn-primary btn-lg shrink-0">
+            {holding ? <><Spinner className="h-5 w-5" /> Reserving…</> : <>Continue <Icon name="arrowRight" className="h-4 w-4" /></>}
           </button>
         </div>
       </div>
@@ -467,7 +511,9 @@ function SeatButton({ seat, selected, premium, onToggle }) {
   const base =
     "flex h-7 w-7 items-center justify-center rounded-t-lg rounded-b-[4px] border text-[10px] font-semibold transition duration-150 sm:h-8 sm:w-8 sm:text-[11px]";
   let style;
-  if (seat.isBooked) {
+  if (seat.reserved) {
+    style = "cursor-not-allowed border-dashed border-sky-400/50 bg-sky-400/[0.08] text-transparent";
+  } else if (seat.isBooked) {
     style = "cursor-not-allowed border-transparent bg-white/[0.08] text-transparent";
   } else if (selected) {
     style = "scale-105 border-brand-500 bg-brand-500 text-white shadow-glow";
@@ -484,11 +530,13 @@ function SeatButton({ seat, selected, premium, onToggle }) {
       disabled={seat.isBooked}
       aria-pressed={seat.isBooked ? undefined : selected}
       aria-label={
-        seat.isBooked
+        seat.reserved
+          ? `Seat ${seat.seatNumber}, reserved by another customer`
+          : seat.isBooked
           ? `Seat ${seat.seatNumber}, booked`
           : `Seat ${seat.seatNumber}, ${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}`
       }
-      title={seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${seat.category} · ${formatPrice(seat.price)}`}
+      title={seat.reserved ? `${seat.seatNumber} · Reserved` : seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${seat.category} · ${formatPrice(seat.price)}`}
       className={`${base} ${style}`}
     >
       {numberOf(seat.seatNumber)}

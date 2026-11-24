@@ -2,6 +2,7 @@ const Show = require("../models/Show");
 const Movie = require("../models/Movie");
 const Parking = require("../models/Parking");
 const { isObjectId, cleanString, cleanNumber, exactInsensitive } = require("../utils/validate");
+const { showForUser } = require("../utils/seatHolds");
 
 const MAX_PRICE = 100000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -111,7 +112,7 @@ exports.getShowById = async (req, res, next) => {
     if (req.query.expand === "movie") query.populate("movieId");
     const show = await query;
     if (!show) return res.status(404).json({ message: "Show not found" });
-    return res.json(show);
+    return res.json(showForUser(show, req.user?.id));
   } catch (err) {
     return next(err);
   }
