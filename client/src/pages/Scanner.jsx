@@ -55,12 +55,13 @@ function Scanner() {
           type: "used",
         });
       } else {
-        // Mark as used
-        await API.put(`/api/bookings/use/${id}`);
-        setStatusMessage({
-          text: "✅ TICKET VERIFIED & ENTRY ALLOWED!",
-          type: "success",
-        });
+        // Mark as used. The server only lets the first scan admit a ticket.
+        const { data } = await API.put(`/api/bookings/use/${id}`);
+        setStatusMessage(
+          data?.alreadyUsed
+            ? { text: "⛔ TICKET ALREADY USED & ADMITTED", type: "used" }
+            : { text: "✅ TICKET VERIFIED & ENTRY ALLOWED!", type: "success" }
+        );
       }
     } catch (err) {
       setStatusMessage({

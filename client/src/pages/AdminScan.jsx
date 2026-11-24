@@ -31,7 +31,11 @@ export default function AdminScan() {
     if (!bookingId.trim()) return;
     API.put(`/api/bookings/use/${bookingId.trim()}`)
       .then((res) => {
-        setMessage("✅ " + (res.data?.message || "Ticket marked as redeemed successfully!"));
+        setMessage(
+          res.data?.alreadyUsed
+            ? "⛔ This ticket was already used. Do not admit again."
+            : "✅ " + (res.data?.message || "Ticket marked as redeemed successfully!")
+        );
       })
       .catch((err) => {
         setMessage("❌ Error: " + (err.response?.data?.message || err.message));

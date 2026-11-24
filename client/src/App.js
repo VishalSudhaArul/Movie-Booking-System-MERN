@@ -87,7 +87,6 @@ function App() {
           <Route path="/loyalty" element={<LoyaltyWallet />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/verify/:bookingId" element={<VerifyTicket />} />
           <Route path="/snacks" element={<SnacksHub />} />
           <Route path="/food-beverages" element={<SnacksHub />} />
 
@@ -125,11 +124,20 @@ function App() {
             }
           />
           <Route
-            path="/scanner"
+            path="/verify/:bookingId"
             element={
               <PrivateRoute>
-                <Scanner />
+                <VerifyTicket />
               </PrivateRoute>
+            }
+          />
+          {/* Ticket scanning admits people, so it's staff-only */}
+          <Route
+            path="/scanner"
+            element={
+              <AdminGate>
+                <Scanner />
+              </AdminGate>
             }
           />
 

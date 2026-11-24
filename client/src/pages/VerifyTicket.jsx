@@ -453,6 +453,7 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import API from "../api";
+import { getSession } from "../lib/session";
 
 function VerifyTicket() {
   const { bookingId } = useParams();
@@ -479,8 +480,13 @@ function VerifyTicket() {
 
         if (res.data.used) {
           setStatus("USED");
+        } else if (getSession().isAdmin) {
+          // Staff scanning at the entrance admit the ticket. The server also checks
+          // the role, and only the first scan of a ticket can admit it.
+          const { data } = await API.put(`/api/bookings/use/${bookingId}`);
+          setStatus(data?.alreadyUsed ? "USED" : "VALID");
         } else {
-          await API.put(`/api/bookings/use/${bookingId}`);
+          // The ticket owner opening their own QR link: show it, don't use it up.
           setStatus("VALID");
         }
       } catch (err) {

@@ -1,16 +1,16 @@
 const router = require("express").Router();
 const showController = require("../controllers/showController");
+const { authMiddleware } = require("../middleware/authMiddleware");
+const { adminAccess } = require("../middleware/adminMiddleware");
 
-router.post("/", showController.addShow);
-
+// Public reads
 router.get("/", showController.getAllShows);
-
 router.get("/single/:showId", showController.getShowById);
-
 router.get("/movie/:movieId", showController.getShowsByMovie);
 
-router.put("/:id", showController.updateShow);
-
-router.delete("/:id", showController.deleteShow);
+// Staff-only writes
+router.post("/", authMiddleware, adminAccess, showController.addShow);
+router.put("/:id", authMiddleware, adminAccess, showController.updateShow);
+router.delete("/:id", authMiddleware, adminAccess, showController.deleteShow);
 
 module.exports = router;

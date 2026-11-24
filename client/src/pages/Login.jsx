@@ -3,14 +3,13 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import API from "../api";
 import AuthLayout, {
   FormAlert,
-  GoogleSignIn,
   PasswordField,
   SubmitButton,
   TextField,
   isValidEmail,
 } from "../components/AuthLayout";
 import { useToast } from "../components/ui/Toast";
-import { getSession, saveSession } from "../lib/session";
+import { getSession, safeRedirectPath, saveSession } from "../lib/session";
 import { getErrorMessage } from "../lib/format";
 
 export default function Login() {
@@ -18,15 +17,14 @@ export default function Login() {
   const location = useLocation();
   const toast = useToast();
   // Return to the page that asked for sign-in (e.g. seat selection).
-  const redirectTo = location.state?.from || "/";
+  const redirectTo = safeRedirectPath(location.state?.from || new URLSearchParams(location.search).get("next") || "/");
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
-  if (getSession().isLoggedIn && !loading && !googleLoading) {
+  if (getSession().isLoggedIn && !loading) {
     return <Navigate to={redirectTo} replace />;
   }
 
@@ -73,18 +71,6 @@ export default function Login() {
     }
   };
 
-  const handleGoogleAuth = async (name, email) => {
-    setError("");
-    setGoogleLoading(true);
-    try {
-      const { data } = await API.post("/api/auth/google", { name, email });
-      finishSignIn(data);
-    } catch (err) {
-      setError(getErrorMessage(err, "Google sign-in failed. Please try again."));
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
 
   return (
     <AuthLayout
@@ -100,8 +86,6 @@ export default function Login() {
       }
     >
       <FormAlert message={error} onDismiss={() => setError("")} />
-
-      <GoogleSignIn onSelect={handleGoogleAuth} loading={googleLoading} dividerLabel="or sign in with email" />
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <TextField

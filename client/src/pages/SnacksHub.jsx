@@ -172,16 +172,15 @@ export default function SnacksHub() {
     setIsSubmitting(true);
     try {
       const payload = {
-        userId,
         theatre: selectedTheatre,
         movieTitle: selectedMovie || "General Theater Order",
         bookingId: selectedBookingId || null,
+        // Prices are looked up on the server; only IDs and quantities are sent.
         items: cart.map((item) => ({
+          snackId: item._id,
           name: item.name,
-          price: item.price,
           qty: item.qty,
         })),
-        totalPrice: totalCartPrice,
         deliveryType,
         seatNumber: deliveryType === "In-Seat Delivery" ? seatNumber : "",
       };

@@ -3,48 +3,48 @@
 const router = require("express").Router();
 const bookingController = require("../controllers/bookingController");
 const Booking = require("../models/Booking");
-const mongoose = require("mongoose");
 const { authMiddleware } = require("../middleware/authMiddleware");
-const { adminAccess } = require("../middleware/adminMiddleware");
+const { adminAccess, selfOrAdmin, isStaff } = require("../middleware/adminMiddleware");
+const { bookingLimiter } = require("../middleware/security");
+const { isObjectId } = require("../utils/validate");
 
-/* ── VERIFY BOOKING (QR Scan) ─── must be BEFORE /:id ─── */
-router.get("/verify/:id", async (req, res) => {
+/* ── VERIFY BOOKING (QR scan) ── owner or staff ── must be BEFORE /:id ── */
+router.get("/verify/:id", authMiddleware, async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (!isObjectId(id)) return res.status(400).json({ message: "Invalid booking ID" });
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid booking ID" });
+    const booking = await bookingController.populateBooking(Booking.findById(id));
+    if (!booking || !(isStaff(req.user) || bookingController.ownsBooking(req.user, booking))) {
+      return res.status(404).json({ message: "Booking not found" });
     }
-
-    const booking = await Booking.findById(id)
-      .populate({ path: "showId", populate: { path: "movieId" } })
-      .populate("userId", "-password");
-
-    if (!booking) return res.status(404).json(null);
-
-    res.json(booking);
-  } catch (error) {
-    console.error("Verify error:", error);
-    res.status(500).json(null);
+    return res.json(booking);
+  } catch (err) {
+    return next(err);
   }
 });
 
 /* ── BOOK SEATS ── */
-router.post("/", authMiddleware, bookingController.bookSeats);
+router.post("/", authMiddleware, bookingLimiter, bookingController.bookSeats);
 
-/* ── USER BOOKING HISTORY ── */
-router.get("/user/:userId", bookingController.getUserBookings);
+/* ── USER BOOKING HISTORY ── only your own, unless staff ── */
+router.get(
+  "/user/:userId",
+  authMiddleware,
+  selfOrAdmin((req) => req.params.userId),
+  bookingController.getUserBookings
+);
 
-/* ── PARKING REVENUE ── */
-router.get("/parking-revenue", bookingController.getParkingRevenue);
+/* ── PARKING REVENUE (staff) ── */
+router.get("/parking-revenue", authMiddleware, adminAccess, bookingController.getParkingRevenue);
 
-/* ── ALL BOOKINGS (Admin) ─── must be BEFORE /:id ─── */
+/* ── ALL BOOKINGS (staff) ── must be BEFORE /:id ── */
 router.get("/all", authMiddleware, adminAccess, bookingController.getAllBookings);
 
-/* ── GET SINGLE BOOKING ── */
-router.get("/:id", bookingController.getBookingById);
+/* ── GET SINGLE BOOKING ── owner or staff ── */
+router.get("/:id", authMiddleware, bookingController.getBookingById);
 
-/* ── MARK TICKET AS USED ── */
-router.put("/use/:id", bookingController.markAsUsed);
+/* ── MARK TICKET AS USED (staff at the entrance) ── */
+router.put("/use/:id", authMiddleware, adminAccess, bookingController.markAsUsed);
 
 module.exports = router;

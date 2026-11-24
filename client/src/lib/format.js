@@ -79,3 +79,10 @@ export const getErrorMessage = (err, fallback = "Something went wrong. Please tr
   if (err?.code === "ERR_NETWORK") return "Can't reach the server. Please check your connection and try again.";
   return fallback;
 };
+
+// Only a real, server-verified payment counts as "paid". Everything else so far
+// went through the demo checkout, where no money is taken.
+export const isVerifiedPayment = (booking) =>
+  booking?.paymentMode === "LIVE" && booking?.paymentStatus === "Success";
+
+export const amountLabel = (booking) => (isVerifiedPayment(booking) ? "Amount paid" : "Total (demo, not charged)");

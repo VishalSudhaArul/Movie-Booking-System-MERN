@@ -1,36 +1,52 @@
+// authMiddleware.js
+// Accepts only "Authorization: Bearer <jwt>" with a valid signature.
+// There is no bypass header and no decode-without-verify fallback.
+
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
+const User = require("../models/User");
+const { getJwtSecret } = require("../config/env");
 
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+const unauthorized = (res, message = "Please sign in to continue") =>
+  res.status(401).json({ message });
 
-  // Support for the 123456 bypass password via Authorization header
-  if (authHeader === "Bypass 123456") {
-    req.user = {
-      role: "admin",
-      name: "Guest Admin",
-      id: "661234567890123456789012",
-      _id: "661234567890123456789012",
-    };
-    return next();
+const authMiddleware = async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) {
+    return unauthorized(res);
   }
 
-  if (!authHeader) {
-    return res.status(401).json({ message: "No token provided" });
+  const token = header.slice(7).trim();
+  if (!token) return unauthorized(res);
+
+  let payload;
+  try {
+    payload = jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"] });
+  } catch (err) {
+    return unauthorized(res, "Your session has expired. Please sign in again.");
   }
 
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Invalid token format" });
+  const userId = payload && (payload.id || payload._id);
+  if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+    return unauthorized(res, "Your session has expired. Please sign in again.");
   }
 
   try {
-    const secret = process.env.JWT_SECRET || "secret";
-    const decoded = jwt.verify(token, secret);
-    req.user = decoded;
+    // The role always comes from the database, so a role change or a deleted
+    // account takes effect immediately, and old tokens without a role still work.
+    const user = await User.findById(userId).select("name email role").lean();
+    if (!user) return unauthorized(res, "Your account no longer exists. Please sign in again.");
+
+    req.user = {
+      id: String(user._id),
+      _id: String(user._id),
+      name: user.name,
+      email: user.email,
+      role: user.role || "user",
+    };
     return next();
   } catch (err) {
-    // Tokens that fail signature verification are never trusted.
-    return res.status(401).json({ message: "Invalid or expired token" });
+    return next(err);
   }
 };
 

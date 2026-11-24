@@ -3,31 +3,29 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import API from "../api";
 import AuthLayout, {
   FormAlert,
-  GoogleSignIn,
   PasswordField,
   SubmitButton,
   TextField,
   isValidEmail,
 } from "../components/AuthLayout";
 import { useToast } from "../components/ui/Toast";
-import { getSession, saveSession } from "../lib/session";
+import { getSession, safeRedirectPath, saveSession } from "../lib/session";
 import { getErrorMessage } from "../lib/format";
 
-const MIN_PASSWORD = 6;
+const MIN_PASSWORD = 8;
 
 export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const redirectTo = location.state?.from || "/";
+  const redirectTo = safeRedirectPath(location.state?.from || new URLSearchParams(location.search).get("next") || "/");
 
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
-  if (getSession().isLoggedIn && !loading && !googleLoading) {
+  if (getSession().isLoggedIn && !loading) {
     return <Navigate to={redirectTo} replace />;
   }
 
@@ -77,18 +75,6 @@ export default function Register() {
     }
   };
 
-  const handleGoogleAuth = async (name, email) => {
-    setError("");
-    setGoogleLoading(true);
-    try {
-      const { data } = await API.post("/api/auth/google", { name, email });
-      finishSignUp(data);
-    } catch (err) {
-      setError(getErrorMessage(err, "Google sign-up failed. Please try again."));
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
 
   return (
     <AuthLayout
@@ -104,8 +90,6 @@ export default function Register() {
       }
     >
       <FormAlert message={error} onDismiss={() => setError("")} />
-
-      <GoogleSignIn onSelect={handleGoogleAuth} loading={googleLoading} dividerLabel="or sign up with email" />
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <TextField

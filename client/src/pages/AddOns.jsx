@@ -6,28 +6,10 @@ import Icon from "../components/ui/Icon";
 import Poster from "../components/Poster";
 import { ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
-import { getSession } from "../lib/session";
-import { formatPrice, formatShowDate, formatShowTime, getErrorMessage } from "../lib/format";
+import { amountLabel, formatPrice, formatShowDate, formatShowTime, getErrorMessage } from "../lib/format";
 import { seatStorageKey } from "./Seats";
 
-const PRESET_COMBOS = [
-  {
-    id: "combo-1",
-    name: "Movie Night Duo",
-    description: "Jumbo butter popcorn + 2 large cold drinks",
-    originalPrice: 460,
-    comboPrice: 380,
-    badge: "Best seller",
-  },
-  {
-    id: "combo-2",
-    name: "Gourmet Feast",
-    description: "XL popcorn + loaded cheese nachos + 2 large cold drinks",
-    originalPrice: 680,
-    comboPrice: 550,
-    badge: "Save ₹130",
-  },
-];
+// Combo names and prices come from the server (GET /api/snacks/combos).
 
 const readSavedSeats = (showId) => {
   try {
@@ -43,7 +25,6 @@ function AddOns() {
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
-  const { userId } = getSession();
 
   // Seats come from the seat page; sessionStorage keeps them across a refresh.
   const [selectedSeats] = useState(() =>
@@ -54,6 +35,7 @@ function AddOns() {
   const [movie, setMovie] = useState(null);
   const [loadError, setLoadError] = useState(false);
   const [snacks, setSnacks] = useState([]);
+  const [combos, setCombos] = useState([]);
   const [parking, setParking] = useState(null);
   const [cart, setCart] = useState([]); // [{ key, name, price, qty }]
   const [selectedParking, setSelectedParking] = useState(null);
@@ -92,6 +74,9 @@ function AddOns() {
         const theatre = encodeURIComponent(current.theatre);
         API.get(`/api/snacks/theatre/${theatre}`)
           .then((r) => !cancelled && setSnacks(Array.isArray(r.data) ? r.data : []))
+          .catch(() => {});
+        API.get("/api/snacks/combos")
+          .then((r) => !cancelled && setCombos(Array.isArray(r.data) ? r.data : []))
           .catch(() => {});
         API.get(`/api/parking/theatre/${theatre}`)
           .then((r) => !cancelled && setParking(r.data || null))
@@ -194,11 +179,10 @@ function AddOns() {
       const res = await API.post(`/api/bookings`, {
         showId,
         seats: selectedSeats,
-        userId,
-        snacks: cart.map(({ name, price, qty }) => ({ name, price, qty })),
-        parking: selectedParking,
+        // Only IDs and quantities are sent: the server looks up every price itself.
+        snacks: cart.map(({ key, name, qty }) => ({ snackId: key, name, qty })),
+        parking: selectedParking ? { type: selectedParking.type } : null,
         couponCode: appliedCoupon || undefined,
-        totalPrice: finalTotal,
       });
       sessionStorage.removeItem(seatStorageKey(showId));
       setBooking(res.data);
@@ -212,7 +196,7 @@ function AddOns() {
         sessionStorage.removeItem(seatStorageKey(showId));
         setPhase("conflict");
       } else {
-        setPayError(getErrorMessage(err, "Your payment couldn't be completed. You haven't been charged — please try again."));
+        setPayError(getErrorMessage(err, "We couldn't confirm your booking. You haven't been charged. Please try again."));
         setPhase("review");
       }
     }
@@ -268,7 +252,7 @@ function AddOns() {
               <SummaryRow label="Theatre" value={show.theatre} />
               <SummaryRow label="Showtime" value={showLine} />
               <SummaryRow label="Seats" value={(booking.seats || selectedSeats).join(", ")} />
-              <SummaryRow label="Amount paid" value={formatPrice(booking.totalPrice)} strong />
+              <SummaryRow label={amountLabel(booking)} value={formatPrice(booking.totalPrice)} strong />
               <div>
                 <dt className="text-xs text-gray-500">Booking ID</dt>
                 <dd className="mt-0.5 break-all font-mono text-xs text-gray-300">{booking._id}</dd>
@@ -320,7 +304,7 @@ function AddOns() {
             <Icon name="arrowLeft" className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="font-display text-lg font-bold text-white sm:text-xl">Extras &amp; payment</h1>
+            <h1 className="font-display text-lg font-bold text-white sm:text-xl">Extras &amp; checkout</h1>
             <p className="text-xs text-gray-400 sm:text-sm">Add snacks or parking, then confirm your booking.</p>
           </div>
         </div>
@@ -336,7 +320,7 @@ function AddOns() {
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2 text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px]">2</span> Extras &amp; payment
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px]">2</span> Extras &amp; checkout
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
@@ -347,10 +331,11 @@ function AddOns() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           {/* ───────────── Extras ───────────── */}
           <div className="space-y-6">
+            {combos.length > 0 && (
             <section className="card p-5 sm:p-6" aria-labelledby="combos-title">
               <SectionHeading id="combos-title" icon="popcorn" title="Combos" hint="Bundle and save" />
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {PRESET_COMBOS.map((combo) => {
+                {combos.map((combo) => {
                   const item = { key: combo.id, name: combo.name, price: combo.comboPrice };
                   return (
                     <div key={combo.id} className="card-muted flex flex-col p-4">
@@ -369,6 +354,7 @@ function AddOns() {
                 })}
               </div>
             </section>
+            )}
 
             <section className="card p-5 sm:p-6" aria-labelledby="snacks-title">
               <SectionHeading id="snacks-title" icon="popcorn" title="Food & drinks" hint={`Available at ${show.theatre}`} />
@@ -543,11 +529,11 @@ function AddOns() {
                   {paying ? (
                     <><Spinner className="h-5 w-5" /> Confirming your seats…</>
                   ) : (
-                    <><Icon name="lock" className="h-4 w-4" /> Pay {formatPrice(finalTotal)}</>
+                    <>Confirm demo booking · {formatPrice(finalTotal)}</>
                   )}
                 </button>
                 <p className="mt-3 text-center text-[11px] leading-relaxed text-gray-500">
-                  Demo checkout — no real payment is taken. Your seats are confirmed instantly.
+                  Demo checkout: no payment is taken and no card details are needed. The final price is calculated by our server.
                 </p>
               </div>
             </div>

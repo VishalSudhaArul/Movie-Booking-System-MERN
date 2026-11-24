@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../../api";
 import AdminLayout from "../../components/AdminLayout";
 
 export default function AdminParking() {
@@ -17,18 +17,16 @@ export default function AdminParking() {
   const [editId, setEditId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
   const fetchData = async () => {
     try {
-      const parkingRes = await axios.get(`${API_URL}/api/parking/all`);
+      const parkingRes = await API.get(`/api/parking/all`);
       setParkingList(parkingRes.data || []);
     } catch (err) {
       console.log("Parking Load Failed", err);
     }
 
     try {
-      const showRes = await axios.get(`${API_URL}/api/shows`);
+      const showRes = await API.get(`/api/shows`);
       const unique = [...new Set((showRes.data || []).map((s) => s.theatre))];
       setTheatres(unique);
     } catch (err) {
@@ -36,7 +34,7 @@ export default function AdminParking() {
     }
 
     try {
-      const rev = await axios.get(`${API_URL}/api/bookings/parking-revenue`);
+      const rev = await API.get(`/api/bookings/parking-revenue`);
       setRevenueMap(rev.data || {});
     } catch (err) {
       console.log("Revenue Load Failed", err);
@@ -52,14 +50,14 @@ export default function AdminParking() {
 
     try {
       if (editId) {
-        await axios.put(`${API_URL}/api/parking/${editId}`, {
+        await API.put(`/api/parking/${editId}`, {
           theatre,
           priceBike: Number(bikePrice),
           priceCar: Number(carPrice),
         });
         setEditId(null);
       } else {
-        await axios.post(`${API_URL}/api/parking`, {
+        await API.post(`/api/parking`, {
           theatre,
           priceBike: Number(bikePrice),
           priceCar: Number(carPrice),
@@ -78,7 +76,7 @@ export default function AdminParking() {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`${API_URL}/api/parking/${deleteId}`);
+      await API.delete(`/api/parking/${deleteId}`);
       setDeleteId(null);
       fetchData();
     } catch (err) {

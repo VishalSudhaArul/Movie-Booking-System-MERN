@@ -10,7 +10,7 @@ import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
 import { useWatchlist } from "../context/WatchlistContext";
 import { getSession } from "../lib/session";
-import { formatDate, formatPrice, formatShowDate, formatShowTime, getShowDateTime } from "../lib/format";
+import { amountLabel, formatDate, formatPrice, formatShowDate, formatShowTime, getShowDateTime } from "../lib/format";
 
 const STATUS_STYLES = {
   UPCOMING: { label: "Upcoming", className: "badge-green" },
@@ -129,7 +129,7 @@ function MyBookings() {
             <dl className="grid grid-cols-3 gap-3 text-center md:w-auto">
               <Stat label="Bookings" value={bookings.length} />
               <Stat label="Upcoming" value={upcoming.length} />
-              <Stat label="Total spent" value={formatPrice(totalSpent)} />
+              <Stat label="Total booked" value={formatPrice(totalSpent)} />
             </dl>
           </div>
 
@@ -291,7 +291,7 @@ function MyBookings() {
                 <Detail label="Food" value={openBooking.snacks.map((s) => `${s.name} × ${s.qty}`).join(", ")} wide />
               )}
               {openBooking.parking?.type && <Detail label="Parking" value={openBooking.parking.type} />}
-              <Detail label="Amount paid" value={formatPrice(openBooking.totalPrice)} />
+              <Detail label={amountLabel(openBooking)} value={formatPrice(openBooking.totalPrice)} />
               <Detail label="Booked on" value={formatDate(openBooking.createdAt)} />
             </dl>
             <p className="mt-4 break-all border-t border-dashed border-white/15 pt-3 font-mono text-[11px] text-gray-500">

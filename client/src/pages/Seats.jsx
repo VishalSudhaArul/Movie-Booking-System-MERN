@@ -296,7 +296,7 @@ export default function Seats() {
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">2</span> Extras &amp; payment
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">2</span> Extras &amp; checkout
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export default function Seats() {
                 </button>
               )}
               <p className="mt-3 text-center text-[11px] text-gray-500">
-                Seats are confirmed when you complete payment.
+                Seats are confirmed when you complete checkout.
               </p>
             </div>
           </aside>

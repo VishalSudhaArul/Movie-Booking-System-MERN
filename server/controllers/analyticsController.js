@@ -2,19 +2,19 @@ const Booking = require("../models/Booking");
 const Movie = require("../models/Movie");
 const Show = require("../models/Show");
 
-exports.getAnalytics = async (req, res) => {
+exports.getAnalytics = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
 
     let matchStage = {};
 
-    if (startDate && endDate) {
-      matchStage = {
-        createdAt: {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate),
-        },
-      };
+    if (startDate || endDate) {
+      const from = new Date(String(startDate));
+      const to = new Date(String(endDate));
+      if (!startDate || !endDate || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+        return res.status(400).json({ message: "Provide a valid startDate and endDate" });
+      }
+      matchStage = { createdAt: { $gte: from, $lte: to } };
     }
 
     /* ---------------- MOVIE COLLECTION ---------------- */
@@ -178,7 +178,6 @@ exports.getAnalytics = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Analytics Error:", err);
-    res.status(500).json({ message: "Analytics fetch failed", error: err.message });
+    return next(err);
   }
 };

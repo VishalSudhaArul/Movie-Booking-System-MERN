@@ -19,8 +19,12 @@ router.get("/active", async (req, res) => {
 // POST validate coupon code
 router.post("/validate", async (req, res) => {
   try {
-    const { code, totalAmount } = req.body;
-    if (!code) {
+    const { code } = req.body;
+    const totalAmount = Number(req.body.totalAmount);
+    if (!Number.isFinite(totalAmount) || totalAmount < 0 || totalAmount > 10000000) {
+      return res.status(400).json({ message: "Invalid order amount" });
+    }
+    if (typeof code !== "string" || !code.trim() || code.length > 40) {
       return res.status(400).json({ message: "Coupon code is required" });
     }
 
@@ -37,7 +41,7 @@ router.post("/validate", async (req, res) => {
       finalPrice: totalAmount - result.discountAmount,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error validating coupon", error: error.message });
+    res.status(500).json({ message: "Error validating coupon" });
   }
 });
 
