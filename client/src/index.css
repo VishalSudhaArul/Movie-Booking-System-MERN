@@ -7,7 +7,11 @@
 @layer base {
   html,
   body {
+    /* "clip" hides sideways overflow without turning body into a scroll
+       container, which would stop position: sticky from working anywhere.
+       Older browsers fall back to "hidden". */
     overflow-x: hidden;
+    overflow-x: clip;
     max-width: 100vw;
     width: 100%;
     margin: 0;

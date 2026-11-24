@@ -1,7 +1,7 @@
 // Every major page at desktop, tablet and mobile widths: it renders its main
 // content, nothing overflows sideways, no console errors, and a screenshot is saved.
 const { test, expect } = require("@playwright/test");
-const { API, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
+const { API, useSeatView, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
 
 // Pages and the element that proves each one rendered real content.
 const PUBLIC_PAGES = [
@@ -61,8 +61,9 @@ test.describe("signed-in user pages", () => {
     await signIn(page, "user");
   });
 
-  test("seat selection", async ({ page }, testInfo) => {
+  test("seat selection (2D map)", async ({ page }, testInfo) => {
     const errors = watchErrors(page);
+    await useSeatView(page, "2d");
     await page.goto(`/seats/${await firstShowId(page)}`);
     await expect(page.getByRole("region", { name: "Seat map" })).toBeVisible();
     // Booked seats from the fixture show as booked.

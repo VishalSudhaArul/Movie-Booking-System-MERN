@@ -1,12 +1,13 @@
 // End-to-end flows through the real API: booking, keyboard use and reduced motion.
 const { test, expect } = require("@playwright/test");
-const { API, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
+const { API, useSeatView, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
 
 // Each viewport books a different seat so the runs don't collide.
 const SEAT_FOR = { desktop: "E1", tablet: "E2", mobile: "E3" };
 
 test("book a seat with extras, then open the ticket", async ({ page }, testInfo) => {
   const errors = watchErrors(page);
+  await useSeatView(page, "2d");
   await signIn(page, "user");
   const seat = SEAT_FOR[testInfo.project.name];
   await page.goto(`/seats/${await firstShowId(page)}`);
@@ -51,6 +52,7 @@ test("someone else's hold shows as reserved and can't be booked", async ({ page,
   });
   expect(hold.ok()).toBeTruthy();
 
+  await useSeatView(page, "2d");
   await signIn(page, "user");
   await page.goto(`/seats/${showId}`);
   const btn = page.getByRole("button", { name: `Seat ${seat}, reserved by another customer` });
@@ -59,6 +61,7 @@ test("someone else's hold shows as reserved and can't be booked", async ({ page,
 
 test("keyboard: skip link and seat selection", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "keyboard flow checked once on desktop");
+  await useSeatView(page, "2d");
   await signIn(page, "user");
   await page.goto(`/seats/${await firstShowId(page)}`);
   await page.getByRole("region", { name: "Seat map" }).waitFor();

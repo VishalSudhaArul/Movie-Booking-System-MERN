@@ -44,6 +44,7 @@ async function seed() {
   const hash = (p) => bcrypt.hash(p, 4);
   await User.create({ name: "Staff Admin", email: "admin@e2e.test", password: await hash("AdminPass123"), role: "admin" });
   const user = await User.create({ name: "Riya Sharma", email: "user@e2e.test", password: await hash("UserPass123"), role: "user" });
+  await User.create({ name: "Arjun Mehta", email: "user2@e2e.test", password: await hash("UserPass123"), role: "user" });
 
   const movies = await Movie.create([
     {

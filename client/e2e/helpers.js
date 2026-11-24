@@ -5,8 +5,14 @@ const API = "http://localhost:5000";
 
 const ACCOUNTS = {
   user: { email: "user@e2e.test", password: "UserPass123" },
+  user2: { email: "user2@e2e.test", password: "UserPass123" },
   admin: { email: "admin@e2e.test", password: "AdminPass123" },
 };
+
+// Picks the seat map view before the page loads ("2d" or "3d").
+async function useSeatView(page, view) {
+  await page.addInitScript((v) => localStorage.setItem("cinebook:seatView", v), view);
+}
 
 // Signs in through the real API and stores the session the way the app does.
 async function signIn(page, who) {
@@ -90,4 +96,4 @@ async function snap(page, testInfo, name) {
   });
 }
 
-module.exports = { API, ACCOUNTS, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap };
+module.exports = { API, ACCOUNTS, useSeatView, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap };

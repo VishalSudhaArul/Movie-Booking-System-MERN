@@ -8,6 +8,7 @@ import { ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
 import { amountLabel, formatPrice, formatShowDate, formatShowTime, getErrorMessage } from "../lib/format";
 import { seatStorageKey } from "./Seats";
+import { inBookingFlow, releaseHoldNow } from "../lib/useSeatHold";
 
 // Combo names and prices come from the server (GET /api/snacks/combos).
 
@@ -80,6 +81,19 @@ function AddOns() {
   useEffect(() => {
     ensureHold();
   }, [ensureHold]);
+
+  // Leaving checkout for anywhere except this show's seat page (or closing the
+  // tab) releases the hold. After a booking the seats are booked, so this is a no-op.
+  useEffect(() => {
+    const onHide = () => releaseHoldNow(showId);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      setTimeout(() => {
+        if (!inBookingFlow(showId)) releaseHoldNow(showId);
+      }, 0);
+    };
+  }, [showId]);
 
   /* Load show, movie, add-ons and coupons */
   useEffect(() => {

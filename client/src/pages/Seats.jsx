@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import API from "../api";
 import Icon from "../components/ui/Icon";
@@ -7,6 +7,21 @@ import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
 import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../lib/format";
 import { buildAuditorium } from "../lib/auditorium";
+import { hasWebGL, isLowPowerDevice, isNarrowScreen, prefersReducedMotion } from "../lib/webgl";
+import ErrorBoundary from "../components/ErrorBoundary";
+import HoldCountdown from "../components/HoldCountdown";
+import useSeatHold, { inBookingFlow, releaseHoldNow } from "../lib/useSeatHold";
+
+// The 3D auditorium (three.js) is loaded only when someone opens it.
+const Auditorium3D = lazy(() => import("../components/cinema3d/Auditorium3D"));
+const VIEW_KEY = "cinebook:seatView";
+
+const initialView = () => {
+  if (!hasWebGL()) return "2d";
+  const saved = localStorage.getItem(VIEW_KEY);
+  if (saved === "2d" || saved === "3d") return saved;
+  return isNarrowScreen() ? "2d" : "3d";
+};
 
 export const MAX_SEATS = 10;
 export const seatStorageKey = (showId) => `cinebook:seats:${showId}`;
@@ -45,6 +60,17 @@ export default function Seats() {
 
   const selectedRef = useRef(selectedSeats);
   const mapScrollRef = useRef(null);
+  const [view, setView] = useState(initialView);
+  const [view3dFailed, setView3dFailed] = useState(false);
+
+  const webgl = useMemo(() => hasWebGL(), []);
+  const show3d = view === "3d" && webgl && !view3dFailed;
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
+  const lowPower = useMemo(() => isLowPowerDevice(), []);
+  const chooseView = (v) => {
+    setView(v);
+    localStorage.setItem(VIEW_KEY, v);
+  };
 
   const fetchShow = useCallback(
     async (silent = false) => {
@@ -96,7 +122,7 @@ export default function Seats() {
     const el = mapScrollRef.current;
     if (status !== "ready" || !el) return;
     if (el.scrollWidth > el.clientWidth) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
-  }, [status]);
+  }, [status, view]);
 
   // Keep availability fresh when the user comes back to the tab.
   useEffect(() => {
@@ -210,39 +236,69 @@ export default function Seats() {
     }
   };
 
-  // Continue = hold the seats on the server for a few minutes, then go to checkout.
+  // Seats are held on the server automatically as they're picked (debounced,
+  // one request at a time, latest selection wins). The server decides who gets
+  // a seat: if someone else got there first, it's removed from the selection.
+  const handleHoldConflict = useCallback(
+    (taken) => {
+      setSelectedSeats((prev) => prev.filter((n) => !taken.includes(n)));
+      toast.error(`${taken.join(", ")} ${taken.length === 1 ? "was" : "were"} just taken by someone else. Please pick again.`);
+      fetchShow(true);
+    },
+    [toast, fetchShow]
+  );
+  const { hold, flush, renew } = useSeatHold({
+    showId,
+    selected: selectedSeats,
+    enabled: status === "ready",
+    onConflict: handleHoldConflict,
+  });
+
+  // Continue: make sure the latest selection is held, then go to checkout.
   const [holding, setHolding] = useState(false);
   const handleProceed = async () => {
     if (selectedSeats.length === 0 || holding) return;
     setHolding(true);
     try {
-      const { data } = await API.post(`/api/shows/${showId}/holds`, { seats: selectedSeats });
-      navigate(`/addons/${showId}`, {
-        state: { selectedSeats, totalPrice: total, show, holdExpiresAt: data.expiresAt },
-      });
-    } catch (err) {
-      if (err.response?.status === 409) {
-        const taken = Array.isArray(err.response.data?.seats) ? err.response.data.seats : [];
-        setSelectedSeats((prev) => prev.filter((n) => !taken.includes(n)));
-        toast.error(
-          taken.length
-            ? `${taken.join(", ")} ${taken.length === 1 ? "was" : "were"} just taken. Please pick again.`
-            : "Some seats were just taken. Please pick again."
-        );
-        fetchShow(true);
-      } else {
-        toast.error(getErrorMessage(err, "We couldn't reserve your seats. Please try again."));
+      const confirmed = await flush();
+      const want = [...selectedRef.current].sort().join(",");
+      if (confirmed.status === "held" && [...confirmed.seats].sort().join(",") === want) {
+        navigate(`/addons/${showId}`, {
+          state: { selectedSeats: selectedRef.current, totalPrice: total, show, holdExpiresAt: confirmed.expiresAt },
+        });
+      } else if (confirmed.status === "error") {
+        toast.error("We couldn't hold your seats. Please try again.");
       }
+      // On a conflict the taken seats were already removed and explained.
     } finally {
       setHolding(false);
     }
   };
 
-  const clearSelection = () => {
-    setSelectedSeats([]);
-    // Let go of any seats this user was holding for this show.
-    API.delete(`/api/shows/${showId}/holds`).catch(() => {});
-  };
+  // Clearing the selection releases the hold (through the same channel).
+  const clearSelection = () => setSelectedSeats([]);
+
+  // Leaving the booking flow (not to this show's checkout) or closing the tab
+  // releases the hold. The server only ever releases this user's own holds.
+  useEffect(() => {
+    const onHide = () => releaseHoldNow(showId);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      setTimeout(() => {
+        if (!inBookingFlow(showId)) releaseHoldNow(showId);
+      }, 0);
+    };
+  }, [showId]);
+
+  // Keep availability fresh: every 15 s while visible, and on returning to the tab.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") fetchShow(true);
+    }, 15000);
+    return () => clearInterval(id);
+  }, [fetchShow]);
+
 
   const handleShare = async () => {
     try {
@@ -379,13 +435,25 @@ export default function Seats() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* In the 3D view the booking panel floats inside the hall, so the hall gets the full width. */}
+        <div className={`grid gap-6 ${show3d ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}>
           {/* ───────────── Seat map ───────────── */}
-          <section className="card overflow-hidden" aria-label="Seat map">
+          <section className={`card ${view === "2d" ? "overflow-hidden" : ""}`} aria-label="Seat map">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-6">
-              <p className="text-sm text-gray-400">
-                <span className="font-semibold text-white">{availableCount}</span> of {show.seats.length} seats available
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                {webgl && (
+                  <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Seat view">
+                    {[["3d", "3D hall"], ["2d", "2D map"]].map(([v, label]) => (
+                      <button key={v} onClick={() => chooseView(v)} aria-pressed={view === v} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${view === v ? "bg-brand-gradient text-white" : "text-gray-400 hover:text-white"}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-sm text-gray-400">
+                  <span className="font-semibold text-white">{availableCount}</span> of {show.seats.length} seats available
+                </p>
+              </div>
               <div className="flex items-center gap-1.5">
                 <span className="mr-1 text-xs text-gray-500">Pick for me:</span>
                 {[1, 2, 3, 4, 6].map((count) => (
@@ -405,79 +473,120 @@ export default function Seats() {
               </div>
             </div>
 
-            <p className="px-4 pt-3 text-center text-xs text-gray-500 sm:hidden">Swipe sideways to see every seat.</p>
-            <div ref={mapScrollRef} data-testid="seat-map-scroll" className="overflow-x-auto px-3 py-6 sm:px-4 sm:py-8">
-              <div className="mx-auto w-max min-w-full">
-                <div className="mx-auto flex w-max flex-col items-stretch gap-8">
-                  {layout.map((category) => {
-                    const isPremium = category.name === premiumCategory;
-                    return (
-                      <div key={category.name}>
-                        <div className="mb-3 flex items-center gap-3">
-                          <span className="h-px flex-1 bg-white/[0.08]" />
-                          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                            {isPremium && <Icon name="crown" className="h-3.5 w-3.5 text-accent-300" />}
-                            {category.name}
-                            <span className="text-white">{formatPrice(category.price)}</span>
-                          </span>
-                          <span className="h-px flex-1 bg-white/[0.08]" />
+            {show3d ? (
+              <ErrorBoundary
+                onError={() => {
+                  setView3dFailed(true);
+                  toast.info("The 3D view couldn't start on this device, so we switched to the 2D map.");
+                }}
+                fallback={null}
+              >
+                <Suspense
+                  fallback={
+                    <div className="m-2 flex h-[min(78vh,680px)] min-h-[460px] flex-col items-center justify-center gap-3 rounded-xl bg-ink-950 sm:m-3" role="status">
+                      <Spinner className="h-8 w-8 text-brand-400" />
+                      <p className="text-sm text-gray-300">Preparing your cinema…</p>
+                    </div>
+                  }
+                >
+                  <div className="p-2 sm:p-3">
+                    <Auditorium3D
+                      layout={show.layout}
+                      seats={show.seats}
+                      selected={selectedSeats}
+                      onToggle={toggleSeat}
+                      onClear={clearSelection}
+                      onContinue={handleProceed}
+                      continuing={holding}
+                      hold={hold}
+                      onRenewHold={renew}
+                      availableCount={availableCount}
+                      maxSeats={MAX_SEATS}
+                      premiumCategory={premiumCategory}
+                      movieTitle={movie?.title}
+                      reducedMotion={reducedMotion}
+                      lowPower={lowPower}
+                    />
+                  </div>
+                </Suspense>
+              </ErrorBoundary>
+            ) : (
+              <>
+              <p className="px-4 pt-3 text-center text-xs text-gray-500 sm:hidden">Swipe sideways to see every seat.</p>
+              <div ref={mapScrollRef} data-testid="seat-map-scroll" className="overflow-x-auto px-3 py-6 sm:px-4 sm:py-8">
+                <div className="mx-auto w-max min-w-full">
+                  <div className="mx-auto flex w-max flex-col items-stretch gap-8">
+                    {layout.map((category) => {
+                      const isPremium = category.name === premiumCategory;
+                      return (
+                        <div key={category.name}>
+                          <div className="mb-3 flex items-center gap-3">
+                            <span className="h-px flex-1 bg-white/[0.08]" />
+                            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                              {isPremium && <Icon name="crown" className="h-3.5 w-3.5 text-accent-300" />}
+                              {category.name}
+                              <span className="text-white">{formatPrice(category.price)}</span>
+                            </span>
+                            <span className="h-px flex-1 bg-white/[0.08]" />
+                          </div>
+  
+                          <div className="space-y-1.5">
+                            {category.rows.map((row) => {
+                              const aisles = row.aisleAfter || [Math.ceil(row.seats.length / 2)];
+                              // Split the row into blocks wherever an aisle runs.
+                              const blocks = [];
+                              row.seats.forEach((seat) => {
+                                const n = numberOf(seat.seatNumber);
+                                const startsBlock = blocks.length === 0 || aisles.includes(n - 1);
+                                if (startsBlock) blocks.push([]);
+                                blocks[blocks.length - 1].push(seat);
+                              });
+                              const recliner = row.seatType === "recliner";
+                              return (
+                                <div key={row.label} className={`flex items-center justify-center gap-2 ${recliner ? "py-0.5" : ""}`}>
+                                  <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
+                                    {row.label}
+                                  </span>
+                                  {blocks.map((block, i) => (
+                                    <React.Fragment key={i}>
+                                      {i > 0 && <span className="w-5 sm:w-8" aria-hidden="true" />}
+                                      <div className="flex gap-1.5">
+                                        {block.map((seat) => (
+                                          <SeatButton
+                                            key={seat.seatNumber}
+                                            seat={seat}
+                                            premium={isPremium}
+                                            recliner={recliner}
+                                            selected={selectedSeats.includes(seat.seatNumber)}
+                                            onToggle={toggleSeat}
+                                          />
+                                        ))}
+                                      </div>
+                                    </React.Fragment>
+                                  ))}
+                                  <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
+                                    {row.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-
-                        <div className="space-y-1.5">
-                          {category.rows.map((row) => {
-                            const aisles = row.aisleAfter || [Math.ceil(row.seats.length / 2)];
-                            // Split the row into blocks wherever an aisle runs.
-                            const blocks = [];
-                            row.seats.forEach((seat) => {
-                              const n = numberOf(seat.seatNumber);
-                              const startsBlock = blocks.length === 0 || aisles.includes(n - 1);
-                              if (startsBlock) blocks.push([]);
-                              blocks[blocks.length - 1].push(seat);
-                            });
-                            const recliner = row.seatType === "recliner";
-                            return (
-                              <div key={row.label} className={`flex items-center justify-center gap-2 ${recliner ? "py-0.5" : ""}`}>
-                                <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
-                                  {row.label}
-                                </span>
-                                {blocks.map((block, i) => (
-                                  <React.Fragment key={i}>
-                                    {i > 0 && <span className="w-5 sm:w-8" aria-hidden="true" />}
-                                    <div className="flex gap-1.5">
-                                      {block.map((seat) => (
-                                        <SeatButton
-                                          key={seat.seatNumber}
-                                          seat={seat}
-                                          premium={isPremium}
-                                          recliner={recliner}
-                                          selected={selectedSeats.includes(seat.seatNumber)}
-                                          onToggle={toggleSeat}
-                                        />
-                                      ))}
-                                    </div>
-                                  </React.Fragment>
-                                ))}
-                                <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
-                                  {row.label}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Screen */}
-                  <div className="px-6 pt-4" aria-hidden="true">
-                    <div className="mx-auto h-10 w-full max-w-md rounded-[50%] border-t-4 border-white/70 bg-gradient-to-b from-white/15 to-transparent" />
-                    <p className="-mt-3 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500">
-                      Screen this way
-                    </p>
+                      );
+                    })}
+  
+                    {/* Screen */}
+                    <div className="px-6 pt-4" aria-hidden="true">
+                      <div className="mx-auto h-10 w-full max-w-md rounded-[50%] border-t-4 border-white/70 bg-gradient-to-b from-white/15 to-transparent" />
+                      <p className="-mt-3 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500">
+                        Screen this way
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+              </>
+            )}
 
             {/* Legend */}
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-white/[0.07] px-4 py-4 text-xs text-gray-400">
@@ -493,7 +602,7 @@ export default function Seats() {
           </section>
 
           {/* ───────────── Summary (desktop) ───────────── */}
-          <aside className="hidden lg:block">
+          <aside className={show3d ? "hidden" : "hidden lg:block"}>
             <div className="card sticky top-24 p-5">
               <h2 className="text-lg font-bold text-white">Your selection</h2>
               <div className="mt-4 min-h-[72px]">{summary}</div>
@@ -511,8 +620,9 @@ export default function Seats() {
                   Clear selection
                 </button>
               )}
-              <p className="mt-3 text-center text-[11px] text-gray-500">
-                Continuing holds your seats for a few minutes. They're confirmed when you complete checkout.
+              <HoldCountdown hold={hold} selectedCount={selectedSeats.length} onRenew={renew} className="mt-3 justify-center" />
+              <p className="mt-2 text-center text-[11px] text-gray-500">
+                Seats you pick are held for you for 8 minutes. They're confirmed when you complete checkout.
               </p>
             </div>
           </aside>
@@ -520,7 +630,7 @@ export default function Seats() {
       </div>
 
       {/* ───────────── Summary bar (mobile & tablet) ───────────── */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden">
+      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "md:hidden" : ""}`}>
         <div className="container-page flex items-center justify-between gap-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-xs text-gray-400" aria-live="polite">
@@ -529,6 +639,7 @@ export default function Seats() {
                 : `${selectedSeats.length} ${selectedSeats.length === 1 ? "seat" : "seats"}: ${selectedSeats.join(", ")}`}
             </p>
             <p className="font-display text-xl font-bold text-white">{formatPrice(total)}</p>
+            <HoldCountdown hold={hold} selectedCount={selectedSeats.length} onRenew={renew} />
           </div>
           <button onClick={handleProceed} disabled={selectedSeats.length === 0 || holding} className="btn-primary btn-lg shrink-0">
             {holding ? <><Spinner className="h-5 w-5" /> Reserving…</> : <>Continue <Icon name="arrowRight" className="h-4 w-4" /></>}
