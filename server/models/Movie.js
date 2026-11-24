@@ -27,6 +27,23 @@ const movieSchema = new mongoose.Schema(
     trailerUrl: {
       type: String,
       default: ""
+    },
+    // Optional details — shown on the site only when filled in.
+    language: {
+      type: String,
+      default: ""
+    },
+    releaseDate: {
+      type: String,
+      default: ""
+    },
+    cast: {
+      type: String,
+      default: ""
+    },
+    director: {
+      type: String,
+      default: ""
     }
   },
   { timestamps: true }

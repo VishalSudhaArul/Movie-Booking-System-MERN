@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../../api";
 import TrailerModal, { getYouTubeEmbedUrl } from "../../components/TrailerModal";
-import AdminNavbar from "../../components/AdminNavbar";
+import AdminLayout from "../../components/AdminLayout";
 
 function AdminMovies() {
   const [movies, setMovies] = useState([]);
@@ -133,9 +133,7 @@ function AdminMovies() {
   const previewEmbedUrl = getYouTubeEmbedUrl(trailerUrl);
 
   return (
-    <div className="bg-[#05050A] min-h-screen text-white pb-24">
-      <AdminNavbar />
-      <div className="p-6 md:p-10">
+    <AdminLayout>
       
       {/* Header */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -431,9 +429,7 @@ function AdminMovies() {
           </div>
         </div>
       )}
-
-      </div>
-    </div>
+    </AdminLayout>
   );
 }
 

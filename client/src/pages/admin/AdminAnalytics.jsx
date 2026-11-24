@@ -3,7 +3,7 @@ import API from "../../api";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import RevenueCharts from "../../components/RevenueCharts";
-import AdminNavbar from "../../components/AdminNavbar";
+import AdminLayout from "../../components/AdminLayout";
 
 export default function AdminAnalytics() {
   const [data, setData] = useState({});
@@ -88,12 +88,7 @@ export default function AdminAnalytics() {
     : null;
 
   return (
-    <div className="bg-[#06060A] min-h-screen text-white relative selection:bg-red-600 selection:text-white">
-      <AdminNavbar />
-      <div className="p-4 md:p-10 relative">
-      
-      {/* Background Ambient Lights */}
-      <div className="absolute top-0 left-1/3 w-96 h-96 bg-red-600/10 rounded-full blur-[160px] pointer-events-none" />
+    <AdminLayout>
 
       <div className="max-w-7xl mx-auto space-y-10 relative z-10">
         
@@ -307,7 +302,7 @@ export default function AdminAnalytics() {
         <RevenueCharts movieStats={data.movieStats} theatreStats={data.theatreStats} />
 
       </div>
-    </div>
+    </AdminLayout>
   );
 }
 

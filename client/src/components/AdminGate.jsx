@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import Icon from "./ui/Icon";
 
 /**
  * AdminGate — wraps admin-only pages.
- * Asks for a password '123456' if the user isn't a logged-in admin.
+ * Signed-in admins and theatre owners pass straight through; anyone else
+ * is asked for the admin password.
  */
 function AdminGate({ children }) {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-  
-  // Use session storage to remember if they entered the bypass password
+
+  // Remember the unlocked state for this browser session only
   const [passBypass, setPassBypass] = useState(sessionStorage.getItem("admin_bypass") === "true");
   const [inputPass, setInputPass] = useState("");
   const [error, setError] = useState("");
@@ -20,54 +22,49 @@ function AdminGate({ children }) {
       sessionStorage.setItem("admin_bypass", "true");
       setPassBypass(true);
     } else {
-      setError("Incorrect Admin Password");
+      setError("That password isn't correct.");
     }
   };
 
-  // If they are a logged-in admin, let them through
   if (token && (role === "admin" || role === "theaterOwner")) {
     return children;
   }
 
-  // If they already entered the secret password this session, let them through
   if (passBypass) {
     return children;
   }
 
-  // Otherwise, show the password prompt
   return (
-    <div className="min-h-screen bg-[#0B0B0F] flex items-center justify-center p-6">
-      <div className="bg-[#111118] border border-white/10 p-8 rounded-3xl shadow-2xl w-full max-w-md text-center">
-        <div className="text-4xl mb-4">🔐</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Admin Access</h2>
-        <p className="text-gray-400 mb-6 text-sm">Please enter the authorized password to proceed</p>
-        
-        <form onSubmit={handleVerify} className="space-y-4">
+    <main id="main" className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-ink-950 p-4">
+      <div className="card w-full max-w-sm p-8 text-center">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gold-500/15 text-gold-400">
+          <Icon name="lock" className="h-7 w-7" />
+        </span>
+        <h1 className="mt-4 font-display text-2xl font-bold text-white">Admin access</h1>
+        <p className="mt-1.5 text-sm text-gray-400">Enter the admin password to continue.</p>
+
+        <form onSubmit={handleVerify} className="mt-6 space-y-3 text-left" noValidate>
+          <label htmlFor="admin-password" className="sr-only">Admin password</label>
           <input
+            id="admin-password"
             type="password"
-            placeholder="Enter Password"
+            placeholder="Password"
             value={inputPass}
-            onChange={(e) => setInputPass(e.target.value)}
-            className="w-full bg-gray-950 border border-white/10 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500 transition"
+            onChange={(e) => {
+              setInputPass(e.target.value);
+              setError("");
+            }}
+            aria-invalid={!!error}
+            className={`input ${error ? "input-error" : ""}`}
             autoFocus
           />
-          {error && <p className="text-red-500 text-xs text-left px-1">{error}</p>}
-          <button
-            type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-red-600/30"
-          >
-            Unlock Panel
-          </button>
+          {error && <p className="field-error" role="alert">{error}</p>}
+          <button type="submit" className="btn-primary w-full">Unlock</button>
         </form>
-        
-        <button 
-          onClick={() => window.location.href = "/"}
-          className="mt-6 text-gray-500 hover:text-white text-xs transition"
-        >
-          Return to Site
-        </button>
+
+        <Link to="/" className="btn-ghost mt-3 w-full text-xs">Back to site</Link>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -24,21 +24,12 @@ const authMiddleware = (req, res, next) => {
   }
 
   try {
-    // 1. Try standard verification
     const secret = process.env.JWT_SECRET || "secret";
     const decoded = jwt.verify(token, secret);
     req.user = decoded;
     return next();
   } catch (err) {
-    // 2. Resilient fallback: decode token payload if secret mismatch on remote deployment
-    try {
-      const decoded = jwt.decode(token);
-      if (decoded && (decoded.id || decoded._id)) {
-        req.user = decoded;
-        return next();
-      }
-    } catch (e) {}
-
+    // Tokens that fail signature verification are never trusted.
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };

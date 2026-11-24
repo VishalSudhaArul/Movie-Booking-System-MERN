@@ -1,6 +1,6 @@
 import { useState } from "react";
 import API from "../api";
-import AdminNavbar from "../components/AdminNavbar";
+import AdminLayout from "../components/AdminLayout";
 
 export default function AdminScan() {
   const [bookingId, setBookingId] = useState("");
@@ -39,10 +39,7 @@ export default function AdminScan() {
   };
 
   return (
-    <div className="bg-[#07070B] min-h-screen text-white relative selection:bg-red-600 selection:text-white">
-      <AdminNavbar />
-
-      <div className="max-w-4xl mx-auto p-4 md:p-10 space-y-8 relative z-10">
+    <AdminLayout><div className="max-w-4xl mx-auto p-4 md:p-10 space-y-8 relative z-10">
         
         {/* Header */}
         <div className="bg-[#0F0F17]/90 border border-gray-800/80 p-6 rounded-3xl backdrop-blur-2xl shadow-2xl text-center space-y-2">
@@ -133,6 +130,6 @@ export default function AdminScan() {
         </div>
 
       </div>
-    </div>
+    </AdminLayout>
   );
 }

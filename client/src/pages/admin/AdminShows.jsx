@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import API from "../../api";
-import AdminNavbar from "../../components/AdminNavbar";
+import AdminLayout from "../../components/AdminLayout";
 
 function AdminShows() {
   const [movies, setMovies] = useState([]);
@@ -129,9 +129,7 @@ function AdminShows() {
   });
 
   return (
-    <div className="bg-[#05050A] min-h-screen text-white pb-24 selection:bg-red-600/40">
-      <AdminNavbar />
-      <div className="p-6 md:p-10">
+    <AdminLayout>
       
       {/* Header Bar */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -447,9 +445,7 @@ function AdminShows() {
           </div>
         </div>
       )}
-
-      </div>
-    </div>
+    </AdminLayout>
   );
 }
 

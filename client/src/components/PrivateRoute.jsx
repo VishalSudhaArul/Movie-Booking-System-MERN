@@ -1,15 +1,16 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { getSession } from "../lib/session";
 
 /**
  * PrivateRoute — wraps protected pages.
- * Redirects to /login if the user is not authenticated.
+ * Redirects to /login if the user is not authenticated, remembering
+ * where they were headed so sign-in can send them back.
  */
 function PrivateRoute({ children }) {
-  const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId");
+  const location = useLocation();
 
-  if (!token || !userId) {
-    return <Navigate to="/login" replace />;
+  if (!getSession().isLoggedIn) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
   return children;

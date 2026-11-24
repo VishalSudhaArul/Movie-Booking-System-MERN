@@ -1,325 +1,623 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import API from "../api";
-import TrailerModal from "../components/TrailerModal";
+import Poster from "../components/Poster";
+import Icon from "../components/ui/Icon";
+import TrailerModal, { getYouTubeEmbedUrl } from "../components/TrailerModal";
+import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
+import { useToast } from "../components/ui/Toast";
+import { useWatchlist } from "../context/WatchlistContext";
+import { getSession } from "../lib/session";
+import {
+  formatDate,
+  formatDuration,
+  formatPrice,
+  formatShowDate,
+  formatShowTime,
+  getErrorMessage,
+  getShowDateTime,
+  isUpcomingShow,
+  splitGenres,
+} from "../lib/format";
+
+const REVIEW_MIN = 10;
+const REVIEW_MAX = 500;
 
 function MovieDetails() {
   const { movieId } = useParams();
+  const location = useLocation();
+  const toast = useToast();
+  const { isSaved, toggle } = useWatchlist();
+  const { isLoggedIn } = getSession();
 
-  const [shows, setShows] = useState([]);
   const [movie, setMovie] = useState(null);
+  const [shows, setShows] = useState([]);
+  const [status, setStatus] = useState("loading"); // loading | ready | error | missing
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
 
-  // Reviews state
   const [reviews, setReviews] = useState([]);
   const [avgRating, setAvgRating] = useState(0);
   const [totalRatings, setTotalRatings] = useState(0);
-  const [userRating, setUserRating] = useState(5);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
   const [userComment, setUserComment] = useState("");
-  const [reviewMsg, setReviewMsg] = useState("");
+  const [reviewError, setReviewError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    // 🎬 Get movie info
-    API.get(`/api/movies/${movieId}`)
-      .then((res) => setMovie(res.data))
-      .catch((err) => console.log("Movie fetch error:", err));
-
-    // 🎭 Get shows
-    API.get(`/api/shows/movie/${movieId}`)
-      .then((res) => setShows(res.data))
-      .catch((err) => console.log("Shows fetch error:", err));
-
-    // ⭐ Get reviews
-    fetchReviews();
-
-    // 💖 Check watchlist status if logged in
-    if (token) {
-      API.get(`/api/users/watchlist`)
-        .then((res) => {
-          const found = (res.data || []).some((m) => m._id === movieId || m === movieId);
-          setIsBookmarked(found);
-        })
-        .catch(() => {});
-    }
-  }, [movieId, token]);
-
-  const fetchReviews = () => {
+  const fetchReviews = useCallback(() => {
     API.get(`/api/reviews/movie/${movieId}`)
       .then((res) => {
         setReviews(res.data.reviews || []);
         setAvgRating(res.data.avgRating || 0);
         setTotalRatings(res.data.totalRatings || 0);
       })
-      .catch((err) => {
-        console.log("Reviews fetch error:", err);
-        setReviews([]);
-        setAvgRating(0);
-        setTotalRatings(0);
-      });
-  };
+      .catch(() => {});
+  }, [movieId]);
 
-  const handleToggleWatchlist = async () => {
-    if (!token) {
-      alert("Please log in to add movies to your watchlist!");
-      return;
-    }
+  const load = useCallback(() => {
+    setStatus("loading");
+    setSelectedDate(null);
+    Promise.all([
+      API.get(`/api/movies/${movieId}`),
+      API.get(`/api/shows/movie/${movieId}`).catch(() => ({ data: [] })),
+    ])
+      .then(([movieRes, showsRes]) => {
+        if (!movieRes.data) {
+          setStatus("missing");
+          return;
+        }
+        setMovie(movieRes.data);
+        setShows(Array.isArray(showsRes.data) ? showsRes.data : []);
+        setStatus("ready");
+      })
+      .catch((err) => setStatus(err?.response?.status === 404 ? "missing" : "error"));
+    fetchReviews();
+  }, [movieId, fetchReviews]);
+
+  useEffect(() => {
+    load();
+    window.scrollTo(0, 0);
+  }, [load]);
+
+  // Group shows by date, upcoming first; earlier shows are kept in a separate group.
+  const { upcomingDates, earlierShows } = useMemo(() => {
+    const byTime = (a, b) => (getShowDateTime(a)?.getTime() || 0) - (getShowDateTime(b)?.getTime() || 0);
+    const upcoming = shows.filter((s) => isUpcomingShow(s)).sort(byTime);
+    const earlier = shows.filter((s) => !isUpcomingShow(s)).sort((a, b) => byTime(b, a));
+    const dates = [];
+    upcoming.forEach((show) => {
+      let group = dates.find((d) => d.date === show.date);
+      if (!group) {
+        group = { date: show.date, shows: [] };
+        dates.push(group);
+      }
+      group.shows.push(show);
+    });
+    return { upcomingDates: dates, earlierShows: earlier };
+  }, [shows]);
+
+  const activeDate = upcomingDates.find((d) => d.date === selectedDate) || upcomingDates[0];
+
+  const handleShare = async () => {
+    const url = window.location.href;
     try {
-      const res = await API.post(`/api/users/watchlist/toggle`, { movieId });
-      setIsBookmarked(res.data.isBookmarked);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to update watchlist");
+      if (navigator.share) {
+        await navigator.share({ title: movie.title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+      }
+    } catch (e) {
+      /* user dismissed the share sheet */
     }
   };
 
   const handleAddReview = async (e) => {
     e.preventDefault();
-    if (!token) {
-      alert("Please log in to submit a review!");
-      return;
-    }
-    if (!userComment.trim()) return;
+    const comment = userComment.trim();
+    if (!userRating) return setReviewError("Please choose a star rating.");
+    if (comment.length < REVIEW_MIN)
+      return setReviewError(`Please write at least ${REVIEW_MIN} characters.`);
 
+    setReviewError("");
+    setSubmitting(true);
     try {
-      await API.post(`/api/reviews`, {
-        movieId,
-        rating: userRating,
-        comment: userComment,
-      });
-      setReviewMsg("Review submitted successfully! 🎉");
+      await API.post(`/api/reviews`, { movieId, rating: userRating, comment });
+      toast.success("Thanks! Your review has been posted.");
       setUserComment("");
+      setUserRating(0);
       fetchReviews();
-      setTimeout(() => setReviewMsg(""), 3000);
     } catch (err) {
-      setReviewMsg(err.response?.data?.message || "Route updating... Please retry in a moment.");
+      setReviewError(getErrorMessage(err, "We couldn't post your review. Please try again."));
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (!movie) {
+  if (status === "loading") return <DetailsSkeleton />;
+
+  if (status === "error" || status === "missing") {
     return (
-      <div className="bg-black min-h-screen text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
-      </div>
+      <main id="main" className="container-page min-h-[70vh] py-16">
+        {status === "missing" ? (
+          <EmptyState
+            icon="film"
+            title="Movie not found"
+            message="This movie may have been removed or the link is incorrect."
+            action={
+              <Link to="/movies" className="btn-primary">
+                Browse movies
+              </Link>
+            }
+          />
+        ) : (
+          <ErrorState title="We couldn't load this movie" onRetry={load} />
+        )}
+      </main>
     );
   }
 
+  const saved = isSaved(movie._id);
+  const genres = splitGenres(movie.genre);
+  const hasTrailer = !!getYouTubeEmbedUrl(movie.trailerUrl);
+  const cast = (movie.cast || "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const facts = [
+    { label: "Duration", value: formatDuration(movie.duration) },
+    { label: "Language", value: movie.language },
+    { label: "Release date", value: movie.releaseDate ? formatDate(movie.releaseDate) : "" },
+    { label: "Director", value: movie.director },
+  ].filter((f) => f.value);
+
   return (
-    <div className="bg-black min-h-screen text-white p-6 md:p-12">
-      {/* 🎬 Hero Banner Section */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 bg-gray-900/60 p-8 rounded-3xl border border-gray-800 shadow-2xl backdrop-blur-xl mb-12">
-        
-        {/* Poster */}
-        <div className="flex flex-col items-center">
-          <img
-            src={movie.poster}
-            alt={movie.title}
-            className="rounded-2xl shadow-2xl object-cover h-[450px] w-full border border-gray-800"
-          />
-          
-          <div className="flex gap-3 mt-6 w-full">
-            <button
-              onClick={() => setIsTrailerOpen(true)}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-red-600/30"
-            >
-              <span>▶</span> Watch Trailer
-            </button>
-            
-            <button
-              onClick={handleToggleWatchlist}
-              className={`p-3 rounded-xl border transition flex items-center justify-center ${
-                isBookmarked
-                  ? "bg-red-950/80 border-red-500 text-red-500"
-                  : "bg-gray-800 border-gray-700 text-gray-300 hover:text-white"
-              }`}
-              title={isBookmarked ? "Remove from Watchlist" : "Add to Watchlist"}
-            >
-              {isBookmarked ? "❤️" : "🤍"}
-            </button>
-          </div>
+    <main id="main" className="min-h-screen bg-ink-950">
+      {/* ───────────── Banner ───────────── */}
+      <section className="relative -mt-16 overflow-hidden pt-16">
+        <div className="absolute inset-0" aria-hidden="true">
+          <img src={movie.poster} alt="" className="h-full w-full scale-110 object-cover opacity-40 blur-2xl" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/85 to-ink-950/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-transparent to-ink-950/60" />
         </div>
 
-        {/* Movie Info & Shows */}
-        <div className="md:col-span-2 flex flex-col justify-between">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
-              <h1 className="text-4xl font-extrabold text-white tracking-wide">
+        <div className="container-page relative py-8 sm:py-12">
+          <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-1.5 text-xs text-gray-400">
+            <Link to="/" className="hover:text-white">Home</Link>
+            <Icon name="chevronRight" className="h-3 w-3" />
+            <Link to="/movies" className="hover:text-white">Movies</Link>
+            <Icon name="chevronRight" className="h-3 w-3" />
+            <span className="truncate text-gray-300">{movie.title}</span>
+          </nav>
+
+          <div className="flex flex-col gap-6 sm:flex-row sm:gap-8 lg:gap-12">
+            <div className="mx-auto w-44 shrink-0 sm:mx-0 sm:w-56 lg:w-72">
+              <div className="relative">
+                <Poster
+                  src={movie.poster}
+                  alt={`${movie.title} poster`}
+                  eager
+                  className="aspect-[2/3] w-full rounded-2xl border border-white/10 shadow-2xl"
+                />
+                {hasTrailer && (
+                  <button
+                    onClick={() => setIsTrailerOpen(true)}
+                    className="group absolute inset-0 flex items-center justify-center rounded-2xl bg-black/0 transition hover:bg-black/40"
+                    aria-label="Play trailer"
+                  >
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black opacity-0 shadow-xl transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                      <Icon name="play" filled className="ml-0.5 h-6 w-6" />
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
                 {movie.title}
               </h1>
-              <span className="bg-red-600/20 text-red-400 border border-red-500/30 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-                {movie.genre}
-              </span>
-            </div>
 
-            {/* Ratings & Meta */}
-            <div className="flex items-center gap-6 mb-6 text-sm text-gray-400">
-              <div className="flex items-center gap-1 text-yellow-400 font-bold text-base">
-                ★ {avgRating > 0 ? avgRating : "N/A"}
-                <span className="text-gray-400 font-normal text-xs">
-                  ({totalRatings} {totalRatings === 1 ? "review" : "reviews"})
-                </span>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-300">
+                <a href="#reviews" className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.07] px-2.5 py-1.5 transition hover:bg-white/[0.12]">
+                  <Icon name="star" filled className="h-4 w-4 text-gold-400" />
+                  {totalRatings > 0 ? (
+                    <>
+                      <span className="font-bold text-white">{Number(avgRating).toFixed(1)}</span>
+                      <span className="text-gray-400">
+                        / 5 · {totalRatings} {totalRatings === 1 ? "review" : "reviews"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-gray-300">No ratings yet</span>
+                  )}
+                </a>
+                {formatDuration(movie.duration) && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon name="clock" className="h-4 w-4 text-gray-400" />
+                    {formatDuration(movie.duration)}
+                  </span>
+                )}
+                {movie.language && <span>{movie.language}</span>}
               </div>
-              <div>⏱ {movie.duration} mins</div>
-            </div>
 
-            <p className="text-gray-300 leading-relaxed text-base mb-8">
-              {movie.description}
-            </p>
-          </div>
-
-          {/* 🎭 Shows Section */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-white flex items-center gap-2 border-b border-gray-800 pb-3">
-              <span>🎟️</span> Available Showtimes
-            </h2>
-
-            <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-              {shows.length === 0 ? (
-                <p className="text-gray-500 py-6 text-center border border-dashed border-gray-800 rounded-xl">
-                  No upcoming shows scheduled for this movie.
-                </p>
-              ) : (
-                shows.map((show) => (
-                  <div
-                    key={show._id}
-                    className="bg-gray-950 p-4 rounded-xl border border-gray-800 flex flex-wrap items-center justify-between gap-4 hover:border-gray-700 transition"
-                  >
-                    <div>
-                      <h4 className="font-bold text-lg text-white">
-                        {show.theatre}
-                      </h4>
-                      <p className="text-xs text-gray-400 mt-1">
-                        📅 <span className="text-gray-300">{show.date}</span> &nbsp;|&nbsp; 
-                        ⏰ <span className="text-gray-300">{show.time}</span>
-                      </p>
-                    </div>
-
-                    <Link to={`/seats/${show._id}`}>
-                      <button className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition shadow-md">
-                        Select Seats
-                      </button>
+              {genres.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {genres.map((g) => (
+                    <Link key={g} to={`/movies?genre=${encodeURIComponent(g)}`} className="badge hover:border-white/25 hover:text-white">
+                      {g}
                     </Link>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
+
+              <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-gray-300">{movie.description}</p>
+
+              {facts.length > 0 && (
+                <dl className="mt-6 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+                  {facts.map((f) => (
+                    <div key={f.label}>
+                      <dt className="text-xs text-gray-500">{f.label}</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-white">{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <a href="#showtimes" className="btn-primary btn-lg">
+                  <Icon name="ticket" className="h-5 w-5" />
+                  Book tickets
+                </a>
+                {hasTrailer && (
+                  <button onClick={() => setIsTrailerOpen(true)} className="btn-secondary btn-lg">
+                    <Icon name="play" filled className="h-4 w-4" />
+                    Trailer
+                  </button>
+                )}
+                <button
+                  onClick={() => toggle(movie)}
+                  aria-pressed={saved}
+                  className={`btn btn-lg border ${
+                    saved
+                      ? "border-brand-500/50 bg-brand-500/10 text-brand-300"
+                      : "border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.12]"
+                  }`}
+                >
+                  <Icon name="heart" filled={saved} className="h-4 w-4" />
+                  {saved ? "Saved" : "Watchlist"}
+                </button>
+                <button onClick={handleShare} className="btn-icon h-[52px] w-[52px]" aria-label="Share this movie">
+                  <Icon name="share" className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ⭐ Reviews & Ratings Section */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-        
-        {/* Submit Review */}
-        <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-800">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span>✍️</span> Rate & Review
-          </h3>
-
-          {reviewMsg && (
-            <div className="p-3 mb-4 rounded-lg bg-red-950/60 border border-red-800 text-xs text-red-300">
-              {reviewMsg}
-            </div>
+      <div className="container-page grid gap-10 pb-20 pt-4 lg:grid-cols-3">
+        <div className="space-y-12 lg:col-span-2">
+          {/* ───────────── Cast ───────────── */}
+          {cast.length > 0 && (
+            <section aria-labelledby="cast-title">
+              <h2 id="cast-title" className="section-title mb-4 !text-2xl">Cast</h2>
+              <ul className="flex flex-wrap gap-2">
+                {cast.map((name) => (
+                  <li key={name} className="flex items-center gap-2.5 rounded-full border border-white/[0.07] bg-ink-850 py-1.5 pl-1.5 pr-4">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white">
+                      {name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="text-sm text-gray-200">{name}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
-          <form onSubmit={handleAddReview} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
-                Your Rating
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setUserRating(star)}
-                    className={`text-2xl transition ${
-                      star <= userRating ? "text-yellow-400 scale-110" : "text-gray-600"
-                    }`}
-                  >
-                    ★
-                  </button>
-                ))}
+          {/* ───────────── Showtimes ───────────── */}
+          <section id="showtimes" aria-labelledby="showtimes-title" className="scroll-mt-24">
+            <h2 id="showtimes-title" className="section-title mb-5 !text-2xl">Showtimes</h2>
+
+            {shows.length === 0 ? (
+              <EmptyState
+                icon="calendar"
+                title="No showtimes yet"
+                message="Showtimes for this movie haven't been announced. Save it to your watchlist and check back soon."
+                action={
+                  !saved && (
+                    <button className="btn-secondary" onClick={() => toggle(movie)}>
+                      <Icon name="heart" className="h-4 w-4" /> Add to watchlist
+                    </button>
+                  )
+                }
+              />
+            ) : (
+              <div className="space-y-6">
+                {upcomingDates.length > 0 ? (
+                  <>
+                    <div className="scroll-row -mx-4 px-4 sm:mx-0 sm:px-0" role="tablist" aria-label="Choose a date">
+                      {upcomingDates.map((d) => {
+                        const active = activeDate?.date === d.date;
+                        return (
+                          <button
+                            key={d.date}
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setSelectedDate(d.date)}
+                            className={`flex min-w-[72px] shrink-0 flex-col items-center rounded-xl border px-3 py-2.5 transition ${
+                              active
+                                ? "border-brand-500 bg-brand-500 text-white"
+                                : "border-white/[0.08] bg-ink-850 text-gray-300 hover:border-white/20"
+                            }`}
+                          >
+                            <span className="text-[11px] font-semibold uppercase opacity-80">
+                              {formatShowDate(d.date, { weekday: "short" })}
+                            </span>
+                            <span className="font-display text-xl font-bold leading-tight">
+                              {formatShowDate(d.date, { day: "numeric" })}
+                            </span>
+                            <span className="text-[11px] font-semibold uppercase opacity-80">
+                              {formatShowDate(d.date, { month: "short" })}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <TheatreList shows={activeDate.shows} />
+                  </>
+                ) : (
+                  <div className="flex items-start gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.06] p-4 text-sm text-gray-300">
+                    <Icon name="info" className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
+                    <p>There are no upcoming showtimes for this movie right now. Earlier showtimes are listed below.</p>
+                  </div>
+                )}
+
+                {earlierShows.length > 0 && (
+                  <details className="group card-muted" open={upcomingDates.length === 0}>
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-gray-300 [&::-webkit-details-marker]:hidden">
+                      <span>Earlier showtimes ({earlierShows.length})</span>
+                      <Icon name="chevronDown" className="h-4 w-4 transition group-open:rotate-180" />
+                    </summary>
+                    <div className="border-t border-white/[0.07] p-4">
+                      <TheatreList shows={earlierShows} showDate />
+                    </div>
+                  </details>
+                )}
               </div>
-            </div>
+            )}
+          </section>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
-                Review Comment
-              </label>
-              <textarea
-                rows="4"
-                value={userComment}
-                onChange={(e) => setUserComment(e.target.value)}
-                placeholder="What did you think of the movie?"
-                className="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition"
-              ></textarea>
-            </div>
+          {/* ───────────── Reviews ───────────── */}
+          <section id="reviews" aria-labelledby="reviews-title" className="scroll-mt-24">
+            <h2 id="reviews-title" className="section-title mb-5 !text-2xl">
+              Reviews{totalRatings > 0 && <span className="ml-2 text-base font-normal text-gray-500">{totalRatings}</span>}
+            </h2>
 
-            <button
-              type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 font-semibold text-white py-2.5 rounded-xl transition text-sm shadow-md"
-            >
-              Post Review
-            </button>
-          </form>
+            {reviews.length === 0 ? (
+              <EmptyState
+                icon="star"
+                title="No reviews yet"
+                message="Seen it? Be the first to share what you thought."
+              />
+            ) : (
+              <ul className="space-y-3">
+                {reviews.map((rev) => (
+                  <li key={rev._id} className="card p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
+                          {(rev.userName || "U").charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">{rev.userName}</p>
+                          <p className="text-xs text-gray-500">{formatDate(rev.createdAt)}</p>
+                        </div>
+                      </div>
+                      <Stars value={rev.rating} />
+                    </div>
+                    <p className="mt-3 text-sm leading-relaxed text-gray-300">{rev.comment}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
 
-        {/* Reviews List */}
-        <div className="md:col-span-2 bg-gray-900/60 p-6 rounded-2xl border border-gray-800">
-          <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <span>💬</span> Audience Reviews ({totalRatings})
-          </h3>
-
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-            {reviews.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                No audience reviews yet. Be the first to leave a review!
-              </p>
-            ) : (
-              reviews.map((rev) => (
-                <div
-                  key={rev._id}
-                  className="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white text-sm">
-                        {rev.userName}
-                      </span>
-                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <span>🎟️</span> Verified Buyer
-                      </span>
-                    </div>
-                    <span className="text-yellow-400 font-bold text-sm">
-                      {"★".repeat(rev.rating)}
-                      <span className="text-gray-600">
-                        {"★".repeat(5 - rev.rating)}
-                      </span>
-                    </span>
+        {/* ───────────── Review form ───────────── */}
+        <aside className="lg:col-span-1">
+          <div className="card sticky top-24 p-5">
+            <h2 className="text-lg font-bold text-white">Rate this movie</h2>
+            {isLoggedIn ? (
+              <form onSubmit={handleAddReview} className="mt-4 space-y-4" noValidate>
+                <div>
+                  <span className="label" id="rating-label">Your rating</span>
+                  <div className="flex gap-1" role="radiogroup" aria-labelledby="rating-label" onMouseLeave={() => setHoverRating(0)}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        role="radio"
+                        aria-checked={userRating === star}
+                        aria-label={`${star} ${star === 1 ? "star" : "stars"}`}
+                        onClick={() => setUserRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        className={`rounded-md p-1 transition ${
+                          star <= (hoverRating || userRating) ? "text-gold-400" : "text-gray-600 hover:text-gray-400"
+                        }`}
+                      >
+                        <Icon name="star" filled className="h-7 w-7" />
+                      </button>
+                    ))}
                   </div>
-                  <p className="text-gray-300 text-xs leading-relaxed">
-                    {rev.comment}
-                  </p>
-                  <p className="text-[10px] text-gray-500 text-right">
-                    {new Date(rev.createdAt).toLocaleDateString()}
+                </div>
+
+                <div>
+                  <label htmlFor="review-comment" className="label">Your review</label>
+                  <textarea
+                    id="review-comment"
+                    rows="4"
+                    maxLength={REVIEW_MAX}
+                    value={userComment}
+                    onChange={(e) => setUserComment(e.target.value)}
+                    placeholder="What did you think of the movie?"
+                    className="input resize-none"
+                  />
+                  <p className="mt-1 text-right text-[11px] text-gray-500">
+                    {userComment.length}/{REVIEW_MAX}
                   </p>
                 </div>
-              ))
+
+                {reviewError && (
+                  <p className="field-error !mt-0" role="alert">{reviewError}</p>
+                )}
+
+                <button type="submit" className="btn-primary w-full" disabled={submitting}>
+                  {submitting ? <><Spinner className="h-4 w-4" /> Posting…</> : "Post review"}
+                </button>
+              </form>
+            ) : (
+              <div className="mt-3">
+                <p className="text-sm text-gray-400">Sign in to rate this movie and share your review.</p>
+                <Link to="/login" state={{ from: location.pathname }} className="btn-secondary mt-4 w-full">
+                  Sign in to review
+                </Link>
+              </div>
             )}
           </div>
-        </div>
+        </aside>
       </div>
 
-      {/* Trailer Modal */}
       <TrailerModal
         isOpen={isTrailerOpen}
         onClose={() => setIsTrailerOpen(false)}
         trailerUrl={movie.trailerUrl}
         movieTitle={movie.title}
       />
-    </div>
+    </main>
+  );
+}
+
+/** Shows grouped by theatre, each time as a button that opens the seat map. */
+function TheatreList({ shows, showDate = false }) {
+  const theatres = useMemo(() => {
+    const map = new Map();
+    shows.forEach((show) => {
+      if (!map.has(show.theatre)) map.set(show.theatre, []);
+      map.get(show.theatre).push(show);
+    });
+    return Array.from(map.entries());
+  }, [shows]);
+
+  return (
+    <ul className="space-y-3">
+      {theatres.map(([theatre, list]) => {
+        const prices = list
+          .flatMap((s) => [s.balconyPrice, s.firstClassPrice, s.secondClassPrice])
+          .filter((p) => Number(p) > 0);
+        return (
+          <li key={theatre} className="card p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-gray-300">
+                  <Icon name="pin" className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="font-sans text-base font-semibold text-white">{theatre}</h3>
+                  {prices.length > 0 && (
+                    <p className="text-xs text-gray-400">Tickets from {formatPrice(Math.min(...prices))}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              {list.map((show) => {
+                const total = show.seats?.length || 0;
+                const available = total ? show.seats.filter((s) => !s.isBooked).length : null;
+                const soldOut = available === 0;
+                const fillingFast = available !== null && !soldOut && available / total <= 0.25;
+                const label = (
+                  <>
+                    <span className="block text-sm font-bold">{formatShowTime(show.time)}</span>
+                    <span className="block text-[11px] font-medium opacity-80">
+                      {showDate
+                        ? formatShowDate(show.date, { day: "numeric", month: "short", year: "numeric" })
+                        : soldOut
+                        ? "Sold out"
+                        : fillingFast
+                        ? "Filling fast"
+                        : "Available"}
+                    </span>
+                  </>
+                );
+                if (soldOut) {
+                  return (
+                    <span
+                      key={show._id}
+                      className="min-w-[104px] cursor-not-allowed rounded-xl border border-white/[0.07] px-4 py-2 text-center text-gray-600"
+                      aria-disabled="true"
+                    >
+                      {label}
+                    </span>
+                  );
+                }
+                return (
+                  <Link
+                    key={show._id}
+                    to={`/seats/${show._id}`}
+                    aria-label={`${formatShowTime(show.time)} at ${theatre}, select seats`}
+                    className={`min-w-[104px] rounded-xl border px-4 py-2 text-center transition hover:-translate-y-0.5 ${
+                      fillingFast
+                        ? "border-gold-500/40 text-gold-400 hover:bg-gold-500/10"
+                        : "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Stars({ value }) {
+  return (
+    <span className="flex shrink-0 gap-0.5" role="img" aria-label={`${value} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Icon
+          key={n}
+          name="star"
+          filled
+          className={`h-4 w-4 ${n <= value ? "text-gold-400" : "text-gray-700"}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+function DetailsSkeleton() {
+  return (
+    <main className="container-page min-h-screen py-12" role="status" aria-label="Loading movie">
+      <div className="flex flex-col gap-8 sm:flex-row lg:gap-12">
+        <div className="skeleton mx-auto aspect-[2/3] w-44 shrink-0 rounded-2xl sm:mx-0 sm:w-56 lg:w-72" />
+        <div className="flex-1 space-y-4">
+          <div className="skeleton h-12 w-3/4" />
+          <div className="skeleton h-6 w-1/2" />
+          <div className="skeleton h-24 w-full max-w-2xl" />
+          <div className="flex gap-3">
+            <div className="skeleton h-12 w-40 rounded-xl" />
+            <div className="skeleton h-12 w-32 rounded-xl" />
+          </div>
+        </div>
+      </div>
+      <div className="skeleton mt-12 h-40 w-full rounded-2xl" />
+    </main>
   );
 }
 

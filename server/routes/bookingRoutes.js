@@ -4,6 +4,8 @@ const router = require("express").Router();
 const bookingController = require("../controllers/bookingController");
 const Booking = require("../models/Booking");
 const mongoose = require("mongoose");
+const { authMiddleware } = require("../middleware/authMiddleware");
+const { adminAccess } = require("../middleware/adminMiddleware");
 
 /* ── VERIFY BOOKING (QR Scan) ─── must be BEFORE /:id ─── */
 router.get("/verify/:id", async (req, res) => {
@@ -16,7 +18,7 @@ router.get("/verify/:id", async (req, res) => {
 
     const booking = await Booking.findById(id)
       .populate({ path: "showId", populate: { path: "movieId" } })
-      .populate("userId");
+      .populate("userId", "-password");
 
     if (!booking) return res.status(404).json(null);
 
@@ -28,13 +30,16 @@ router.get("/verify/:id", async (req, res) => {
 });
 
 /* ── BOOK SEATS ── */
-router.post("/", bookingController.bookSeats);
+router.post("/", authMiddleware, bookingController.bookSeats);
 
 /* ── USER BOOKING HISTORY ── */
 router.get("/user/:userId", bookingController.getUserBookings);
 
 /* ── PARKING REVENUE ── */
 router.get("/parking-revenue", bookingController.getParkingRevenue);
+
+/* ── ALL BOOKINGS (Admin) ─── must be BEFORE /:id ─── */
+router.get("/all", authMiddleware, adminAccess, bookingController.getAllBookings);
 
 /* ── GET SINGLE BOOKING ── */
 router.get("/:id", bookingController.getBookingById);

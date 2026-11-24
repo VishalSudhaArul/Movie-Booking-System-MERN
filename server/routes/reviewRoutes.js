@@ -6,6 +6,26 @@ const User = require("../models/User");
 require("../models/Movie");
 const { authMiddleware } = require("../middleware/authMiddleware");
 
+// GET average rating and review count for every reviewed movie
+router.get("/summary", async (req, res) => {
+  try {
+    const rows = await Review.aggregate([
+      { $group: { _id: "$movieId", avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } },
+    ]);
+    const summary = {};
+    rows.forEach((r) => {
+      summary[r._id] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalRatings: r.totalRatings,
+      };
+    });
+    return res.json(summary);
+  } catch (error) {
+    console.error("Review summary error:", error);
+    return res.json({});
+  }
+});
+
 // GET reviews for a movie
 router.get("/movie/:movieId", async (req, res) => {
   try {

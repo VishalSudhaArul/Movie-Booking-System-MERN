@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import API from "../api";
-import AdminNavbar from "../components/AdminNavbar";
+import AdminLayout from "../components/AdminLayout";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -58,13 +58,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="bg-[#07070B] min-h-screen text-white relative selection:bg-red-600 selection:text-white">
-      <AdminNavbar />
-      <div className="p-4 md:p-10 relative">
-      
-      {/* Background Accent Glows */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[140px] pointer-events-none" />
+    <AdminLayout>
 
       <div className="max-w-7xl mx-auto space-y-10 relative z-10">
         
@@ -258,7 +252,7 @@ export default function AdminDashboard() {
         </div>
 
       </div>
-    </div>
+    </AdminLayout>
   );
 }
 

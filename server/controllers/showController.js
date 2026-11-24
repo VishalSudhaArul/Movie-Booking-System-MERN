@@ -98,7 +98,11 @@ exports.addShow = async (req, res) => {
 /* ---------- GET SHOW BY ID ---------- */
 exports.getShowById = async (req, res) => {
   try {
-    const show = await Show.findById(req.params.showId);
+    // ?expand=movie embeds the movie document in place of its id.
+    const query = Show.findById(req.params.showId);
+    if (req.query.expand === "movie") query.populate("movieId");
+    const show = await query;
+    if (!show) return res.status(404).json({ message: "Show not found" });
     res.json(show);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -110,7 +114,7 @@ exports.getShowsByMovie = async (req, res) => {
   try {
     const shows = await Show.find({
       movieId: req.params.movieId
-    });
+    }).sort({ date: 1, time: 1 });
     res.json(shows);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -120,7 +124,11 @@ exports.getShowsByMovie = async (req, res) => {
 /* ---------- GET ALL SHOWS ---------- */
 exports.getAllShows = async (req, res) => {
   try {
-    const shows = await Show.find().populate("movieId");
+    // ?lite=1 skips the seat arrays, which listing pages do not need.
+    const query = Show.find().sort({ date: 1, time: 1 });
+    if (req.query.lite) query.select("-seats");
+    else query.populate("movieId");
+    const shows = await query;
     res.json(shows);
   } catch (err) {
     res.status(500).json({ message: err.message });

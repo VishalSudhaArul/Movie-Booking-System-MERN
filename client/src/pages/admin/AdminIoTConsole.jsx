@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import API from "../../api";
-import AdminNavbar from "../../components/AdminNavbar";
+import AdminLayout from "../../components/AdminLayout";
 
 export default function AdminIoTConsole() {
   // Gate Turnstile State
@@ -106,12 +106,7 @@ export default function AdminIoTConsole() {
   }, []);
 
   return (
-    <div className="bg-[#06060A] min-h-screen text-white relative selection:bg-red-600 selection:text-white">
-      <AdminNavbar />
-      <div className="p-4 md:p-10 relative">
-      
-      {/* Glow Backdrop */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-[160px] pointer-events-none" />
+    <AdminLayout>
 
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         
@@ -405,6 +400,6 @@ export default function AdminIoTConsole() {
         </div>
 
       </div>
-    </div>
+    </AdminLayout>
   );
 }

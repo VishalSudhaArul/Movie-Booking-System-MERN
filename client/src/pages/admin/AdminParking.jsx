@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import AdminNavbar from "../../components/AdminNavbar";
+import AdminLayout from "../../components/AdminLayout";
 
 export default function AdminParking() {
   const [parkingList, setParkingList] = useState([]);
@@ -87,12 +87,7 @@ export default function AdminParking() {
   };
 
   return (
-    <div className="bg-[#06060A] min-h-screen text-white relative selection:bg-red-600 selection:text-white">
-      <AdminNavbar />
-      <div className="p-4 md:p-10 relative">
-      
-      {/* Glow Backdrop */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[160px] pointer-events-none" />
+    <AdminLayout>
 
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         
@@ -296,6 +291,6 @@ export default function AdminParking() {
         )}
 
       </div>
-    </div>
+    </AdminLayout>
   );
 }

@@ -1,496 +1,436 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import API from "../api";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
+import { Link } from "react-router-dom";
+import useCatalog from "../hooks/useCatalog";
+import MovieCard from "../components/MovieCard";
+import Poster from "../components/Poster";
+import Icon from "../components/ui/Icon";
+import TrailerModal, { getYouTubeEmbedUrl } from "../components/TrailerModal";
+import { EmptyState, ErrorState, MovieGridSkeleton } from "../components/ui/Feedback";
+import { formatDuration, splitGenres } from "../lib/format";
 
-const TrailerModal = lazy(() => import("../components/TrailerModal"));
 const HeroTrailer = lazy(() => import("../components/HeroTrailer"));
 
+const HERO_COUNT = 5;
+const HERO_INTERVAL_MS = 7000;
+const GRID = "grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+
 function Home() {
-  const navigate = useNavigate();
-  const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { movies, loading, error, reload } = useCatalog();
   const [activeHero, setActiveHero] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
   const [trailerMovie, setTrailerMovie] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState("All");
-  const [selectedLanguage, setSelectedLanguage] = useState("All");
-  const [watchlistIds, setWatchlistIds] = useState([]);
-  const [toastMsg, setToastMsg] = useState("");
+  const [query, setQuery] = useState("");
+  const [genre, setGenre] = useState("All");
+  const [showDemo, setShowDemo] = useState(false);
 
-  const token = localStorage.getItem("token");
+  const nowShowing = useMemo(
+    () =>
+      movies
+        .filter((m) => m.status === "now")
+        .sort((a, b) => b.upcomingShowCount - a.upcomingShowCount),
+    [movies]
+  );
+  const comingSoon = useMemo(() => movies.filter((m) => m.status === "soon"), [movies]);
+  const topRated = useMemo(
+    () =>
+      movies
+        .filter((m) => m.avgRating)
+        .sort((a, b) => b.avgRating - a.avgRating || b.totalRatings - a.totalRatings)
+        .slice(0, 5),
+    [movies]
+  );
 
-  useEffect(() => {
-    // Fetch Movies
-    API.get("/api/movies")
-      .then((res) => {
-        setMovies(res.data || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Home movies fetch error:", err);
-        setLoading(false);
-      });
+  const heroMovies = useMemo(
+    () => (nowShowing.length ? nowShowing : movies).slice(0, HERO_COUNT),
+    [nowShowing, movies]
+  );
 
-    // Fetch Watchlist
-    if (token) {
-      API.get("/api/users/watchlist")
-        .then((res) => {
-          const ids = (res.data || []).map((m) => m._id || m);
-          setWatchlistIds(ids);
-        })
-        .catch(() => {});
-    }
-  }, [token]);
-
-  // Auto Rotation for Hero Banner
-  useEffect(() => {
-    if (!movies.length) return;
-    const timer = setInterval(() => {
-      setActiveHero((prev) => (prev + 1) % Math.min(movies.length, 5));
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [movies]);
-
-  // Watchlist Toggle
-  const handleToggleWatchlist = async (e, movieId, movieTitle) => {
-    e.stopPropagation();
-    if (!token) {
-      setToastMsg("Please log in to save movies to your watchlist!");
-      setTimeout(() => setToastMsg(""), 3500);
-      return;
-    }
-    try {
-      const res = await API.post("/api/users/watchlist/toggle", { movieId });
-      const updated = (res.data.watchlist || []).map((m) => m._id || m);
-      setWatchlistIds(updated);
-
-      const isAdded = updated.includes(movieId);
-      setToastMsg(isAdded ? `❤️ Added "${movieTitle}" to Watchlist!` : `Removed "${movieTitle}" from Watchlist`);
-      setTimeout(() => setToastMsg(""), 3500);
-    } catch (err) {
-      console.error("Watchlist error:", err);
-    }
-  };
-
-  // Unique Genres
   const genres = useMemo(() => {
-    return ["All", "Action", "Drama", "Sci-Fi", "Comedy", "Thriller", "Horror"];
-  }, []);
+    const counts = {};
+    nowShowing.forEach((m) => splitGenres(m.genre).forEach((g) => (counts[g] = (counts[g] || 0) + 1)));
+    return ["All", ...Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 8)];
+  }, [nowShowing]);
 
-  // Filtered Movies
-  const filteredMovies = useMemo(() => {
-    return movies.filter((movie) => {
-      const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            movie.genre?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesGenre = selectedGenre === "All" || movie.genre?.toLowerCase().includes(selectedGenre.toLowerCase());
-      const matchesLang = selectedLanguage === "All" || (movie.language && movie.language.toLowerCase() === selectedLanguage.toLowerCase());
-      return matchesSearch && matchesGenre && matchesLang;
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return nowShowing.filter((m) => {
+      const matchesQuery =
+        !q ||
+        m.title?.toLowerCase().includes(q) ||
+        m.genre?.toLowerCase().includes(q) ||
+        m.language?.toLowerCase().includes(q);
+      const matchesGenre = genre === "All" || splitGenres(m.genre).includes(genre);
+      return matchesQuery && matchesGenre;
     });
-  }, [movies, searchQuery, selectedGenre, selectedLanguage]);
+  }, [nowShowing, query, genre]);
 
-  const currentHero = movies[activeHero];
+  // Auto-advance the hero, pausing on hover/focus and while a trailer is open
+  useEffect(() => {
+    if (heroMovies.length < 2 || heroPaused || trailerMovie) return undefined;
+    const timer = setInterval(
+      () => setActiveHero((prev) => (prev + 1) % heroMovies.length),
+      HERO_INTERVAL_MS
+    );
+    return () => clearInterval(timer);
+  }, [heroMovies.length, heroPaused, trailerMovie]);
+
+  const hero = heroMovies[Math.min(activeHero, heroMovies.length - 1)];
+  const isFiltering = query.trim() !== "" || genre !== "All";
 
   return (
-    <div className="relative min-h-screen text-white bg-[#06060A] overflow-hidden selection:bg-red-600/40">
-      
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toastMsg && (
-          <motion.div
-            initial={{ opacity: 0, y: -50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed top-24 right-6 z-50 bg-[#161622] border border-red-500/40 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-2xl shadow-red-950 flex items-center gap-3"
-          >
-            <span>✨</span>
-            <span>{toastMsg}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ================= HERO BACKDROP & CAROUSEL ================= */}
-      <section className="relative h-[85vh] md:h-[90vh] w-full overflow-hidden">
-        {loading ? (
-          <div className="h-full flex items-center justify-center bg-gray-950">
-            <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            {currentHero && (
-              <motion.div
-                key={activeHero}
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.2 }}
-                className="absolute inset-0"
-              >
-                <img
-                  src={currentHero.poster}
-                  alt={currentHero.title}
-                  fetchpriority="high"
-                  decoding="async"
-                  className="w-full h-full object-cover filter brightness-[0.75] contrast-[1.05]"
-                />
-                {/* Refined gradient overlays for clear background visibility */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#06060A] via-[#06060A]/40 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#06060A]/90 via-[#06060A]/50 to-transparent" />
-                
-                {/* Dynamic Ambient Backlight Glow - Lightweight blur on mobile for max GPU performance */}
-                <div 
-                  className="absolute bottom-10 left-10 md:left-20 w-64 h-64 md:w-[450px] md:h-[450px] rounded-full blur-2xl md:blur-[140px] pointer-events-none opacity-30"
-                  style={{
-                    background: `radial-gradient(circle, rgba(239,68,68,0.7) 0%, rgba(219,39,119,0.3) 60%, transparent 80%)`
-                  }}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-
-        {/* Hero Info Overlay */}
-        {!loading && currentHero && (
-          <div className="relative z-10 max-w-7xl mx-auto h-full flex flex-col justify-end pb-20 px-6 md:px-12">
-            <motion.div
-              key={`text-${activeHero}`}
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6 }}
-              className="max-w-3xl"
-            >
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="bg-red-600 text-white text-[11px] font-black uppercase px-3 py-1 rounded-md tracking-wider shadow-lg shadow-red-600/40">
-                  🔥 TOP BLOCKBUSTER
-                </span>
-                <span className="bg-white/10 backdrop-blur-md text-gray-200 border border-white/15 text-xs font-semibold px-3 py-1 rounded-full">
-                  {currentHero.genre || "Action / Adventure"}
-                </span>
-                <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
-                  ★ {currentHero.rating || "4.9"} / 5
-                </span>
-              </div>
-
-              <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight mb-4 drop-shadow-2xl">
-                {currentHero.title}
-              </h1>
-
-              <p className="text-gray-300 text-sm md:text-base line-clamp-3 mb-8 max-w-2xl font-normal leading-relaxed">
-                {currentHero.description ||
-                  "Immerse yourself in cinematic greatness. Book early access tickets now for an unmissable experience with state-of-the-art Surround Sound and Recliner Comfort."}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-4">
-                <button
-                  onClick={() => navigate(`/movies/${currentHero._id}`)}
-                  className="px-8 py-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-extrabold text-sm rounded-2xl transition shadow-xl shadow-red-600/30 flex items-center gap-3 group"
-                >
-                  <span>🎟️ BOOK TICKETS NOW</span>
-                  <span className="group-hover:translate-x-1 transition">→</span>
-                </button>
-
-                <button
-                  onClick={() => setTrailerMovie(currentHero)}
-                  className="px-6 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white font-bold text-sm rounded-2xl transition flex items-center gap-2"
-                >
-                  <span>▶</span> Watch Trailer
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Slider Indicator Dots */}
-            <div className="flex items-center gap-3 mt-12">
-              {movies.slice(0, 5).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveHero(i)}
-                  className={`h-2 transition-all duration-300 rounded-full ${
-                    activeHero === i ? "w-10 bg-red-600" : "w-3 bg-white/30 hover:bg-white/60"
-                  }`}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ================= AI MOTION CONTROLLER 4K HERO LAUNCH TRAILER ================= */}
-      <section className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 my-12">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs tracking-widest uppercase mb-1">
-              <span>⚡</span> PRODUCT LAUNCH TRAILER
-            </div>
-            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-              AI Motion-Controlled Cinema Booking
-            </h2>
-            <p className="text-gray-400 text-xs md:text-sm mt-1">
-              Experience the world's first touchless movie ticket booking system powered by MediaPipe LiDAR tracking.
-            </p>
-          </div>
-          <a
-            href="/hero-video.html"
-            target="_blank"
-            rel="noreferrer"
-            className="px-6 py-3 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-bold text-xs rounded-2xl border border-cyan-500/40 transition shrink-0 flex items-center gap-2"
-          >
-            <span>⛶ Launch Standalone 4K Trailer</span>
-          </a>
-        </div>
-
-        {/* Hero Trailer Canvas Component */}
-        <Suspense fallback={<div className="h-64 bg-gray-950/80 rounded-3xl animate-pulse flex items-center justify-center text-xs text-gray-500">Loading AI Motion Trailer...</div>}>
-          <HeroTrailer />
-        </Suspense>
-      </section>
-
-      {/* ================= SEARCH & CATEGORY BAR ================= */}
-      <section className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 mb-20">
-        <div className="bg-[#12121B]/90 backdrop-blur-2xl border border-gray-800 p-6 md:p-8 rounded-3xl shadow-2xl space-y-6">
-          
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Search Box */}
-            <div className="relative w-full md:w-1/2">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔍</span>
-              <input
-                type="text"
-                placeholder="Search movies, genres, or keywords..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-950 border border-gray-800 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition shadow-inner"
+    <main id="main" className="min-h-screen bg-ink-950">
+      {/* ───────────── Hero ───────────── */}
+      <section
+        className="relative -mt-16 overflow-hidden pt-16"
+        onMouseEnter={() => setHeroPaused(true)}
+        onMouseLeave={() => setHeroPaused(false)}
+        onFocus={() => setHeroPaused(true)}
+        onBlur={() => setHeroPaused(false)}
+        aria-roledescription="carousel"
+        aria-label="Featured movies"
+      >
+        {loading && !hero ? (
+          <HeroSkeleton />
+        ) : hero ? (
+          <>
+            {/* Backdrop: the poster, blurred and darkened */}
+            <div className="absolute inset-0" aria-hidden="true">
+              <img
+                key={hero._id}
+                src={hero.poster}
+                alt=""
+                className="h-full w-full scale-110 object-cover opacity-50 blur-2xl animate-fadeIn"
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-xs"
-                >
-                  Clear
-                </button>
-              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/80 to-ink-950/30" />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-transparent to-ink-950/60" />
             </div>
 
-            {/* Language Chips */}
-            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 custom-scrollbar">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mr-2 shrink-0">
-                Language:
-              </span>
-              {["All", "English", "Hindi", "Tamil", "Telugu"].map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setSelectedLanguage(lang)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition shrink-0 ${
-                    selectedLanguage === lang
-                      ? "bg-red-600 text-white shadow-md shadow-red-600/30"
-                      : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {lang}
-                </button>
-              ))}
-            </div>
-          </div>
+            <div className="container-page relative flex min-h-[540px] items-center gap-10 py-12 md:min-h-[600px] lg:gap-16">
+              <div key={hero._id} className="max-w-2xl flex-1 animate-fadeUp">
+                <p className="eyebrow mb-4">{hero.status === "now" ? "Now showing" : "Featured"}</p>
+                <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
+                  {hero.title}
+                </h1>
 
-          {/* Genre Pills */}
-          <div className="flex items-center gap-3 overflow-x-auto pt-2 border-t border-gray-800/80 custom-scrollbar">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 shrink-0">
-              Genre:
-            </span>
-            {genres.map((g) => (
-              <button
-                key={g}
-                onClick={() => setSelectedGenre(g)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition shrink-0 ${
-                  selectedGenre === g
-                    ? "bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold shadow-md shadow-red-600/30"
-                    : "bg-gray-900/80 border border-gray-800/80 text-gray-400 hover:border-gray-700 hover:text-white"
-                }`}
+                <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-gray-300">
+                  {hero.avgRating ? (
+                    <span className="inline-flex items-center gap-1 font-semibold text-white">
+                      <Icon name="star" filled className="h-4 w-4 text-gold-400" />
+                      {hero.avgRating.toFixed(1)}
+                      <span className="font-normal text-gray-400">({hero.totalRatings})</span>
+                    </span>
+                  ) : null}
+                  {formatDuration(hero.duration) && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon name="clock" className="h-4 w-4 text-gray-400" />
+                      {formatDuration(hero.duration)}
+                    </span>
+                  )}
+                  {hero.language && <span className="badge">{hero.language}</span>}
+                  {splitGenres(hero.genre)
+                    .slice(0, 3)
+                    .map((g) => (
+                      <span key={g} className="badge">
+                        {g}
+                      </span>
+                    ))}
+                </div>
+
+                {hero.description && (
+                  <p className="mt-5 line-clamp-3 max-w-xl text-base leading-relaxed text-gray-300">
+                    {hero.description}
+                  </p>
+                )}
+
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Link to={`/movies/${hero._id}`} className="btn-primary btn-lg">
+                    <Icon name="ticket" className="h-5 w-5" />
+                    Book tickets
+                  </Link>
+                  {getYouTubeEmbedUrl(hero.trailerUrl) && (
+                    <button onClick={() => setTrailerMovie(hero)} className="btn-secondary btn-lg">
+                      <Icon name="play" filled className="h-4 w-4" />
+                      Watch trailer
+                    </button>
+                  )}
+                </div>
+
+                {heroMovies.length > 1 && (
+                  <div className="mt-10 flex items-center gap-2" role="tablist" aria-label="Choose featured movie">
+                    {heroMovies.map((m, i) => (
+                      <button
+                        key={m._id}
+                        role="tab"
+                        aria-selected={i === activeHero}
+                        aria-label={`Show ${m.title}`}
+                        onClick={() => setActiveHero(i)}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          i === activeHero ? "w-8 bg-brand-500" : "w-4 bg-white/25 hover:bg-white/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Link
+                to={`/movies/${hero._id}`}
+                key={`poster-${hero._id}`}
+                className="hidden shrink-0 animate-fadeUp md:block"
+                aria-label={`${hero.title} — view details`}
+                tabIndex={-1}
               >
-                {g}
-              </button>
-            ))}
+                <Poster
+                  src={hero.poster}
+                  alt={hero.title}
+                  eager
+                  className="aspect-[2/3] w-[260px] rounded-2xl border border-white/10 shadow-2xl lg:w-[300px]"
+                />
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="container-page py-24">
+            {error ? (
+              <ErrorState title="We couldn't load movies" onRetry={reload} />
+            ) : (
+              <EmptyState
+                icon="film"
+                title="No movies yet"
+                message="New releases will appear here as soon as they're added."
+              />
+            )}
           </div>
-
-        </div>
+        )}
       </section>
 
-      {/* ================= NOW SHOWING & EXPLORE GRID ================= */}
-      <section className="max-w-7xl mx-auto px-6 md:px-12 mb-28">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+      {/* ───────────── Now showing ───────────── */}
+      <section className="container-page pb-16 pt-6" aria-labelledby="now-showing-title">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-red-500 font-extrabold text-xs tracking-widest uppercase mb-1">
-              <span>🍿</span> EXPLORE SHOWTIMES
-            </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-              Now Showing in Theatres
+            <p className="eyebrow mb-1.5">In cinemas</p>
+            <h2 id="now-showing-title" className="section-title">
+              Now showing
             </h2>
           </div>
-
-          <Link
-            to="/movies"
-            className="text-xs font-bold text-gray-400 hover:text-red-400 transition flex items-center gap-1 bg-gray-900 border border-gray-800 px-4 py-2.5 rounded-2xl w-fit"
-          >
-            <span>View All {movies.length} Movies</span>
-            <span>→</span>
+          <Link to="/movies" className="btn-ghost -mr-2 text-sm">
+            View all <Icon name="arrowRight" className="h-4 w-4" />
           </Link>
         </div>
 
-        {/* Movie Cards Grid */}
-        {filteredMovies.length === 0 ? (
-          <div className="bg-[#12121A] border border-gray-800 rounded-3xl p-16 text-center">
-            <span className="text-5xl mb-4 block">🎬</span>
-            <h3 className="text-xl font-bold text-white mb-2">No movies match your filters</h3>
-            <p className="text-gray-400 text-sm mb-6">Try searching for a different title or resetting genre filters.</p>
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedGenre("All");
-                setSelectedLanguage("All");
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-6 py-3 rounded-xl transition"
-            >
-              Reset Filters
-            </button>
+        <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative lg:w-80">
+            <Icon name="search" className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by title or genre"
+              aria-label="Search movies now showing"
+              className="input pl-10"
+            />
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {filteredMovies.map((movie) => {
-              const isSaved = watchlistIds.includes(movie._id);
-              return (
-                <motion.div
-                  key={movie._id}
-                  whileHover={{ y: -8 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-[#111119] border border-gray-800/80 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between group hover:border-red-500/40 transition duration-300"
+          {genres.length > 2 && (
+            <div className="scroll-row -mx-4 px-4 sm:mx-0 sm:px-0" role="group" aria-label="Filter by genre">
+              {genres.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGenre(g)}
+                  aria-pressed={genre === g}
+                  className={`chip ${genre === g ? "chip-active" : ""}`}
                 >
-                  {/* Poster Header */}
-                  <div className="relative aspect-[2/3] overflow-hidden bg-gray-900">
-                    <img
-                      src={movie.poster}
-                      alt={movie.title}
-                      loading="lazy"
-                      decoding="async"
-                      width="300"
-                      height="450"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#111119] via-transparent to-transparent opacity-80" />
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-                    {/* Heart Watchlist Toggle */}
-                    <button
-                      onClick={(e) => handleToggleWatchlist(e, movie._id, movie.title)}
-                      className={`absolute top-4 left-4 p-2.5 rounded-2xl backdrop-blur-xl border transition ${
-                        isSaved
-                          ? "bg-red-950/90 border-red-500 text-red-500"
-                          : "bg-black/60 border-white/10 text-gray-300 hover:text-white hover:border-red-500/50"
-                      }`}
-                      title={isSaved ? "Remove from Watchlist" : "Add to Watchlist"}
-                    >
-                      {isSaved ? "❤️" : "🤍"}
-                    </button>
+        {loading && movies.length === 0 ? (
+          <MovieGridSkeleton count={10} />
+        ) : error && movies.length === 0 ? (
+          <ErrorState title="We couldn't load movies" onRetry={reload} />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title={isFiltering ? "No movies match your search" : "Nothing showing right now"}
+            message={
+              isFiltering
+                ? "Try a different title or clear the filters."
+                : "Check back soon — new showtimes are added regularly."
+            }
+            action={
+              isFiltering && (
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setQuery("");
+                    setGenre("All");
+                  }}
+                >
+                  Clear filters
+                </button>
+              )
+            }
+          />
+        ) : (
+          <div className={GRID}>
+            {filtered.slice(0, 10).map((movie) => (
+              <MovieCard key={movie._id} movie={movie} onPlayTrailer={setTrailerMovie} />
+            ))}
+          </div>
+        )}
 
-                    {/* Rating Pill */}
-                    <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5">
-                      <span className="text-yellow-400 text-xs">★</span>
-                      <span className="text-white text-xs font-bold">
-                        {movie.rating || "4.8"}
-                      </span>
-                    </div>
-
-                    {/* Play Trailer Button overlay */}
-                    <button
-                      onClick={() => setTrailerMovie(movie)}
-                      className="absolute bottom-4 right-4 bg-red-600/90 hover:bg-red-600 text-white p-3 rounded-2xl shadow-lg transition opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0"
-                      title="Play Trailer"
-                    >
-                      ▶
-                    </button>
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="p-6 flex flex-col flex-1 justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-md border border-red-500/20">
-                          {movie.genre || "Action"}
-                        </span>
-                        <span className="text-xs text-gray-400 font-semibold">
-                          ⏱ {movie.duration ? `${movie.duration}m` : "2h 15m"}
-                        </span>
-                      </div>
-
-                      <h3 className="text-lg font-bold text-white group-hover:text-red-400 transition line-clamp-1 mb-2">
-                        {movie.title}
-                      </h3>
-
-                      <p className="text-gray-400 text-xs line-clamp-2 mb-6 leading-relaxed">
-                        {movie.description || "Catch this blockbuster movie on the big screen today."}
-                      </p>
-                    </div>
-
-                    <Link
-                      to={`/movies/${movie._id}`}
-                      className="w-full bg-gray-900 hover:bg-red-600 text-gray-200 hover:text-white font-bold text-xs py-3 rounded-2xl border border-gray-800 hover:border-red-500 transition text-center shadow-md block"
-                    >
-                      SELECT SHOWTIME →
-                    </Link>
-                  </div>
-                </motion.div>
-              );
-            })}
+        {filtered.length > 10 && (
+          <div className="mt-10 text-center">
+            <Link to="/movies" className="btn-secondary">
+              See all {filtered.length} movies
+            </Link>
           </div>
         )}
       </section>
 
-      {/* ================= PROMO / EXPERIENCE CARDS ================= */}
-      <section className="max-w-7xl mx-auto px-6 md:px-12 mb-28">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          <div className="bg-gradient-to-br from-red-950/40 via-[#13131D] to-[#0A0A0F] border border-red-500/20 p-8 rounded-3xl relative overflow-hidden shadow-xl">
-            <div className="text-3xl mb-4">🛋️</div>
-            <h3 className="text-xl font-bold text-white mb-2">VIP Recliner Experience</h3>
-            <p className="text-gray-400 text-xs leading-relaxed mb-6">
-              Plush luxury leather recliners with personal serving call buttons and Dolby Atmos audio setup.
-            </p>
-            <Link to="/movies" className="text-xs font-bold text-red-400 hover:text-red-300">
-              Browse VIP Theatres →
+      {/* ───────────── Top rated ───────────── */}
+      {topRated.length >= 3 && (
+        <section className="container-page pb-16" aria-labelledby="top-rated-title">
+          <div className="mb-6">
+            <p className="eyebrow mb-1.5">Audience favourites</p>
+            <h2 id="top-rated-title" className="section-title">
+              Top rated
+            </h2>
+          </div>
+          <div className={GRID}>
+            {topRated.map((movie) => (
+              <MovieCard key={movie._id} movie={movie} onPlayTrailer={setTrailerMovie} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ───────────── Coming soon ───────────── */}
+      {comingSoon.length > 0 && (
+        <section className="container-page pb-16" aria-labelledby="coming-soon-title">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-1.5">On the way</p>
+              <h2 id="coming-soon-title" className="section-title">
+                Coming soon
+              </h2>
+            </div>
+            <Link to="/movies?status=soon" className="btn-ghost -mr-2 text-sm">
+              View all <Icon name="arrowRight" className="h-4 w-4" />
             </Link>
           </div>
-
-          <div className="bg-gradient-to-br from-purple-950/40 via-[#13131D] to-[#0A0A0F] border border-purple-500/20 p-8 rounded-3xl relative overflow-hidden shadow-xl">
-            <div className="text-3xl mb-4">🍿</div>
-            <h3 className="text-xl font-bold text-white mb-2">Combos & Gourmet Snacks</h3>
-            <p className="text-gray-400 text-xs leading-relaxed mb-6">
-              Pre-order hot buttered popcorn, nachos, and cold drinks straight to your seat with no queue!
-            </p>
-            <Link to="/movies" className="text-xs font-bold text-purple-400 hover:text-purple-300">
-              View Snack Menu →
-            </Link>
+          <div className={GRID}>
+            {comingSoon.slice(0, 5).map((movie) => (
+              <MovieCard key={movie._id} movie={movie} onPlayTrailer={setTrailerMovie} />
+            ))}
           </div>
+        </section>
+      )}
 
-          <div className="bg-gradient-to-br from-amber-950/40 via-[#13131D] to-[#0A0A0F] border border-amber-500/20 p-8 rounded-3xl relative overflow-hidden shadow-xl">
-            <div className="text-3xl mb-4">🎟️</div>
-            <h3 className="text-xl font-bold text-white mb-2">Instant Digital QR Ticket</h3>
-            <p className="text-gray-400 text-xs leading-relaxed mb-6">
-              No paper printouts needed. Scan your QR code ticket at the theatre gates directly from your smartphone.
-            </p>
-            <Link to="/my-bookings" className="text-xs font-bold text-amber-400 hover:text-amber-300">
-              Check My Tickets →
-            </Link>
-          </div>
-
+      {/* ───────────── Why CineBook ───────────── */}
+      <section className="container-page pb-16" aria-label="What you get with CineBook">
+        <div className="grid gap-4 md:grid-cols-3">
+          <FeatureCard
+            icon="grid"
+            title="Pick your exact seats"
+            text="See the live seat map for every show and choose where you sit before you pay."
+            to="/movies"
+            cta="Browse movies"
+          />
+          <FeatureCard
+            icon="popcorn"
+            title="Snacks without the queue"
+            text="Add popcorn, drinks and parking to your booking, or order food on its own."
+            to="/snacks"
+            cta="See the menu"
+          />
+          <FeatureCard
+            icon="qr"
+            title="Tickets on your phone"
+            text="Every booking comes with a QR ticket you can show at the gate or download as a PDF."
+            to="/my-bookings"
+            cta="My bookings"
+          />
         </div>
       </section>
 
-      {/* Trailer Modal */}
-      <Suspense fallback={null}>
-        <TrailerModal
-          isOpen={!!trailerMovie}
-          onClose={() => setTrailerMovie(null)}
-          trailerUrl={trailerMovie?.trailerUrl}
-          movieTitle={trailerMovie?.title}
-        />
-      </Suspense>
+      {/* ───────────── Gesture-control demo (loaded on demand) ───────────── */}
+      <section className="container-page pb-20" aria-labelledby="demo-title">
+        <div className="card overflow-hidden">
+          <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="eyebrow mb-1.5">CineBook Labs</p>
+              <h2 id="demo-title" className="text-xl font-bold text-white">
+                Touch-free booking with motion control
+              </h2>
+              <p className="mt-1 max-w-xl text-sm text-gray-400">
+                A preview of our gesture-controlled kiosk experience for cinema lobbies.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-secondary" onClick={() => setShowDemo((v) => !v)} aria-expanded={showDemo}>
+                <Icon name={showDemo ? "close" : "play"} filled={!showDemo} className="h-4 w-4" />
+                {showDemo ? "Hide preview" : "Play preview"}
+              </button>
+              <a href="/hero-video.html" target="_blank" rel="noreferrer" className="btn-ghost">
+                Open full screen
+              </a>
+            </div>
+          </div>
+          {showDemo && (
+            <div className="border-t border-white/[0.07] p-4 sm:p-6">
+              <Suspense fallback={<div className="skeleton h-64 w-full rounded-2xl" />}>
+                <HeroTrailer />
+              </Suspense>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <TrailerModal
+        isOpen={!!trailerMovie}
+        onClose={() => setTrailerMovie(null)}
+        trailerUrl={trailerMovie?.trailerUrl}
+        movieTitle={trailerMovie?.title}
+      />
+    </main>
+  );
+}
+
+function FeatureCard({ icon, title, text, to, cta }) {
+  return (
+    <div className="card flex flex-col p-6">
+      <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500/10 text-brand-400">
+        <Icon name={icon} className="h-5 w-5" />
+      </span>
+      <h3 className="text-lg font-bold text-white">{title}</h3>
+      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-gray-400">{text}</p>
+      <Link
+        to={to}
+        className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-400 transition hover:text-brand-300"
+      >
+        {cta} <Icon name="arrowRight" className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
+function HeroSkeleton() {
+  return (
+    <div className="container-page flex min-h-[540px] items-center gap-16 py-12 md:min-h-[600px]" role="status" aria-label="Loading featured movies">
+      <div className="max-w-2xl flex-1 space-y-5">
+        <div className="skeleton h-3 w-28" />
+        <div className="skeleton h-14 w-4/5" />
+        <div className="skeleton h-5 w-2/3" />
+        <div className="skeleton h-16 w-full max-w-xl" />
+        <div className="flex gap-3">
+          <div className="skeleton h-12 w-40 rounded-xl" />
+          <div className="skeleton h-12 w-40 rounded-xl" />
+        </div>
+      </div>
+      <div className="skeleton hidden aspect-[2/3] w-[300px] rounded-2xl md:block" />
     </div>
   );
 }
