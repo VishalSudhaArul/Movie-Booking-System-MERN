@@ -1,73 +1,41 @@
-import React, { useState } from "react";
-import { Navigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, Navigate, useLocation } from "react-router-dom";
+import Icon from "./ui/Icon";
+import { getSession } from "../lib/session";
 
 /**
  * AdminGate — wraps admin-only pages.
- * Asks for a password '123456' if the user isn't a logged-in admin.
+ * Only signed-in admins and theatre owners get through. This only controls
+ * what the browser shows: every admin API call is also checked on the server.
  */
 function AdminGate({ children }) {
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
-  
-  // Use session storage to remember if they entered the bypass password
-  const [passBypass, setPassBypass] = useState(sessionStorage.getItem("admin_bypass") === "true");
-  const [inputPass, setInputPass] = useState("");
-  const [error, setError] = useState("");
+  const location = useLocation();
+  const { isLoggedIn, isAdmin } = getSession();
 
-  const handleVerify = (e) => {
-    e.preventDefault();
-    if (inputPass === "123456") {
-      sessionStorage.setItem("admin_bypass", "true");
-      setPassBypass(true);
-    } else {
-      setError("Incorrect Admin Password");
-    }
-  };
+  // Clear the flag left behind by the old password gate.
+  useEffect(() => {
+    sessionStorage.removeItem("admin_bypass");
+  }, []);
 
-  // If they are a logged-in admin, let them through
-  if (token && (role === "admin" || role === "theaterOwner")) {
-    return children;
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
-  // If they already entered the secret password this session, let them through
-  if (passBypass) {
-    return children;
-  }
+  if (isAdmin) return children;
 
-  // Otherwise, show the password prompt
   return (
-    <div className="min-h-screen bg-[#0B0B0F] flex items-center justify-center p-6">
-      <div className="bg-[#111118] border border-white/10 p-8 rounded-3xl shadow-2xl w-full max-w-md text-center">
-        <div className="text-4xl mb-4">🔐</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Admin Access</h2>
-        <p className="text-gray-400 mb-6 text-sm">Please enter the authorized password to proceed</p>
-        
-        <form onSubmit={handleVerify} className="space-y-4">
-          <input
-            type="password"
-            placeholder="Enter Password"
-            value={inputPass}
-            onChange={(e) => setInputPass(e.target.value)}
-            className="w-full bg-gray-950 border border-white/10 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500 transition"
-            autoFocus
-          />
-          {error && <p className="text-red-500 text-xs text-left px-1">{error}</p>}
-          <button
-            type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-red-600/30"
-          >
-            Unlock Panel
-          </button>
-        </form>
-        
-        <button 
-          onClick={() => window.location.href = "/"}
-          className="mt-6 text-gray-500 hover:text-white text-xs transition"
-        >
-          Return to Site
-        </button>
+    <main id="main" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
+      <div className="card w-full max-w-sm p-8 text-center">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-500/15 text-accent-300">
+          <Icon name="lock" className="h-7 w-7" />
+        </span>
+        <h1 className="mt-4 font-display text-2xl font-bold text-white">Staff only</h1>
+        <p className="mt-1.5 text-sm text-gray-400">
+          This area is for cinema staff. Your account doesn't have admin access.
+        </p>
+        <Link to="/" className="btn-primary mt-6 w-full">Back to site</Link>
       </div>
-    </div>
+    </main>
   );
 }
 

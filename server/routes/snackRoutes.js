@@ -1,15 +1,16 @@
 const router = require("express").Router();
 const snackController = require("../controllers/snackController");
+const { authMiddleware } = require("../middleware/authMiddleware");
+const { adminAccess } = require("../middleware/adminMiddleware");
 
-// ✅ Specific routes first
+// Public reads (specific routes first)
 router.get("/all", snackController.getAllSnacks);
-
-// ✅ Get by theatre
+router.get("/combos", (req, res) => res.json(require("../utils/combos").COMBOS));
 router.get("/theatre/:theatre", snackController.getSnacksByTheatre);
 
-// ✅ CRUD
-router.post("/", snackController.addSnack);
-router.put("/:id", snackController.updateSnack);
-router.delete("/:id", snackController.deleteSnack);
+// Staff-only writes
+router.post("/", authMiddleware, adminAccess, snackController.addSnack);
+router.put("/:id", authMiddleware, adminAccess, snackController.updateSnack);
+router.delete("/:id", authMiddleware, adminAccess, snackController.deleteSnack);
 
 module.exports = router;

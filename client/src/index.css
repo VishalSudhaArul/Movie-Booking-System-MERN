@@ -2,71 +2,268 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
-  width: 100%;
-  margin: 0;
-  padding: 0;
+/* ───────────────────────── Base ───────────────────────── */
+
+@layer base {
+  html,
+  body {
+    /* "clip" hides sideways overflow without turning body into a scroll
+       container, which would stop position: sticky from working anywhere.
+       Older browsers fall back to "hidden". */
+    overflow-x: hidden;
+    overflow-x: clip;
+    max-width: 100vw;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    @apply bg-ink-950 font-sans text-gray-200 antialiased;
+    /* Soft blue and violet light from the top of the page. Fixed so it doesn't
+       repaint while scrolling. */
+    background-image: radial-gradient(1200px 600px at 10% -10%, rgba(30, 140, 255, 0.09), transparent 60%),
+      radial-gradient(900px 500px at 95% -5%, rgba(139, 92, 246, 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+
+  /* Visible keyboard focus everywhere, without changing mouse behaviour */
+  :focus-visible {
+    outline: 2px solid #4da8ff;
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgba(30, 140, 255, 0.4);
+    color: #fff;
+  }
 }
 
-.adminInput{
-  @apply p-2 rounded bg-[#1e293b] border border-gray-700 text-white;
+/* ─────────────────────── Components ─────────────────────── */
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
+      transition duration-200 select-none whitespace-nowrap
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-gradient text-white shadow-glow hover:brightness-110 active:brightness-95
+      disabled:hover:brightness-100;
+  }
+  .btn-secondary {
+    @apply btn border border-white/10 bg-white/[0.06] text-white hover:border-white/20 hover:bg-white/[0.1];
+  }
+  .btn-ghost {
+    @apply btn text-gray-300 hover:bg-white/[0.06] hover:text-white;
+  }
+  .btn-danger {
+    @apply btn border border-danger-500/40 bg-danger-500/10 text-danger-300 hover:bg-danger-500/20;
+  }
+  .btn-lg {
+    @apply px-7 py-3.5 text-base;
+  }
+  .btn-sm {
+    @apply rounded-lg px-3.5 py-2 text-xs;
+  }
+  .btn-icon {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10
+      bg-white/[0.04] text-gray-300 transition hover:border-white/20 hover:bg-white/[0.1] hover:text-white;
+  }
+
+  /* Surfaces */
+  .card {
+    @apply rounded-2xl border border-white/[0.08] bg-ink-850/80 bg-surface-gradient shadow-card backdrop-blur-sm;
+  }
+  .card-muted {
+    @apply rounded-2xl border border-white/[0.06] bg-ink-900/80;
+  }
+  .glass {
+    @apply border border-white/[0.08] bg-ink-900/70 backdrop-blur-xl;
+  }
+  .card-interactive {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/30 hover:shadow-glow;
+  }
+
+  /* Forms */
+  .label {
+    @apply mb-1.5 block text-xs font-semibold text-gray-400;
+  }
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-ink-900/80 px-4 py-3 text-sm text-white
+      placeholder-gray-500 transition
+      focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25;
+  }
+  .input-error {
+    @apply border-danger-500/70 focus:border-danger-500 focus:ring-danger-500/25;
+  }
+  .field-error {
+    @apply mt-1.5 text-xs text-danger-300;
+  }
+  .help-text {
+    @apply mt-1.5 text-xs text-gray-500;
+  }
+
+  /* Chips & badges */
+  .chip {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04]
+      px-4 py-2 text-xs font-semibold text-gray-300 transition hover:border-white/20 hover:text-white;
+  }
+  .chip-active {
+    @apply border-transparent bg-brand-gradient text-white shadow-glow hover:border-transparent;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06]
+      px-2 py-0.5 text-[11px] font-semibold text-gray-300;
+  }
+  .badge-brand {
+    @apply badge border-brand-500/30 bg-brand-500/10 text-brand-300;
+  }
+  .badge-accent {
+    @apply badge border-accent-500/30 bg-accent-500/10 text-accent-300;
+  }
+  .badge-gold {
+    @apply badge border-gold-500/30 bg-gold-500/10 text-gold-400;
+  }
+  .badge-green {
+    @apply badge border-emerald-500/30 bg-emerald-500/10 text-emerald-300;
+  }
+  .badge-danger {
+    @apply badge border-danger-500/30 bg-danger-500/10 text-danger-300;
+  }
+
+  /* Inline status messages */
+  .alert {
+    @apply flex items-start gap-2.5 rounded-xl border p-3.5 text-sm;
+  }
+  .alert-info {
+    @apply alert border-brand-500/30 bg-brand-500/[0.08] text-brand-200;
+  }
+  .alert-success {
+    @apply alert border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-200;
+  }
+  .alert-warning {
+    @apply alert border-gold-500/30 bg-gold-500/[0.08] text-gold-400;
+  }
+  .alert-error {
+    @apply alert border-danger-500/35 bg-danger-500/[0.08] text-danger-300;
+  }
+
+  /* Typography helpers */
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-brand-400;
+  }
+  .section-title {
+    @apply font-display text-2xl font-bold tracking-tight text-white sm:text-3xl;
+  }
+  .text-gradient {
+    @apply bg-brand-gradient bg-clip-text text-transparent;
+  }
+
+  /* Stat tiles (dashboards) */
+  .stat-card {
+    @apply card p-5;
+  }
+  .stat-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-gray-400;
+  }
+  .stat-value {
+    @apply mt-2 font-display text-2xl font-bold text-white sm:text-3xl;
+  }
+
+  /* Data tables (admin) */
+  .table-wrap {
+    @apply overflow-x-auto rounded-2xl border border-white/[0.07];
+  }
+  .data-table {
+    @apply w-full min-w-[640px] text-left text-sm;
+  }
+  .data-table thead th {
+    @apply bg-white/[0.03] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400;
+  }
+  .data-table tbody td {
+    @apply border-t border-white/[0.06] px-4 py-3 text-gray-300;
+  }
+  .data-table tbody tr {
+    @apply transition hover:bg-white/[0.02];
+  }
+
+  /* Skeleton loader */
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-white/[0.06];
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+  }
+
+  /* Horizontal scroll rows without a visible scrollbar */
+  .scroll-row {
+    @apply flex gap-2 overflow-x-auto;
+    scrollbar-width: none;
+  }
+  .scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── Admin form helpers (used by the admin pages) ── */
+  .adminInput {
+    @apply input py-2.5;
+  }
+  .adminBtn {
+    @apply btn-primary;
+  }
+  .adminBtnDelete {
+    @apply btn-danger btn-sm;
+  }
+  .dropdownMenu {
+    @apply absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-white/10 bg-ink-800 p-1 shadow-card;
+  }
+  .dropdownItem {
+    @apply cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-brand-500/15 hover:text-white;
+  }
 }
 
-.adminBtn{
-  @apply bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-semibold;
-}
+/* ─────────────────────── Scrollbars ─────────────────────── */
 
-.adminBtnDelete{
-  @apply bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm;
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #283454 transparent;
 }
-
-/* Theatre Card */
-.theatreCard{
-  @apply bg-gradient-to-br from-[#0f172a] to-[#020617]
-  p-4 rounded-xl shadow-lg h-[170px] flex flex-col;
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
-
-/* Snack Scroll */
-.snackScroll{
-  @apply flex-1 overflow-y-auto space-y-3 pr-2;
-}
-
-/* Snack Row */
-.snackRow{
-  @apply flex justify-between items-center border-b border-gray-800 pb-2;
-}
-
-/* Dropdown */
-.dropdownMenu{
-  @apply absolute w-full bg-[#1e293b] border border-gray-700
-  rounded mt-1 max-h-32 overflow-y-auto z-50;
-}
-
-.dropdownItem{
-  @apply p-2 hover:bg-red-600 cursor-pointer;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar{
-  width: 6px;
-  height: 6px;
-}
-
 ::-webkit-scrollbar-track {
-  background: #0b0b0f;
+  background: transparent;
 }
-
-::-webkit-scrollbar-thumb{
-  background: #ef4444;
+::-webkit-scrollbar-thumb {
+  background: #283454;
   border-radius: 10px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: #34436b;
+}
+
+/* ─────────────────────── Animations ─────────────────────── */
 
 @keyframes modalScaleIn {
   0% {
     opacity: 0;
-    transform: scale(0.92) translateY(10px);
+    transform: scale(0.96) translateY(8px);
   }
   100% {
     opacity: 1;
@@ -75,14 +272,29 @@ html, body {
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .animate-modalScaleIn {
-  animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

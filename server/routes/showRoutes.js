@@ -1,16 +1,24 @@
 const router = require("express").Router();
 const showController = require("../controllers/showController");
+const { authMiddleware, optionalAuth } = require("../middleware/authMiddleware");
+const holdController = require("../controllers/holdController");
+const { holdLimiter } = require("../middleware/security");
+const { adminAccess } = require("../middleware/adminMiddleware");
 
-router.post("/", showController.addShow);
-
+// Public reads
 router.get("/", showController.getAllShows);
-
-router.get("/single/:showId", showController.getShowById);
-
+router.get("/layouts", showController.getLayouts);
+// Signed-in users also see which seats they hold and until when.
+router.get("/single/:showId", optionalAuth, showController.getShowById);
 router.get("/movie/:movieId", showController.getShowsByMovie);
 
-router.put("/:id", showController.updateShow);
+// Temporary seat holds (signed in)
+router.post("/:showId/holds", authMiddleware, holdLimiter, holdController.holdSeats);
+router.delete("/:showId/holds", authMiddleware, holdLimiter, holdController.releaseSeats);
 
-router.delete("/:id", showController.deleteShow);
+// Staff-only writes
+router.post("/", authMiddleware, adminAccess, showController.addShow);
+router.put("/:id", authMiddleware, adminAccess, showController.updateShow);
+router.delete("/:id", authMiddleware, adminAccess, showController.deleteShow);
 
 module.exports = router;

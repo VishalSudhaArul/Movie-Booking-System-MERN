@@ -39,10 +39,27 @@ const bookingSchema = new mongoose.Schema(
       default: 0,
     },
 
+    couponCode: String,
+
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+
+    // "Demo" means no money was taken (demo checkout). "Success" is kept for
+    // bookings created before this change and for a future verified payment.
     paymentStatus: {
       type: String,
-      enum: ["Success", "Failed", "Pending"],
-      default: "Success",
+      enum: ["Success", "Failed", "Pending", "Demo"],
+      default: "Pending",
+    },
+
+    // DEMO = demo checkout, nothing charged. LIVE is reserved for a real,
+    // server-verified payment provider.
+    paymentMode: {
+      type: String,
+      enum: ["DEMO", "LIVE"],
+      default: "DEMO",
     },
 
     // ── Ticket lifecycle ──────────────────────────────

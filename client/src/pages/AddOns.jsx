@@ -1,468 +1,677 @@
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { QRCodeCanvas } from "qrcode.react";
 import API from "../api";
-import axios from "axios";
+import Icon from "../components/ui/Icon";
+import Poster from "../components/Poster";
+import { ErrorState, Spinner } from "../components/ui/Feedback";
+import { useToast } from "../components/ui/Toast";
+import { amountLabel, formatPrice, formatShowDate, formatShowTime, getErrorMessage } from "../lib/format";
+import { seatStorageKey } from "./Seats";
+import { inBookingFlow, releaseHoldNow } from "../lib/useSeatHold";
 
-const PRESET_COMBOS = [
-  {
-    id: "combo-1",
-    name: "🎬 Movie Night Duo",
-    items: [
-      { name: "Jumbo Butter Popcorn", price: 220, qty: 1 },
-      { name: "Cold Beverage (Large)", price: 120, qty: 2 },
-    ],
-    originalPrice: 460,
-    comboPrice: 380,
-    savings: 80,
-    badge: "🔥 Best Seller",
-  },
-  {
-    id: "combo-2",
-    name: "🎉 VIP Gourmet Feast",
-    items: [
-      { name: "Extra Large Popcorn", price: 260, qty: 1 },
-      { name: "Loaded Cheese Nachos", price: 180, qty: 1 },
-      { name: "Cold Beverage (Large)", price: 120, qty: 2 },
-    ],
-    originalPrice: 680,
-    comboPrice: 550,
-    savings: 130,
-    badge: "⭐ 20% OFF",
-  },
-];
+// Combo names and prices come from the server (GET /api/snacks/combos).
+
+const readSavedSeats = (showId) => {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(seatStorageKey(showId)) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch (e) {
+    return [];
+  }
+};
 
 function AddOns() {
   const { showId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
 
-  const selectedSeats = location.state?.selectedSeats || [];
-  const initialShow = location.state?.show;
+  // Seats come from the seat page; sessionStorage keeps them across a refresh.
+  const [selectedSeats] = useState(() =>
+    location.state?.selectedSeats?.length ? location.state.selectedSeats : readSavedSeats(showId)
+  );
 
+  const [show, setShow] = useState(location.state?.show || null);
+  const [movie, setMovie] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const [snacks, setSnacks] = useState([]);
+  const [combos, setCombos] = useState([]);
   const [parking, setParking] = useState(null);
-  const [selectedSnacks, setSelectedSnacks] = useState([]);
+  const [cart, setCart] = useState([]); // [{ key, name, price, qty }]
   const [selectedParking, setSelectedParking] = useState(null);
-  const [show, setShow] = useState(initialShow || null);
 
-  // Promo code state
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponMsg, setCouponMsg] = useState({ text: "", type: "" });
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [activeCoupons, setActiveCoupons] = useState([]);
 
-  const userString = localStorage.getItem("user");
-  const user = userString ? JSON.parse(userString) : null;
-  const userId = user?._id || user?.id || localStorage.getItem("userId");
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const [phase, setPhase] = useState("review"); // review | paying | success | conflict
+  const [payError, setPayError] = useState("");
+  const [booking, setBooking] = useState(null);
+  const [conflictSeats, setConflictSeats] = useState([]);
 
-  /* Protect Refresh */
-  useEffect(() => {
-    if (!showId || selectedSeats.length === 0) {
-      navigate("/");
+  /* Seat hold: the server keeps these seats for this user for a few minutes. */
+  const [holdExpiresAt, setHoldExpiresAt] = useState(location.state?.holdExpiresAt || null);
+  const [holdBusy, setHoldBusy] = useState(false);
+  const now = useNow(1000);
+  const holdLeftMs = holdExpiresAt ? new Date(holdExpiresAt).getTime() - now : null;
+
+  // (Re)places the hold. Also runs on load, so a refresh or a direct link
+  // re-checks that the seats are still free and restarts the timer.
+  const ensureHold = useCallback(async () => {
+    if (!showId || selectedSeats.length === 0) return;
+    setHoldBusy(true);
+    try {
+      const { data } = await API.post(`/api/shows/${showId}/holds`, { seats: selectedSeats });
+      setHoldExpiresAt(data.expiresAt);
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setConflictSeats(Array.isArray(err.response.data?.seats) ? err.response.data.seats : []);
+        sessionStorage.removeItem(seatStorageKey(showId));
+        setPhase("conflict");
+      }
+    } finally {
+      setHoldBusy(false);
     }
-  }, [showId, selectedSeats, navigate]);
+  }, [showId, selectedSeats]);
 
-  /* Fetch Show + AddOns + Coupons */
   useEffect(() => {
-    if (!showId) return;
+    ensureHold();
+  }, [ensureHold]);
 
-    const loadData = async () => {
+  // Leaving checkout for anywhere except this show's seat page (or closing the
+  // tab) releases the hold. After a booking the seats are booked, so this is a no-op.
+  useEffect(() => {
+    const onHide = () => releaseHoldNow(showId);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      setTimeout(() => {
+        if (!inBookingFlow(showId)) releaseHoldNow(showId);
+      }, 0);
+    };
+  }, [showId]);
+
+  /* Load show, movie, add-ons and coupons */
+  useEffect(() => {
+    if (!showId || selectedSeats.length === 0) return;
+    let cancelled = false;
+
+    const load = async () => {
       try {
-        let currentShow = show;
-        if (!currentShow) {
-          const res = await API.get(`/api/shows/single/${showId}`);
-          currentShow = res.data;
-          setShow(currentShow);
-        }
+        const res = await API.get(`/api/shows/single/${showId}`, { params: { expand: "movie" } });
+        if (cancelled) return;
+        const current = res.data;
+        if (!current) throw new Error("Show not found");
+        setShow(current);
 
-        const theatre = currentShow.theatre;
+        if (current.movieId && typeof current.movieId === "object") setMovie(current.movieId);
+        else if (current.movieId)
+          API.get(`/api/movies/${current.movieId}`)
+            .then((r) => !cancelled && setMovie(r.data))
+            .catch(() => {});
 
-        // Fetch Snacks
+        const theatre = encodeURIComponent(current.theatre);
         API.get(`/api/snacks/theatre/${theatre}`)
-          .then((r) => setSnacks(r.data))
-          .catch(() => setSnacks([]));
-
-        // Fetch Parking
+          .then((r) => !cancelled && setSnacks(Array.isArray(r.data) ? r.data : []))
+          .catch(() => {});
+        API.get("/api/snacks/combos")
+          .then((r) => !cancelled && setCombos(Array.isArray(r.data) ? r.data : []))
+          .catch(() => {});
         API.get(`/api/parking/theatre/${theatre}`)
-          .then((r) => setParking(r.data))
-          .catch(() => setParking(null));
-
-        // Fetch available coupons
-        axios
-          .get(`${API_URL}/api/coupons/active`)
-          .then((r) => setActiveCoupons(r.data))
+          .then((r) => !cancelled && setParking(r.data || null))
           .catch(() => {});
       } catch (err) {
-        console.error("Data load error", err);
+        if (!cancelled) setLoadError(true);
       }
     };
 
-    loadData();
-  }, [showId]);
+    load();
+    API.get(`/api/coupons/active`)
+      .then((r) => !cancelled && setActiveCoupons(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {});
 
-  /* Snack Add & Remove */
-  const addSnack = (snack) => {
-    setSelectedSnacks((prev) => {
-      const exist = prev.find((s) => s._id === snack._id || s.name === snack.name);
-      if (exist) {
-        return prev.map((s) =>
-          s._id === snack._id || s.name === snack.name ? { ...s, qty: s.qty + 1 } : s
-        );
-      }
-      return [...prev, { ...snack, qty: 1 }];
-    });
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [showId, selectedSeats.length]);
 
-  const addComboToCart = (combo) => {
-    combo.items.forEach((item) => {
-      setSelectedSnacks((prev) => {
-        const exist = prev.find((s) => s.name === item.name);
-        if (exist) {
-          return prev.map((s) => (s.name === item.name ? { ...s, qty: s.qty + item.qty } : s));
-        }
-        return [...prev, { _id: item.name, name: item.name, price: item.price, qty: item.qty }];
-      });
-    });
-  };
-
-  const removeSnack = (snack) => {
-    setSelectedSnacks((prev) =>
-      prev
-        .map((s) => (s.name === snack.name ? { ...s, qty: s.qty - 1 } : s))
-        .filter((s) => s.qty > 0)
-    );
-  };
-
-  const calculateSubtotal = () => {
-    if (!show) return 0;
-    const seatTotal = show.seats
-      .filter((s) => selectedSeats.includes(s.seatNumber))
-      .reduce((acc, s) => acc + s.price, 0);
-
-    const snackTotal = selectedSnacks.reduce(
-      (acc, s) => acc + s.price * s.qty,
-      0
-    );
-
-    const parkingTotal = selectedParking?.price || 0;
-    return seatTotal + snackTotal + parkingTotal;
-  };
-
-  const subtotal = calculateSubtotal();
+  /* Totals */
+  const seatObjects = useMemo(
+    () => (show?.seats || []).filter((s) => selectedSeats.includes(s.seatNumber)),
+    [show, selectedSeats]
+  );
+  const seatTotal = seatObjects.reduce((sum, s) => sum + s.price, 0);
+  const snackTotal = cart.reduce((sum, s) => sum + s.price * s.qty, 0);
+  const parkingTotal = selectedParking?.price || 0;
+  const subtotal = seatTotal + snackTotal + parkingTotal;
   const finalTotal = Math.max(0, subtotal - discountAmount);
 
-  /* Apply Coupon */
-  const handleApplyCoupon = async (codeToApply) => {
-    const code = codeToApply || couponCode;
-    if (!code.trim()) return;
+  /* Cart helpers */
+  const qtyOf = (key) => cart.find((i) => i.key === key)?.qty || 0;
+  const changeQty = (item, delta) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.key === item.key);
+      if (!existing) return delta > 0 ? [...prev, { ...item, qty: 1 }] : prev;
+      return prev
+        .map((i) => (i.key === item.key ? { ...i, qty: Math.min(10, i.qty + delta) } : i))
+        .filter((i) => i.qty > 0);
+    });
+  };
 
+  /* Coupons */
+  const validateCoupon = async (code, amount, { silent = false } = {}) => {
     try {
-      const res = await axios.post(`${API_URL}/api/coupons/validate`, {
-        code,
-        totalAmount: subtotal,
-      });
-
+      const res = await API.post(`/api/coupons/validate`, { code, totalAmount: amount });
       if (res.data.success) {
         setAppliedCoupon(res.data.code);
+        setCouponCode(res.data.code);
         setDiscountAmount(res.data.discountAmount);
-        setCouponMsg({ text: res.data.message, type: "success" });
+        if (!silent) setCouponMsg({ text: `${res.data.code} applied — you save ${formatPrice(res.data.discountAmount)}.`, type: "success" });
       }
     } catch (err) {
       setAppliedCoupon(null);
       setDiscountAmount(0);
-      setCouponMsg({
-        text: err.response?.data?.message || "Invalid coupon code",
-        type: "error",
-      });
+      setCouponMsg({ text: getErrorMessage(err, "That promo code isn't valid."), type: "error" });
     }
+  };
+
+  const handleApplyCoupon = async (codeToApply) => {
+    const code = (codeToApply || couponCode).trim();
+    if (!code) {
+      setCouponMsg({ text: "Enter a promo code first.", type: "error" });
+      return;
+    }
+    setApplyingCoupon(true);
+    await validateCoupon(code, subtotal);
+    setApplyingCoupon(false);
   };
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setDiscountAmount(0);
     setCouponCode("");
-    setCouponMsg({ text: "Coupon removed", type: "info" });
-    setTimeout(() => setCouponMsg({ text: "", type: "" }), 2000);
+    setCouponMsg({ text: "", type: "" });
   };
 
-  /* Confirm Booking */
+  // Re-check the applied coupon whenever the order amount changes.
+  const lastValidated = useRef(null);
+  useEffect(() => {
+    if (!appliedCoupon) {
+      lastValidated.current = null;
+      return;
+    }
+    if (lastValidated.current === null) {
+      lastValidated.current = subtotal;
+      return;
+    }
+    if (lastValidated.current !== subtotal) {
+      lastValidated.current = subtotal;
+      validateCoupon(appliedCoupon, subtotal, { silent: true });
+    }
+  }, [appliedCoupon, subtotal]);
+
+  /* Payment */
   const confirmBooking = async () => {
+    setPayError("");
+    setPhase("paying");
     try {
-      await API.post(`/api/bookings`, {
+      const res = await API.post(`/api/bookings`, {
         showId,
         seats: selectedSeats,
-        userId,
-        snacks: selectedSnacks,
-        parking: selectedParking,
-        totalPrice: finalTotal,
+        // Only IDs and quantities are sent: the server looks up every price itself.
+        snacks: cart.map(({ key, name, qty }) => ({ snackId: key, name, qty })),
+        parking: selectedParking ? { type: selectedParking.type } : null,
+        couponCode: appliedCoupon || undefined,
       });
-      navigate("/my-bookings");
+      sessionStorage.removeItem(seatStorageKey(showId));
+      setBooking(res.data);
+      setPhase("success");
+      window.scrollTo(0, 0);
     } catch (err) {
-      console.error("Booking failed", err);
-      alert("Booking failed");
+      const data = err.response?.data;
+      const seatsTaken = err.response?.status === 409 || /already booked/i.test(data?.message || "");
+      if (seatsTaken) {
+        setConflictSeats(Array.isArray(data?.seats) ? data.seats : []);
+        sessionStorage.removeItem(seatStorageKey(showId));
+        setPhase("conflict");
+      } else {
+        setPayError(getErrorMessage(err, "We couldn't confirm your booking. You haven't been charged. Please try again."));
+        setPhase("review");
+      }
     }
   };
 
-  const skipBooking = async () => {
-    try {
-      await API.post(`/api/bookings`, {
-        showId,
-        seats: selectedSeats,
-        userId,
-        totalPrice: finalTotal,
-      });
-      navigate("/my-bookings");
-    } catch (err) {
-      console.error("Booking failed", err);
-      alert("Booking failed");
-    }
-  };
-
-  if (!show) {
-    return <p className="text-white text-center mt-10">Loading...</p>;
+  if (!showId || selectedSeats.length === 0) {
+    return <Navigate to={showId ? `/seats/${showId}` : "/"} replace />;
   }
 
-  return (
-    <div className="bg-[#07070B] min-h-screen text-white p-4 md:p-10 relative">
-      <div className="max-w-4xl mx-auto bg-[#0F0F17]/90 border border-gray-800/80 p-6 md:p-8 rounded-3xl backdrop-blur-2xl shadow-2xl space-y-8">
-        
-        <div className="border-b border-gray-800/80 pb-4 text-center">
-          <span className="bg-red-600/20 text-red-400 border border-red-500/30 text-[10px] font-black px-3 py-1 rounded-full uppercase">
-            Step 2 of 2: Extras & Checkout
-          </span>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-2">
-            Customize Refreshments & Parking
-          </h1>
-          <p className="text-xs text-gray-400 mt-1">
-            Theater: <span className="text-red-400 font-bold">{show.theatre}</span> &nbsp;•&nbsp; Seats: <span className="text-white font-bold">{selectedSeats.join(", ")}</span>
-          </p>
+  if (loadError && !show) {
+    return (
+      <main id="main" className="container-page min-h-[70vh] py-16">
+        <ErrorState title="We couldn't load your booking" onRetry={() => window.location.reload()} />
+      </main>
+    );
+  }
+
+  if (!show) {
+    return (
+      <main className="container-page min-h-[80vh] py-10" role="status" aria-label="Loading checkout">
+        <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+          <div className="space-y-4">
+            <div className="skeleton h-40 rounded-2xl" />
+            <div className="skeleton h-56 rounded-2xl" />
+          </div>
+          <div className="skeleton h-96 rounded-2xl" />
         </div>
+      </main>
+    );
+  }
 
-        {/* 🍿 PRE-PACKAGED COMBOS */}
-        <div>
-          <h2 className="text-base font-extrabold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            ⚡ Recommended Cinema Combos
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {PRESET_COMBOS.map((combo) => (
-              <div
-                key={combo.id}
-                className="bg-gray-950 border border-amber-500/30 p-4 rounded-2xl flex flex-col justify-between space-y-3 relative overflow-hidden group hover:border-amber-400 transition"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="bg-amber-500/20 text-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                      {combo.badge}
-                    </span>
-                    <h3 className="font-bold text-white text-sm mt-1">{combo.name}</h3>
-                    <p className="text-[11px] text-gray-400">
-                      {combo.items.map((i) => `${i.name} x${i.qty}`).join(" + ")}
-                    </p>
-                  </div>
+  const showLine = `${formatShowDate(show.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · ${formatShowTime(show.time)}`;
+
+  /* ───────────── Success ───────────── */
+  if (phase === "success" && booking) {
+    return (
+      <main id="main" className="container-page flex min-h-[80vh] items-center justify-center py-12">
+        <div className="card w-full max-w-lg overflow-hidden animate-fadeUp">
+          <div className="bg-emerald-500/10 px-6 py-8 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white">
+              <Icon name="check" className="h-7 w-7" />
+            </span>
+            <h1 className="mt-4 font-display text-2xl font-bold text-white">Booking confirmed</h1>
+            <p className="mt-1 text-sm text-gray-300">Your seats are reserved. Show this QR code at the entrance.</p>
+          </div>
+
+          <div className="flex flex-col items-center gap-6 px-6 py-6 sm:flex-row sm:items-start">
+            <div className="shrink-0 rounded-xl bg-white p-3">
+              <QRCodeCanvas value={`${window.location.origin}/verify/${booking._id}`} size={132} />
+            </div>
+            <dl className="w-full space-y-3 text-sm">
+              <SummaryRow label="Movie" value={movie?.title || booking.showId?.movieId?.title || "—"} />
+              <SummaryRow label="Theatre" value={show.theatre} />
+              <SummaryRow label="Showtime" value={showLine} />
+              <SummaryRow label="Seats" value={(booking.seats || selectedSeats).join(", ")} />
+              <SummaryRow label={amountLabel(booking)} value={formatPrice(booking.totalPrice)} strong />
+              <div>
+                <dt className="text-xs text-gray-500">Booking ID</dt>
+                <dd className="mt-0.5 break-all font-mono text-xs text-gray-300">{booking._id}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="grid gap-2 border-t border-white/[0.07] p-4 sm:grid-cols-2">
+            <Link to="/my-bookings" className="btn-primary">
+              <Icon name="ticket" className="h-4 w-4" /> View my tickets
+            </Link>
+            <Link to="/movies" className="btn-secondary">Book another movie</Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  /* ───────────── Seats taken ───────────── */
+  if (phase === "conflict") {
+    return (
+      <main id="main" className="container-page flex min-h-[70vh] items-center justify-center py-12">
+        <div className="card w-full max-w-md p-8 text-center animate-fadeUp">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gold-500/15 text-gold-400">
+            <Icon name="alert" className="h-7 w-7" />
+          </span>
+          <h1 className="mt-4 font-display text-2xl font-bold text-white">Those seats were just taken</h1>
+          <p className="mt-2 text-sm text-gray-400">
+            {conflictSeats.length > 0
+              ? `Someone else booked or reserved ${conflictSeats.join(", ")} while you were checking out. `
+              : "Someone else booked or reserved one or more of your seats while you were checking out. "}
+            You haven't been charged.
+          </p>
+          <button className="btn-primary mt-6 w-full" onClick={() => navigate(`/seats/${showId}`, { replace: true })}>
+            Choose different seats
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const paying = phase === "paying";
+
+  return (
+    <main id="main" className="min-h-screen pb-16">
+      <div className="border-b border-white/[0.07] bg-ink-900">
+        <div className="container-page flex items-center gap-3 py-4">
+          <button onClick={() => navigate(`/seats/${showId}`)} className="btn-icon" aria-label="Back to seat selection" disabled={paying}>
+            <Icon name="arrowLeft" className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="font-display text-lg font-bold text-white sm:text-xl">Extras &amp; checkout</h1>
+            <p className="text-xs text-gray-400 sm:text-sm">Add snacks or parking, then confirm your booking.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="container-page mt-6">
+        <ol className="mb-6 flex items-center gap-2 text-xs font-semibold text-gray-500" aria-label="Booking progress">
+          <li className="flex items-center gap-2 text-gray-300">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
+              <Icon name="check" className="h-3.5 w-3.5" />
+            </span>
+            Seats
+          </li>
+          <li aria-hidden="true" className="h-px w-8 bg-white/15" />
+          <li className="flex items-center gap-2 text-white">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px]">2</span> Extras &amp; checkout
+          </li>
+          <li aria-hidden="true" className="h-px w-8 bg-white/15" />
+          <li className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">3</span> Ticket
+          </li>
+        </ol>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          {/* ───────────── Extras ───────────── */}
+          <div className="space-y-6">
+            {combos.length > 0 && (
+            <section className="card p-5 sm:p-6" aria-labelledby="combos-title">
+              <SectionHeading id="combos-title" icon="popcorn" title="Combos" hint="Bundle and save" />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {combos.map((combo) => {
+                  const item = { key: combo.id, name: combo.name, price: combo.comboPrice };
+                  return (
+                    <div key={combo.id} className="card-muted flex flex-col p-4">
+                      <span className="badge-gold mb-2 self-start">{combo.badge}</span>
+                      <h3 className="font-sans text-sm font-semibold text-white">{combo.name}</h3>
+                      <p className="mt-0.5 flex-1 text-xs text-gray-400">{combo.description}</p>
+                      <div className="mt-3 flex items-center justify-between">
+                        <p className="text-sm">
+                          <span className="font-bold text-white">{formatPrice(combo.comboPrice)}</span>
+                          <span className="ml-1.5 text-xs text-gray-500 line-through">{formatPrice(combo.originalPrice)}</span>
+                        </p>
+                        <Stepper qty={qtyOf(item.key)} label={combo.name} onChange={(d) => changeQty(item, d)} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+            )}
+
+            <section className="card p-5 sm:p-6" aria-labelledby="snacks-title">
+              <SectionHeading id="snacks-title" icon="popcorn" title="Food & drinks" hint={`Available at ${show.theatre}`} />
+              {snacks.length === 0 ? (
+                <p className="mt-4 text-sm text-gray-400">No individual items are listed for this theatre yet.</p>
+              ) : (
+                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {snacks.map((snack) => {
+                    const item = { key: snack._id, name: snack.name?.trim(), price: snack.price };
+                    return (
+                      <li key={snack._id} className="card-muted flex items-center justify-between gap-3 p-3.5">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-white">{item.name}</p>
+                          <p className="text-xs text-gray-400">{formatPrice(snack.price)}</p>
+                        </div>
+                        <Stepper qty={qtyOf(item.key)} label={item.name} onChange={(d) => changeQty(item, d)} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {parking && (
+              <section className="card p-5 sm:p-6" aria-labelledby="parking-title">
+                <SectionHeading id="parking-title" icon="car" title="Parking" hint="Optional — reserve a spot at the theatre" />
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {[
+                    { type: "Bike", price: parking.priceBike },
+                    { type: "Car", price: parking.priceCar },
+                  ].map((option) => {
+                    const active = selectedParking?.type === option.type;
+                    return (
+                      <button
+                        key={option.type}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() =>
+                          setSelectedParking(active ? null : { type: option.type, price: option.price, theatre: show.theatre })
+                        }
+                        className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-left transition ${
+                          active ? "border-brand-500 bg-brand-500/10" : "border-white/[0.08] bg-ink-900 hover:border-white/20"
+                        }`}
+                      >
+                        <span>
+                          <span className="block text-sm font-semibold text-white">{option.type} parking</span>
+                          <span className="block text-xs text-gray-400">{formatPrice(option.price)}</span>
+                        </span>
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                            active ? "border-brand-500 bg-brand-500 text-white" : "border-white/25"
+                          }`}
+                        >
+                          {active && <Icon name="check" className="h-3 w-3" />}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
+              </section>
+            )}
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-                  <div>
-                    <span className="text-xs text-gray-500 line-through mr-1">₹{combo.originalPrice}</span>
-                    <span className="text-sm font-extrabold text-amber-400">₹{combo.comboPrice}</span>
-                  </div>
-                  <button
-                    onClick={() => addComboToCart(combo)}
-                    className="bg-amber-500 hover:bg-amber-400 text-gray-950 font-black text-xs px-3.5 py-1.5 rounded-xl transition"
-                  >
-                    + Add Combo
+            <section className="card p-5 sm:p-6" aria-labelledby="promo-title">
+              <SectionHeading id="promo-title" icon="tag" title="Promo code" />
+              <form
+                className="mt-4 flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!appliedCoupon) handleApplyCoupon();
+                }}
+              >
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  placeholder="Enter code"
+                  aria-label="Promo code"
+                  disabled={!!appliedCoupon}
+                  className="input flex-1 font-mono uppercase disabled:opacity-60"
+                />
+                {appliedCoupon ? (
+                  <button type="button" onClick={handleRemoveCoupon} className="btn-secondary">Remove</button>
+                ) : (
+                  <button type="submit" className="btn-secondary" disabled={applyingCoupon}>
+                    {applyingCoupon ? <Spinner className="h-4 w-4" /> : "Apply"}
                   </button>
+                )}
+              </form>
+
+              {couponMsg.text && (
+                <p role="status" className={`mt-2 text-xs font-medium ${couponMsg.type === "success" ? "text-emerald-300" : "text-brand-300"}`}>
+                  {couponMsg.text}
+                </p>
+              )}
+
+              {activeCoupons.length > 0 && !appliedCoupon && (
+                <ul className="mt-4 space-y-2">
+                  {activeCoupons.map((c) => (
+                    <li key={c.code} className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-white/15 px-3.5 py-2.5">
+                      <div className="min-w-0">
+                        <p className="font-mono text-sm font-bold text-white">{c.code}</p>
+                        {c.description && <p className="truncate text-xs text-gray-400">{c.description}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs font-bold text-brand-400 hover:text-brand-300"
+                        onClick={() => handleApplyCoupon(c.code)}
+                      >
+                        APPLY
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          {/* ───────────── Order summary ───────────── */}
+          <aside>
+            <div className="card sticky top-24 overflow-hidden">
+              <div className="flex gap-4 border-b border-white/[0.07] p-5">
+                <Poster src={movie?.poster} alt="" className="h-24 w-16 shrink-0 rounded-lg" />
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-bold text-white">{movie?.title || "Your booking"}</h2>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-400">
+                    <Icon name="pin" className="h-3.5 w-3.5 shrink-0" /> {show.theatre}
+                  </p>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-400">
+                    <Icon name="calendar" className="h-3.5 w-3.5 shrink-0" /> {showLine}
+                  </p>
+                  <p className="mt-1 flex items-start gap-1.5 text-xs text-gray-300">
+                    <Icon name="ticket" className="mt-px h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    <span>{selectedSeats.join(", ")}</span>
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* 🍿 SINGLE SNACKS */}
-        <div>
-          <h2 className="text-base font-extrabold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
-            🍿 À La Carte Food & Snacks
-          </h2>
+              <div className="space-y-2.5 p-5 text-sm">
+                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-gray-500">Price details</h3>
+                <PriceRow
+                  label={`Tickets × ${selectedSeats.length}`}
+                  value={formatPrice(seatTotal)}
+                />
+                {cart.map((item) => (
+                  <PriceRow key={item.key} label={`${item.name} × ${item.qty}`} value={formatPrice(item.price * item.qty)} muted />
+                ))}
+                {selectedParking && (
+                  <PriceRow label={`${selectedParking.type} parking`} value={formatPrice(selectedParking.price)} muted />
+                )}
+                {discountAmount > 0 && (
+                  <PriceRow label={`Promo ${appliedCoupon}`} value={`− ${formatPrice(discountAmount)}`} accent />
+                )}
+                <PriceRow label="Convenience fee" value="Free" muted />
 
-          {snacks.length === 0 ? (
-            <p className="text-gray-500 text-xs italic">No snacks available for this theater.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {snacks.map((snack) => {
-                const qty = selectedSnacks.find((s) => s.name === snack.name)?.qty || 0;
-                return (
-                  <div
-                    key={snack._id}
-                    className="flex justify-between items-center bg-gray-950 p-3.5 rounded-2xl border border-gray-800"
-                  >
-                    <div>
-                      <span className="font-semibold text-white text-xs block">{snack.name}</span>
-                      <span className="text-xs text-red-400 font-bold">₹{snack.price}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 bg-gray-900 border border-gray-800 px-3 py-1 rounded-xl">
-                      <button
-                        onClick={() => removeSnack(snack)}
-                        className="text-gray-400 hover:text-white font-bold text-base"
-                      >
-                        -
-                      </button>
-                      <span className="text-xs font-bold text-white min-w-[1rem] text-center">{qty}</span>
-                      <button
-                        onClick={() => addSnack(snack)}
-                        className="text-red-500 hover:text-red-400 font-bold text-base"
-                      >
-                        +
-                      </button>
-                    </div>
+                <div className="flex items-end justify-between border-t border-white/[0.07] pt-4">
+                  <div>
+                    <p className="font-semibold text-white">Total</p>
+                    <p className="text-[11px] text-gray-500">Inclusive of all taxes</p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  <p className="font-display text-2xl font-bold text-white" aria-live="polite">{formatPrice(finalTotal)}</p>
+                </div>
+              </div>
 
-        {/* 🚗 PARKING */}
-        {parking && (
-          <div>
-            <h2 className="text-base font-extrabold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
-              🚗 Vehicle Parking Pass
-            </h2>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() =>
-                  setSelectedParking(
-                    selectedParking?.type === "Bike"
-                      ? null
-                      : { type: "Bike", price: parking.priceBike }
-                  )
-                }
-                className={`flex-1 p-3.5 rounded-2xl border transition text-center font-semibold text-xs ${
-                  selectedParking?.type === "Bike"
-                    ? "bg-red-950/80 border-red-500 text-red-400 shadow-lg"
-                    : "bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700"
-                }`}
-              >
-                🏍 Bike Parking (₹{parking.priceBike})
-              </button>
-
-              <button
-                onClick={() =>
-                  setSelectedParking(
-                    selectedParking?.type === "Car"
-                      ? null
-                      : { type: "Car", price: parking.priceCar }
-                  )
-                }
-                className={`flex-1 p-3.5 rounded-2xl border transition text-center font-semibold text-xs ${
-                  selectedParking?.type === "Car"
-                    ? "bg-red-950/80 border-red-500 text-red-400 shadow-lg"
-                    : "bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700"
-                }`}
-              >
-                🚗 Car Parking (₹{parking.priceCar})
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 🏷️ PROMO DISCOUNT */}
-        <div className="bg-gray-950 p-5 rounded-2xl border border-gray-800 space-y-3">
-          <h2 className="text-xs font-black uppercase text-gray-400 tracking-wider">
-            🏷️ Apply Promo Code
-          </h2>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-              placeholder="Enter code (e.g. CINE50)"
-              className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white uppercase font-mono focus:outline-none focus:border-red-500 transition"
-              disabled={!!appliedCoupon}
-            />
-            {appliedCoupon ? (
-              <button
-                onClick={handleRemoveCoupon}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold px-4 py-2.5 rounded-xl text-xs transition"
-              >
-                Remove
-              </button>
-            ) : (
-              <button
-                onClick={() => handleApplyCoupon()}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition"
-              >
-                Apply
-              </button>
-            )}
-          </div>
-
-          {couponMsg.text && (
-            <p className={`text-xs font-bold ${couponMsg.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
-              {couponMsg.text}
-            </p>
-          )}
-
-          {activeCoupons.length > 0 && !appliedCoupon && (
-            <div className="pt-1 flex flex-wrap gap-2">
-              {activeCoupons.map((c) => (
-                <button
-                  key={c.code}
-                  onClick={() => {
-                    setCouponCode(c.code);
-                    handleApplyCoupon(c.code);
-                  }}
-                  className="text-[11px] bg-red-950/60 border border-red-800/80 text-red-300 px-3 py-1 rounded-xl hover:bg-red-900/60 transition"
-                >
-                  🏷️ <span className="font-bold">{c.code}</span>
+              <div className="border-t border-white/[0.07] p-5">
+                <HoldTimer leftMs={holdLeftMs} busy={holdBusy} onRenew={ensureHold} />
+                {payError && (
+                  <div role="alert" className="alert-error mb-3 text-xs">
+                    <Icon name="alert" className="mt-px h-4 w-4 shrink-0" />
+                    <span>{payError}</span>
+                  </div>
+                )}
+                <button onClick={confirmBooking} disabled={paying} className="btn-primary btn-lg w-full">
+                  {paying ? (
+                    <><Spinner className="h-5 w-5" /> Confirming your seats…</>
+                  ) : (
+                    <>Confirm demo booking · {formatPrice(finalTotal)}</>
+                  )}
                 </button>
-              ))}
+                <p className="mt-3 text-center text-[11px] leading-relaxed text-gray-500">
+                  Demo checkout: no payment is taken and no card details are needed. The final price is calculated by our server.
+                </p>
+              </div>
             </div>
-          )}
+          </aside>
         </div>
+      </div>
+    </main>
+  );
+}
 
-        {/* 💳 SUMMARY & TOTAL */}
-        <div className="bg-gray-950 p-5 rounded-2xl border border-gray-800 space-y-2">
-          <div className="flex justify-between text-xs text-gray-400">
-            <span>Subtotal:</span>
-            <span className="font-semibold text-white">₹{subtotal}</span>
-          </div>
-
-          {discountAmount > 0 && (
-            <div className="flex justify-between text-xs text-emerald-400 font-bold">
-              <span>Discount ({appliedCoupon}):</span>
-              <span>- ₹{discountAmount}</span>
-            </div>
-          )}
-
-          <div className="flex justify-between text-lg font-black text-white border-t border-gray-800 pt-3">
-            <span>Total Payable:</span>
-            <span className="text-red-500 text-xl font-black">₹{finalTotal}</span>
-          </div>
-        </div>
-
-        {/* ACTIONS */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <button
-            onClick={confirmBooking}
-            className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-extrabold py-4 rounded-2xl transition text-center shadow-xl shadow-red-600/30 text-sm"
-          >
-            Confirm & Pay (₹{finalTotal})
-          </button>
-          <button
-            onClick={skipBooking}
-            className="bg-gray-900 hover:bg-gray-800 text-gray-300 font-bold py-4 px-6 rounded-2xl transition text-center text-xs border border-gray-800"
-          >
-            Skip Extras & Checkout
-          </button>
-        </div>
-
+function SectionHeading({ id, icon, title, hint }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-gray-300">
+        <Icon name={icon} className="h-[18px] w-[18px]" />
+      </span>
+      <div>
+        <h2 id={id} className="font-sans text-base font-bold text-white">{title}</h2>
+        {hint && <p className="text-xs text-gray-400">{hint}</p>}
       </div>
     </div>
+  );
+}
+
+function Stepper({ qty, onChange, label }) {
+  if (qty === 0) {
+    return (
+      <button type="button" className="btn-secondary btn-sm shrink-0" onClick={() => onChange(1)} aria-label={`Add ${label}`}>
+        <Icon name="plus" className="h-3.5 w-3.5" /> Add
+      </button>
+    );
+  }
+  return (
+    <div className="flex shrink-0 items-center rounded-lg border border-brand-500/50 bg-brand-500/10">
+      <button type="button" className="flex h-8 w-8 items-center justify-center text-brand-300 hover:text-white" onClick={() => onChange(-1)} aria-label={`Remove one ${label}`}>
+        <Icon name="minus" className="h-3.5 w-3.5" />
+      </button>
+      <span className="min-w-[1.25rem] text-center text-sm font-bold text-white" aria-live="polite">{qty}</span>
+      <button type="button" className="flex h-8 w-8 items-center justify-center text-brand-300 hover:text-white" onClick={() => onChange(1)} aria-label={`Add one more ${label}`}>
+        <Icon name="plus" className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function PriceRow({ label, value, muted, accent }) {
+  return (
+    <div className={`flex items-start justify-between gap-4 ${accent ? "text-emerald-300" : muted ? "text-gray-400" : "text-gray-200"}`}>
+      <span className="min-w-0 break-words">{label}</span>
+      <span className="shrink-0 font-medium">{value}</span>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value, strong }) {
+  return (
+    <div>
+      <dt className="text-xs text-gray-500">{label}</dt>
+      <dd className={`mt-0.5 ${strong ? "font-display text-lg font-bold text-white" : "text-sm font-medium text-white"}`}>{value}</dd>
+    </div>
+  );
+}
+
+
+// Re-renders every `interval` ms so countdowns stay current.
+function useNow(interval) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), interval);
+    return () => clearInterval(id);
+  }, [interval]);
+  return now;
+}
+
+function HoldTimer({ leftMs, busy, onRenew }) {
+  if (leftMs === null) return null;
+  if (leftMs <= 0) {
+    return (
+      <div role="alert" className="mb-3 rounded-xl border border-gold-500/40 bg-gold-500/10 p-3 text-xs text-gold-400">
+        <p className="font-semibold">Your seat hold has expired.</p>
+        <p className="mt-0.5 text-gray-300">Others can now pick these seats. Hold them again to keep going.</p>
+        <button type="button" onClick={onRenew} disabled={busy} className="btn-ghost mt-2 w-full text-xs">
+          {busy ? "Checking seats…" : "Hold my seats again"}
+        </button>
+      </div>
+    );
+  }
+  const total = Math.ceil(leftMs / 1000);
+  const label = `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  return (
+    <p className={`mb-3 flex items-center justify-center gap-2 text-xs ${total <= 60 ? "text-gold-400" : "text-gray-400"}`} aria-live="off">
+      <Icon name="clock" className="h-4 w-4" />
+      Seats held for you for <span className="font-mono font-semibold text-white" data-testid="hold-timer">{label}</span>
+    </p>
   );
 }
 

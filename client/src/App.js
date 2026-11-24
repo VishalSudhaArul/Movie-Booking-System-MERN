@@ -1,15 +1,18 @@
 import React, { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminGate from "./components/AdminGate";
+import { ToastProvider } from "./components/ui/Toast";
+import { PageLoader, EmptyState } from "./components/ui/Feedback";
+import { WatchlistProvider } from "./context/WatchlistContext";
 
-// 🚀 Eager load critical Home page for instant FCP / LCP
+// Home is loaded eagerly for a fast first paint
 import Home from "./pages/Home";
 
-// ⚡ Code-split non-critical routes via React.lazy to reduce initial JS payload from 7.27MB down to ~200KB
+// Code-split every other route so the initial bundle stays small
 const Movies = lazy(() => import("./pages/Movies"));
 const MovieDetails = lazy(() => import("./pages/MovieDetails"));
 const Login = lazy(() => import("./pages/Login"));
@@ -19,7 +22,6 @@ const AddOns = lazy(() => import("./pages/AddOns"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const VerifyTicket = lazy(() => import("./pages/VerifyTicket"));
 const SnacksHub = lazy(() => import("./pages/SnacksHub"));
-const Admin = lazy(() => import("./pages/Admin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminScan = lazy(() => import("./pages/AdminScan"));
 const Scanner = lazy(() => import("./pages/Scanner"));
@@ -36,20 +38,43 @@ const GiftCards = lazy(() => import("./pages/GiftCards"));
 const LoyaltyWallet = lazy(() => import("./pages/LoyaltyWallet"));
 const Watchlist = lazy(() => import("./pages/Watchlist"));
 
-// Sleek glassmorphic Loading Fallback to maintain zero Cumulative Layout Shift (CLS)
-const PageLoader = () => (
-  <div className="min-h-[70vh] flex flex-col items-center justify-center bg-[#0B0B0F] text-white">
-    <div className="w-12 h-12 border-4 border-red-600/30 border-t-red-600 rounded-full animate-spin mb-4"></div>
-    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">
-      Loading CineBook...
-    </span>
-  </div>
-);
+// Scroll back to the top when moving to a different page
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
+function NotFound() {
+  return (
+    <main id="main" className="container-page flex min-h-[70vh] items-center justify-center py-16">
+      <div className="w-full max-w-md">
+        <EmptyState
+          icon="film"
+          title="Page not found"
+          message="The page you're looking for doesn't exist or has been moved."
+          action={
+            <Link to="/" className="btn-primary">
+              Back to home
+            </Link>
+          }
+        />
+      </div>
+    </main>
+  );
+}
 
 function App() {
   return (
     <Router>
+      <ToastProvider>
+      <WatchlistProvider>
+      <ScrollToTop />
+      <div className="flex min-h-screen flex-col">
       <Navbar />
+      <div className="flex-1">
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* ── Public Routes ── */}
@@ -62,7 +87,6 @@ function App() {
           <Route path="/loyalty" element={<LoyaltyWallet />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/verify/:bookingId" element={<VerifyTicket />} />
           <Route path="/snacks" element={<SnacksHub />} />
           <Route path="/food-beverages" element={<SnacksHub />} />
 
@@ -100,23 +124,25 @@ function App() {
             }
           />
           <Route
-            path="/scanner"
+            path="/verify/:bookingId"
             element={
               <PrivateRoute>
-                <Scanner />
+                <VerifyTicket />
               </PrivateRoute>
+            }
+          />
+          {/* Ticket scanning admits people, so it's staff-only */}
+          <Route
+            path="/scanner"
+            element={
+              <AdminGate>
+                <Scanner />
+              </AdminGate>
             }
           />
 
           {/* ── Admin Routes ── */}
-          <Route
-            path="/admin"
-            element={
-              <AdminGate>
-                <Admin />
-              </AdminGate>
-            }
-          />
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route
             path="/admin/dashboard"
             element={
@@ -183,26 +209,14 @@ function App() {
           />
 
           {/* ── 404 Fallback ── */}
-          <Route
-            path="*"
-            element={
-              <div className="min-h-screen flex items-center justify-center bg-gray-950">
-                <div className="text-center space-y-4">
-                  <h1 className="text-6xl font-black text-red-500">404</h1>
-                  <p className="text-white text-lg font-bold">Page Not Found</p>
-                  <a
-                    href="/"
-                    className="inline-block bg-red-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-red-700 transition shadow-lg shadow-red-600/30"
-                  >
-                    Go Home
-                  </a>
-                </div>
-              </div>
-            }
-          />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </div>
       <Footer />
+      </div>
+      </WatchlistProvider>
+      </ToastProvider>
     </Router>
   );
 }

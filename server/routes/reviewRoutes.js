@@ -1,20 +1,39 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
 const Review = require("../models/Review");
-const User = require("../models/User");
-require("../models/Movie");
+const Movie = require("../models/Movie");
 const { authMiddleware } = require("../middleware/authMiddleware");
+const { isObjectId, cleanString, cleanNumber } = require("../utils/validate");
+
+// GET average rating and review count for every reviewed movie
+router.get("/summary", async (req, res) => {
+  try {
+    const rows = await Review.aggregate([
+      { $group: { _id: "$movieId", avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } },
+    ]);
+    const summary = {};
+    rows.forEach((r) => {
+      summary[r._id] = {
+        avgRating: Number(r.avgRating.toFixed(1)),
+        totalRatings: r.totalRatings,
+      };
+    });
+    return res.json(summary);
+  } catch (error) {
+    console.error("Review summary error:", error.name);
+    return res.json({});
+  }
+});
 
 // GET reviews for a movie
 router.get("/movie/:movieId", async (req, res) => {
   try {
     const { movieId } = req.params;
-    if (!movieId || !mongoose.Types.ObjectId.isValid(movieId)) {
+    if (!isObjectId(movieId)) {
       return res.json({ reviews: [], avgRating: 0, totalRatings: 0 });
     }
 
-    const reviews = await Review.find({ movieId }).sort({ createdAt: -1 });
+    const reviews = await Review.find({ movieId }).select("-userId").sort({ createdAt: -1 });
     const totalRatings = reviews.length;
     const avgRating =
       totalRatings > 0
@@ -23,54 +42,36 @@ router.get("/movie/:movieId", async (req, res) => {
 
     return res.json({ reviews, avgRating: Number(avgRating), totalRatings });
   } catch (error) {
-    console.error("Fetch reviews error:", error);
+    console.error("Fetch reviews error:", error.name);
     return res.json({ reviews: [], avgRating: 0, totalRatings: 0 });
   }
 });
 
-// POST add a review
-router.post("/", authMiddleware, async (req, res) => {
+// POST add a review (signed in)
+router.post("/", authMiddleware, async (req, res, next) => {
   try {
-    const { movieId, rating, comment } = req.body;
+    const { movieId } = req.body;
+    const rating = cleanNumber(req.body.rating, { min: 1, max: 5, integer: true });
+    const comment = cleanString(req.body.comment, { min: 1, max: 1000 });
 
-    if (!movieId || !rating || !comment) {
-      return res.status(400).json({ message: "All fields (movie, rating, comment) are required" });
+    if (!isObjectId(movieId) || rating === null || !comment) {
+      return res.status(400).json({ message: "Choose a rating from 1 to 5 and write a short comment" });
+    }
+    if (!(await Movie.exists({ _id: movieId }))) {
+      return res.status(404).json({ message: "Movie not found" });
     }
 
-    const rawUserId = req.user?.id || req.user?._id;
-    let userId = rawUserId;
-    if (!userId || !mongoose.Types.ObjectId.isValid(rawUserId)) {
-      userId = new mongoose.Types.ObjectId("661234567890123456789012");
-    } else {
-      userId = new mongoose.Types.ObjectId(rawUserId);
-    }
-
-    let userName = req.user?.name;
-    if (!userName && mongoose.Types.ObjectId.isValid(userId)) {
-      try {
-        const dbUser = await User.findById(userId);
-        if (dbUser) userName = dbUser.name;
-      } catch (e) {}
-    }
-
-    let validMovieId = movieId;
-    if (mongoose.Types.ObjectId.isValid(movieId)) {
-      validMovieId = new mongoose.Types.ObjectId(movieId);
-    }
-
-    const review = new Review({
-      movieId: validMovieId,
-      userId,
-      userName: userName || "Movie Enthusiast",
-      rating: Number(rating) || 5,
-      comment: String(comment).trim(),
+    const review = await Review.create({
+      movieId,
+      userId: req.user.id,
+      userName: req.user.name || "Movie Enthusiast",
+      rating,
+      comment,
     });
 
-    await review.save();
-    return res.status(201).json({ message: "Review posted successfully! 🎉", review });
+    return res.status(201).json({ message: "Review posted successfully!", review });
   } catch (error) {
-    console.error("Post review error:", error);
-    return res.status(500).json({ message: "Failed to post review", error: error.message });
+    return next(error);
   }
 });
 

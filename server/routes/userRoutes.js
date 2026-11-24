@@ -15,7 +15,7 @@ router.get("/me", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     return res.json(user);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to fetch user profile", error: error.message });
+    return res.status(500).json({ message: "Failed to fetch user profile" });
   }
 });
 
@@ -32,7 +32,7 @@ router.get("/watchlist", authMiddleware, async (req, res) => {
     const validWatchlist = (user.watchlist || []).filter((item) => item !== null);
     return res.json(validWatchlist);
   } catch (error) {
-    console.error("Watchlist error:", error);
+    console.error("Watchlist error:", error.name);
     return res.json([]);
   }
 });
@@ -41,7 +41,9 @@ router.get("/watchlist", authMiddleware, async (req, res) => {
 router.post("/watchlist/toggle", authMiddleware, async (req, res) => {
   try {
     const { movieId } = req.body;
-    if (!movieId) return res.status(400).json({ message: "Movie ID is required" });
+    if (typeof movieId !== "string" || !mongoose.Types.ObjectId.isValid(movieId) || !/^[a-f0-9]{24}$/i.test(movieId)) {
+      return res.status(400).json({ message: "A valid movie ID is required" });
+    }
 
     const rawUserId = req.user?.id || req.user?._id;
     if (!rawUserId || !mongoose.Types.ObjectId.isValid(rawUserId)) {
@@ -79,8 +81,8 @@ router.post("/watchlist/toggle", authMiddleware, async (req, res) => {
       watchlist: validWatchlist,
     });
   } catch (error) {
-    console.error("Toggle watchlist error:", error);
-    return res.status(500).json({ message: "Failed to toggle watchlist", error: error.message });
+    console.error("Toggle watchlist error:", error.name);
+    return res.status(500).json({ message: "Failed to toggle watchlist" });
   }
 });
 

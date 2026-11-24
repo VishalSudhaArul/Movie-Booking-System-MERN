@@ -1,23 +1,16 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL:
-    process.env.REACT_APP_API_URL || "http://localhost:5000",
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000",
 });
 
-// ── Attach JWT token or Bypass token to every request automatically ──
+// ── Attach the signed-in user's JWT to every request ──
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
-    const bypass = sessionStorage.getItem("admin_bypass");
-
-    // Prioritize bypass password for admin actions
-    if (bypass === "true") {
-      config.headers.Authorization = `Bypass 123456`;
-    } else if (token) {
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
     return config;
   },
   (error) => Promise.reject(error)
@@ -27,12 +20,13 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("role");
-      localStorage.removeItem("userName");
-      window.location.href = "/login";
+    const isAuthCall = /\/api\/auth\//.test(error.config?.url || "");
+    if (error.response && error.response.status === 401 && !isAuthCall) {
+      ["token", "userId", "role", "userName", "user"].forEach((k) => localStorage.removeItem(k));
+      const here = window.location.pathname + window.location.search;
+      if (window.location.pathname !== "/login") {
+        window.location.href = `/login?next=${encodeURIComponent(here)}`;
+      }
     }
     return Promise.reject(error);
   }

@@ -1,472 +1,300 @@
-// // bookingController.js
-
-// const Show = require("../models/Show");
-// const Booking = require("../models/Booking");
-
-// /* ---------------- BOOK SEATS ---------------- */
-
-// exports.bookSeats = async (req, res) => {
-
-//   try {
-
-//     const {
-//       showId,
-//       seats,
-//       userId,
-//       snacks = [],
-//       parking = null
-//     } = req.body;
-
-//     const show = await Show.findById(showId);
-
-//     if (!show)
-//       return res.status(404).json({ message: "Show not found" });
-
-//     /* Check already booked seats */
-
-//     const alreadyBooked = show.seats.filter(
-//       seat => seats.includes(seat.seatNumber) && seat.isBooked
-//     );
-
-//     if (alreadyBooked.length > 0)
-//       return res.status(400).json({
-//         message: "Seats already booked"
-//       });
-
-//     /* Mark seats booked */
-
-//     show.seats.forEach(seat => {
-//       if (seats.includes(seat.seatNumber)) {
-//         seat.isBooked = true;
-//       }
-//     });
-
-//     await show.save();
-
-//     /* ---------- Price Calculation ---------- */
-
-//     const seatPrice = 200;
-//     let totalPrice = seats.length * seatPrice;
-
-//     let snacksTotal = 0;
-
-//     snacks.forEach(snack => {
-//       snacksTotal += snack.price * snack.qty;
-//     });
-
-//     const parkingPrice = parking?.price || 0;
-
-//     totalPrice += snacksTotal + parkingPrice;
-
-//     /* ---------- Save Booking ---------- */
-
-//     const booking = await Booking.create({
-//       showId,
-//       seats,
-//       userId,
-//       snacks,
-//       parking,
-//       totalPrice,
-//       paymentStatus: "Success"
-//     });
-
-//     res.json(booking);
-
-//   } catch (err) {
-//     res.status(500).json(err);
-//   }
-// };
-
-
-// /* ---------------- USER BOOKINGS ---------------- */
-
-// exports.getUserBookings = async (req, res) => {
-
-//   try {
-
-//     const bookings = await Booking.find({
-//       userId: req.params.userId
-//     })
-//       .populate({
-//         path: "showId",
-//         populate: { path: "movieId" }
-//       })
-//       .populate("userId");
-
-//     res.json(bookings);
-
-//   } catch (err) {
-//     res.status(500).json({
-//       message: "Booking fetch failed"
-//     });
-//   }
-// };
-
-
-// /* ---------------- GET BOOKING BY ID ---------------- */
-
-// exports.getBookingById = async (req, res) => {
-
-//   try {
-
-//     const booking = await Booking.findById(req.params.id)
-//       .populate({
-//         path: "showId",
-//         populate: { path: "movieId" }
-//       });
-
-//     res.json(booking);
-
-//   } catch {
-//     res.status(404).json({
-//       message: "Booking not found"
-//     });
-//   }
-// };
-
-
-// /* ---------------- MARK TICKET USED ---------------- */
-
-// exports.markAsUsed = async (req, res) => {
-
-//   try {
-
-//     const booking = await Booking.findById(req.params.id);
-
-//     if (!booking)
-//       return res.status(404).json({
-//         message: "Booking not found"
-//       });
-
-//     if (booking.used)
-//       return res.json({
-//         message: "Already Used"
-//       });
-
-//     booking.used = true;
-//     await booking.save();
-
-//     res.json({
-//       message: "Ticket marked as used"
-//     });
-
-//   } catch (err) {
-//     res.status(500).json(err);
-//   }
-// };
-
-
-// /* ---------------- PARKING REVENUE ---------------- */
-
-// exports.getParkingRevenue = async (req, res) => {
-
-//   try {
-
-//     const bookings = await Booking.find();
-
-//     const revenue = {};
-
-//     bookings.forEach(b => {
-
-//       if (!b.parking) return;
-
-//       const theatre = b.parking.theatre;
-
-//       if (!revenue[theatre])
-//         revenue[theatre] = 0;
-
-//       revenue[theatre] += b.parking.price;
-//     });
-
-//     res.json(revenue);
-
-//   } catch (err) {
-//     res.status(500).json(err);
-//   }
-// };
-
-
-
-
-
-
-
-
-
-
-
-
-
 // bookingController.js
 
 const Show = require("../models/Show");
 const Booking = require("../models/Booking");
-const mongoose = require("mongoose");
+const Snack = require("../models/Snack");
+const Parking = require("../models/Parking");
+const { evaluateCoupon } = require("../utils/coupons");
+const { findCombo } = require("../utils/combos");
+const { toObjectId, seatsFreeFor, unavailableSeats } = require("../utils/seatHolds");
+const { isObjectId, cleanNumber, exactInsensitive } = require("../utils/validate");
+const { isStaff } = require("../middleware/adminMiddleware");
+
+const MAX_SEATS_PER_BOOKING = 10;
+const MAX_SNACK_LINES = 20;
+const MAX_SNACK_QTY = 20;
+const SEAT_NUMBER_RE = /^[A-Z]{1,2}\d{1,3}$/;
+
+const populateBooking = (query) =>
+  query
+    // Hold details of other users' seats never leave the server.
+    .populate({ path: "showId", select: "-seats.heldBy -seats.holdExpiresAt", populate: { path: "movieId" } })
+    .populate("userId", "name email");
+
+const fail = (status, message, extra = {}) => {
+  const err = new Error(message);
+  err.status = status;
+  err.extra = extra;
+  return err;
+};
+
+const ownsBooking = (user, booking) => {
+  const owner = booking.userId && booking.userId._id ? booking.userId._id : booking.userId;
+  return String(owner) === user.id;
+};
+
+/* ---------------- PRICING (server side only) ---------------- */
+
+// Every price comes from the database. Prices sent by the browser are ignored.
+const priceSnacks = async (rawSnacks, theatre) => {
+  if (rawSnacks === undefined || rawSnacks === null) return [];
+  if (!Array.isArray(rawSnacks) || rawSnacks.length > MAX_SNACK_LINES) {
+    throw fail(400, "Invalid snack selection");
+  }
+
+  const menu = await Snack.find({ theatre: exactInsensitive(theatre) }).lean();
+  const byId = new Map(menu.map((s) => [String(s._id), s]));
+  const byName = new Map(menu.map((s) => [String(s.name).trim().toLowerCase(), s]));
+
+  const lines = new Map();
+  rawSnacks.forEach((item) => {
+    if (!item || typeof item !== "object") throw fail(400, "Invalid snack selection");
+    const qty = cleanNumber(item.qty, { min: 1, max: MAX_SNACK_QTY, integer: true });
+    if (qty === null) throw fail(400, `Snack quantity must be between 1 and ${MAX_SNACK_QTY}`);
+
+    const combo = typeof item.snackId === "string" ? findCombo(item.snackId) : null;
+    const snack = combo
+      ? { _id: combo.id, name: combo.name, price: combo.comboPrice }
+      : (isObjectId(item.snackId) && byId.get(item.snackId)) ||
+        (typeof item.name === "string" && byName.get(item.name.trim().toLowerCase()));
+    if (!snack) throw fail(400, "One of the snacks isn't sold at this theatre");
+
+    const key = String(snack._id);
+    const existing = lines.get(key);
+    const total = (existing ? existing.qty : 0) + qty;
+    if (total > MAX_SNACK_QTY) throw fail(400, `Snack quantity must be between 1 and ${MAX_SNACK_QTY}`);
+    lines.set(key, { name: snack.name, price: Number(snack.price) || 0, qty: total });
+  });
+
+  return [...lines.values()];
+};
+
+const PARKING_FIELDS = { bike: "priceBike", car: "priceCar" };
+
+const priceParking = async (rawParking, theatre) => {
+  if (!rawParking) return null;
+  const type = typeof rawParking === "object" ? String(rawParking.type || "").toLowerCase() : "";
+  const field = PARKING_FIELDS[type];
+  if (!field) throw fail(400, "Invalid parking option");
+
+  const parking = await Parking.findOne({ theatre: exactInsensitive(theatre) }).lean();
+  const price = parking ? Number(parking[field]) : NaN;
+  if (!Number.isFinite(price) || price < 0) throw fail(400, "Parking isn't available at this theatre");
+
+  return { type: type === "bike" ? "Bike" : "Car", price, theatre };
+};
 
 /* ---------------- BOOK SEATS ---------------- */
 
-exports.bookSeats = async (req, res) => {
+exports.bookSeats = async (req, res, next) => {
   try {
-    const {
-      showId,
-      seats,
-      userId,
-      snacks = [],
-      parking = null
-    } = req.body;
+    const { showId, snacks, parking, couponCode } = req.body;
+    // The booking always belongs to the signed-in user; any userId in the body is ignored.
+    const userId = req.user.id;
 
-    /* ----------- Basic Validation ----------- */
+    if (!isObjectId(showId)) return res.status(400).json({ message: "Invalid show ID" });
 
-    if (!mongoose.Types.ObjectId.isValid(showId))
-      return res.status(400).json({ message: "Invalid show ID" });
-
-    if (!mongoose.Types.ObjectId.isValid(userId))
-      return res.status(400).json({ message: "Invalid user ID" });
-
-    if (!Array.isArray(seats) || seats.length === 0)
+    if (!Array.isArray(req.body.seats) || req.body.seats.length === 0)
       return res.status(400).json({ message: "No seats selected" });
 
+    if (req.body.seats.length > MAX_SEATS_PER_BOOKING * 2)
+      return res.status(400).json({ message: `You can book up to ${MAX_SEATS_PER_BOOKING} seats at a time` });
+
+    const seats = [...new Set(req.body.seats.map((s) => String(s).trim().toUpperCase()))];
+
+    if (seats.some((s) => !SEAT_NUMBER_RE.test(s)))
+      return res.status(400).json({ message: "Invalid seat number" });
+
+    if (seats.length > MAX_SEATS_PER_BOOKING)
+      return res.status(400).json({ message: `You can book up to ${MAX_SEATS_PER_BOOKING} seats at a time` });
+
     const show = await Show.findById(showId);
+    if (!show) return res.status(404).json({ message: "Show not found" });
 
-    if (!show)
-      return res.status(404).json({ message: "Show not found" });
+    const selectedSeatObjects = show.seats.filter((s) => seats.includes(s.seatNumber));
+    if (selectedSeatObjects.length !== seats.length)
+      return res.status(400).json({ message: "One or more seats do not exist for this show" });
 
-    /* ----------- Check Already Booked ----------- */
+    /* ----------- Price everything before touching seats ----------- */
 
-    const alreadyBooked = show.seats.filter(
-      seat => seats.includes(seat.seatNumber) && seat.isBooked
+    const cleanSnacks = await priceSnacks(snacks, show.theatre);
+    const cleanParking = await priceParking(parking, show.theatre);
+
+    const seatTotal = selectedSeatObjects.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+    const snacksTotal = cleanSnacks.reduce((sum, s) => sum + s.price * s.qty, 0);
+    const subtotal = seatTotal + snacksTotal + (cleanParking ? cleanParking.price : 0);
+
+    let discount = 0;
+    let appliedCoupon;
+    if (couponCode !== undefined && couponCode !== null && couponCode !== "") {
+      if (typeof couponCode !== "string" || couponCode.length > 40)
+        return res.status(400).json({ message: "Invalid promo code" });
+      const result = await evaluateCoupon(couponCode, subtotal);
+      if (!result.ok) return res.status(400).json({ message: result.message });
+      discount = result.discountAmount;
+      appliedCoupon = result.coupon.code;
+    }
+
+    const totalPrice = Math.max(0, subtotal - discount);
+
+    /* ----------- Reserve seats atomically ----------- */
+    // The filter only matches while none of the requested seats is booked, and
+    // MongoDB applies it and the update as one step on the show document, so two
+    // simultaneous requests for the same seat can never both succeed.
+
+    // Seats on hold for someone else count as taken; this user's own holds
+    // (and expired holds) don't. Booking also clears this user's holds here.
+    const now = new Date();
+    const me = toObjectId(userId);
+    const reserved = await Show.findOneAndUpdate(
+      { _id: showId, seats: seatsFreeFor(seats, userId, now) },
+      {
+        $set: {
+          "seats.$[seat].isBooked": true,
+          "seats.$[seat].heldBy": null,
+          "seats.$[seat].holdExpiresAt": null,
+          "seats.$[mine].heldBy": null,
+          "seats.$[mine].holdExpiresAt": null,
+        },
+      },
+      {
+        arrayFilters: [
+          { "seat.seatNumber": { $in: seats } },
+          { "mine.heldBy": me, "mine.seatNumber": { $nin: seats } },
+        ],
+        new: true,
+      }
     );
 
-    if (alreadyBooked.length > 0)
-      return res.status(400).json({
-        message: "Some seats are already booked",
-        seats: alreadyBooked.map(s => s.seatNumber)
-      });
-
-    /* ----------- Mark Seats as Booked ----------- */
-
-    show.seats.forEach(seat => {
-      if (seats.includes(seat.seatNumber)) {
-        seat.isBooked = true;
-      }
-    });
-
-    await show.save();
-
-    /* ----------- Dynamic Price Calculation ----------- */
-
-    let totalPrice = 0;
-
-    const selectedSeatObjects = show.seats.filter(
-      s => seats.includes(s.seatNumber)
-    );
-
-    selectedSeatObjects.forEach(s => {
-      totalPrice += s.price;
-    });
-
-    let snacksTotal = 0;
-
-    snacks.forEach(snack => {
-      if (snack.qty > 0 && snack.price > 0) {
-        snacksTotal += snack.price * snack.qty;
-      }
-    });
-
-    const parkingPrice = parking?.price || 0;
-
-    totalPrice += snacksTotal + parkingPrice;
-
-    /* ----------- Create Booking ----------- */
-
-    const booking = await Booking.create({
-      showId,
-      seats,
-      userId,
-      snacks,
-      parking,
-      totalPrice,
-      paymentStatus: "Success",
-      used: false
-    });
-
-    /* ----------- Populate Before Sending ----------- */
-
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate({
-        path: "showId",
-        populate: { path: "movieId" }
-      })
-      .populate("userId");
-
-    res.status(201).json(populatedBooking);
-
-  } catch (err) {
-    console.error("Booking Error:", err);
-    res.status(500).json({
-      message: "Booking failed",
-      error: err.message
-    });
-  }
-};
-
-
-/* ---------------- USER BOOKINGS ---------------- */
-
-// exports.getUserBookings = async (req, res) => {
-//   try {
-
-//     if (!mongoose.Types.ObjectId.isValid(req.params.userId))
-//       return res.status(400).json({ message: "Invalid user ID" });
-
-//     const bookings = await Booking.find({
-//       userId: req.params.userId
-//     })
-//       .populate({
-//         path: "showId",
-//         populate: { path: "movieId" }
-//       })
-//       .populate("userId")
-//       .sort({ createdAt: -1 });
-
-//     res.json(bookings);
-
-//   } catch (err) {
-//     res.status(500).json({
-//       message: "Booking fetch failed",
-//       error: err.message
-//     });
-//   }
-// };
-
-
-exports.getUserBookings = async (req, res) => {
-
-  try {
-
-    const { userId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        message: "Invalid user ID"
+    if (!reserved) {
+      const latest = await Show.findById(showId).select("seats").lean();
+      return res.status(409).json({
+        message: "Some seats were just booked or reserved by someone else",
+        seats: unavailableSeats(latest, seats, userId, now),
       });
     }
 
-    const bookings = await Booking.find({ userId })
-      .populate({
-        path: "showId",
-        populate: { path: "movieId" }
-      })
-      .populate("userId")
-      .sort({ createdAt: -1 });
-
-    res.json(bookings);
-
-  } catch (err) {
-
-    res.status(500).json({
-      message: "Booking fetch failed",
-      error: err.message
-    });
-
-  }
-
-};
-
-
-/* ---------------- GET BOOKING BY ID ---------------- */
-
-exports.getBookingById = async (req, res) => {
-  try {
-
-    if (!mongoose.Types.ObjectId.isValid(req.params.id))
-      return res.status(400).json({ message: "Invalid booking ID" });
-
-    const booking = await Booking.findById(req.params.id)
-      .populate({
-        path: "showId",
-        populate: { path: "movieId" }
-      })
-      .populate("userId");
-
-    if (!booking)
-      return res.status(404).json({
-        message: "Booking not found"
+    try {
+      const booking = await Booking.create({
+        showId,
+        seats,
+        userId,
+        snacks: cleanSnacks,
+        parking: cleanParking || undefined,
+        couponCode: appliedCoupon,
+        discountAmount: discount,
+        totalPrice,
+        // Demo checkout: no money is taken, and the record says so.
+        paymentStatus: "Demo",
+        paymentMode: "DEMO",
+        used: false,
       });
 
-    res.json(booking);
-
+      const populatedBooking = await populateBooking(Booking.findById(booking._id));
+      return res.status(201).json(populatedBooking);
+    } catch (err) {
+      // Release the seats if the booking record could not be saved.
+      await Show.updateOne(
+        { _id: showId },
+        { $set: { "seats.$[seat].isBooked": false } },
+        { arrayFilters: [{ "seat.seatNumber": { $in: seats } }] }
+      );
+      throw err;
+    }
   } catch (err) {
-    res.status(500).json({
-      message: "Error fetching booking",
-      error: err.message
-    });
+    if (err.status && err.status < 500) {
+      return res.status(err.status).json({ message: err.message, ...err.extra });
+    }
+    return next(err);
   }
 };
 
+/* ---------------- USER BOOKINGS ---------------- */
 
-/* ---------------- MARK TICKET USED ---------------- */
-
-exports.markAsUsed = async (req, res) => {
+exports.getUserBookings = async (req, res, next) => {
   try {
+    const { userId } = req.params;
+    if (!isObjectId(userId)) return res.status(400).json({ message: "Invalid user ID" });
 
-    if (!mongoose.Types.ObjectId.isValid(req.params.id))
-      return res.status(400).json({ message: "Invalid booking ID" });
-
-    const booking = await Booking.findById(req.params.id);
-
-    if (!booking)
-      return res.status(404).json({
-        message: "Booking not found"
-      });
-
-    if (booking.used)
-      return res.json({
-        message: "Ticket already used"
-      });
-
-    booking.used = true;
-    await booking.save();
-
-    res.json({
-      message: "Ticket marked as used"
-    });
-
+    const bookings = await populateBooking(Booking.find({ userId }).sort({ createdAt: -1 }));
+    return res.json(bookings);
   } catch (err) {
-    res.status(500).json({
-      message: "Failed to mark ticket",
-      error: err.message
-    });
+    return next(err);
   }
 };
 
+/* ---------------- ALL BOOKINGS (ADMIN) ---------------- */
 
-/* ---------------- PARKING REVENUE ---------------- */
-
-exports.getParkingRevenue = async (req, res) => {
+exports.getAllBookings = async (req, res, next) => {
   try {
+    const bookings = await Booking.find()
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .populate({ path: "showId", select: "-seats", populate: { path: "movieId", select: "title poster" } })
+      .populate("userId", "name email");
+    return res.json(bookings);
+  } catch (err) {
+    return next(err);
+  }
+};
 
-    const bookings = await Booking.find();
+/* ---------------- GET BOOKING BY ID (owner or staff) ---------------- */
 
+exports.getBookingById = async (req, res, next) => {
+  try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ message: "Invalid booking ID" });
+
+    const booking = await populateBooking(Booking.findById(req.params.id));
+    // 404 for someone else's booking too, so IDs can't be probed.
+    if (!booking || !(isStaff(req.user) || ownsBooking(req.user, booking))) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    return res.json(booking);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/* ---------------- MARK TICKET USED (staff) ---------------- */
+
+exports.markAsUsed = async (req, res, next) => {
+  try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ message: "Invalid booking ID" });
+
+    // Atomic: only one scan can flip an unused ticket to used.
+    const updated = await Booking.findOneAndUpdate(
+      { _id: req.params.id, used: { $ne: true } },
+      { $set: { used: true, status: "USED" } },
+      { new: true }
+    );
+
+    if (updated) return res.json({ message: "Ticket marked as used", alreadyUsed: false });
+
+    const exists = await Booking.exists({ _id: req.params.id });
+    if (!exists) return res.status(404).json({ message: "Booking not found" });
+    return res.json({ message: "Ticket already used", alreadyUsed: true });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/* ---------------- PARKING REVENUE (staff) ---------------- */
+
+exports.getParkingRevenue = async (req, res, next) => {
+  try {
+    const bookings = await Booking.find({ "parking.price": { $gt: 0 } }).select("parking").lean();
     const revenue = {};
-
-    bookings.forEach(b => {
+    bookings.forEach((b) => {
       if (!b.parking) return;
-
       const theatre = b.parking.theatre;
-
-      if (!revenue[theatre])
-        revenue[theatre] = 0;
-
-      revenue[theatre] += b.parking.price;
+      revenue[theatre] = (revenue[theatre] || 0) + b.parking.price;
     });
-
-    res.json(revenue);
-
+    return res.json(revenue);
   } catch (err) {
-    res.status(500).json({
-      message: "Failed to calculate parking revenue",
-      error: err.message
-    });
+    return next(err);
   }
 };
+
+exports.ownsBooking = ownsBooking;
+exports.populateBooking = populateBooking;
+exports.MAX_SEATS_PER_BOOKING = MAX_SEATS_PER_BOOKING;
