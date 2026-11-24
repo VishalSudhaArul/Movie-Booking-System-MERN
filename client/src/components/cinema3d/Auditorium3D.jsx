@@ -95,6 +95,8 @@ export default function Auditorium3D({
 
   const [mode, setMode] = useState(reducedMotion ? "overview" : "intro"); // intro | overview | map | screen | seat
   const [viewSeat, setViewSeat] = useState(null);
+  // Phones: the booking panel is a bottom sheet that starts collapsed.
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [hover, setHover] = useState(null); // { seat, x, y }
   const [introDone, setIntroDone] = useState(reducedMotion);
   const [introProgress, setIntroProgress] = useState(reducedMotion ? 1 : 0);
@@ -166,6 +168,7 @@ export default function Auditorium3D({
       c.maxPolarAngle = Math.PI;
       setMode("seat");
       setViewSeat(seat);
+      setSheetOpen(false); // on phones, get the sheet out of the way of the view
       c.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, animate).then(() => {
         // Limited look-around from the seat: about ±40° sideways, ±20° up/down.
         const az = c.azimuthAngle;
@@ -511,7 +514,7 @@ export default function Auditorium3D({
 
         {/* Touch: explore mode toggle */}
         {coarse && mode !== "seat" && (
-          <div className="absolute bottom-3 left-3">
+          <div className="absolute right-2 top-14 md:bottom-3 md:left-3 md:right-auto md:top-auto">
             <button
               onClick={() => setTouchExplore((v) => !v)}
               aria-pressed={touchExplore}
@@ -520,7 +523,7 @@ export default function Auditorium3D({
               <Icon name={touchExplore ? "check" : "eye"} className="h-4 w-4" />
               {touchExplore ? "Done exploring" : "Explore in 3D"}
             </button>
-            {!touchExplore && <p className="mt-1.5 max-w-[220px] rounded-lg bg-ink-950/70 px-2 py-1 text-[11px] text-gray-400">Tap a seat to select it. Explore to rotate and pinch-zoom.</p>}
+            {!touchExplore && <p className="mt-1.5 hidden max-w-[220px] rounded-lg bg-ink-950/70 px-2 py-1 text-[11px] text-gray-400 md:block">Tap a seat to select it. Explore to rotate and pinch-zoom.</p>}
           </div>
         )}
 
@@ -543,11 +546,11 @@ export default function Auditorium3D({
 
         {/* Floating booking panel */}
         <aside
-          className="glass absolute bottom-3 right-3 top-3 hidden w-[290px] flex-col overflow-hidden rounded-2xl md:flex"
+          className="glass absolute inset-x-2 bottom-2 z-10 flex max-h-[72%] flex-col overflow-hidden rounded-2xl md:inset-x-auto md:bottom-3 md:right-3 md:top-3 md:max-h-none md:w-[290px]"
           aria-label="Your booking"
           data-testid="booking-panel"
         >
-          <div className="border-b border-white/[0.07] p-4">
+          <div id="booking-sheet-details" className={`${sheetOpen ? "" : "hidden"} border-b border-white/[0.07] p-4 md:block`}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-white">Your seats</h3>
               <span className="text-xs text-gray-400">{selected.length} of {maxSeats}</span>
@@ -573,7 +576,7 @@ export default function Auditorium3D({
             {finderMsg && <p className="mt-1.5 text-[11px] text-gold-400" role="alert">{finderMsg}</p>}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          <div className={`${sheetOpen ? "" : "hidden"} min-h-0 flex-1 overflow-y-auto p-2 md:block`}>
             {selectedSeats.length === 0 ? (
               <p className="px-2 py-6 text-center text-xs text-gray-500">Click a seat in the hall to select it.</p>
             ) : (
@@ -599,7 +602,17 @@ export default function Auditorium3D({
             )}
           </div>
 
-          <div className="space-y-2.5 border-t border-white/[0.07] p-4">
+          <div className="space-y-2.5 border-t border-white/[0.07] p-3 md:p-4">
+            <button
+              type="button"
+              onClick={() => setSheetOpen((v) => !v)}
+              aria-expanded={sheetOpen}
+              aria-controls="booking-sheet-details"
+              className="flex w-full items-center justify-between text-xs font-semibold text-brand-300 md:hidden"
+            >
+              {sheetOpen ? "Hide seat details" : "Show seats, finder and preview"}
+              <Icon name="chevronDown" className={`h-4 w-4 transition ${sheetOpen ? "rotate-180" : ""}`} />
+            </button>
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-gray-400">{selected.length} {selected.length === 1 ? "ticket" : "tickets"}</span>
               <span className="font-display text-xl font-bold text-white">{formatPrice(total)}</span>
@@ -616,7 +629,7 @@ export default function Auditorium3D({
 
         {/* First-person seat view */}
         {mode === "seat" && viewSeat && info && (
-          <div className="glass absolute bottom-3 left-3 right-3 rounded-2xl p-4 md:right-[306px] md:w-[330px]" aria-live="polite" data-testid="seat-view-panel">
+          <div className="glass absolute left-2 right-2 top-14 z-10 rounded-2xl p-3 md:bottom-3 md:left-3 md:right-[306px] md:top-auto md:w-[330px] md:p-4" aria-live="polite" data-testid="seat-view-panel">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="eyebrow">View from your seat</p>
@@ -647,7 +660,7 @@ export default function Auditorium3D({
                 </div>
               </div>
             )}
-            <p className="mt-3 text-[11px] text-gray-500">Drag or use the arrow keys to look around a little.</p>
+            <p className="mt-3 hidden text-[11px] text-gray-500 md:block">Drag or use the arrow keys to look around a little.</p>
             <button onClick={exitSeatView} className="btn-secondary btn-sm mt-2 w-full">
               <Icon name="arrowLeft" className="h-4 w-4" /> Back to the auditorium
             </button>

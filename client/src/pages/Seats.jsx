@@ -193,6 +193,10 @@ export default function Seats() {
 
   const toggleSeat = (seat) => {
     if (seat.isBooked) return;
+    if (show && !isUpcomingShow(show)) {
+      toast.info("This showtime has already started, so seats can't be booked.");
+      return;
+    }
     if (selectedSeats.includes(seat.seatNumber)) {
       setSelectedSeats(selectedSeats.filter((n) => n !== seat.seatNumber));
     } else if (selectedSeats.length >= MAX_SEATS) {
@@ -250,7 +254,7 @@ export default function Seats() {
   const { hold, flush, renew } = useSeatHold({
     showId,
     selected: selectedSeats,
-    enabled: status === "ready",
+    enabled: status === "ready" && !!show && isUpcomingShow(show),
     onConflict: handleHoldConflict,
   });
 
@@ -431,7 +435,7 @@ export default function Seats() {
         {ended && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.06] p-4 text-sm text-gray-300">
             <Icon name="info" className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
-            <p>This showtime's date has already passed. Check the date before you book.</p>
+            <p>This showtime has already started, so seats can no longer be booked. <Link to={movieId ? `/movies/${movieId}` : "/movies"} className="font-semibold text-brand-300 underline">Pick another showtime</Link>.</p>
           </div>
         )}
 
@@ -630,7 +634,7 @@ export default function Seats() {
       </div>
 
       {/* ───────────── Summary bar (mobile & tablet) ───────────── */}
-      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "md:hidden" : ""}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "hidden" : ""}`}>
         <div className="container-page flex items-center justify-between gap-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-xs text-gray-400" aria-live="polite">
