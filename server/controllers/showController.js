@@ -3,6 +3,13 @@ const Movie = require("../models/Movie");
 const Parking = require("../models/Parking");
 const { isObjectId, cleanString, cleanNumber, exactInsensitive } = require("../utils/validate");
 const { showForUser } = require("../utils/seatHolds");
+const {
+  DEFAULT_LAYOUT_ID,
+  getLayout,
+  listLayouts,
+  generateSeatsFromLayout,
+  layoutForShow,
+} = require("../utils/auditoriumLayouts");
 
 const MAX_PRICE = 100000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -12,34 +19,6 @@ const CATEGORY_PRICE_FIELDS = {
   Balcony: "balconyPrice",
   "First Class": "firstClassPrice",
   "Second Class": "secondClassPrice",
-};
-
-/* ---------- Seat Generator ---------- */
-const generateSeats = (balconyPrice, firstPrice, secondPrice) => {
-  const seats = [];
-
-  // BALCONY (A–D)
-  ["A", "B", "C", "D"].forEach((row) => {
-    for (let i = 1; i <= 10; i++) {
-      seats.push({ seatNumber: `${row}${i}`, category: "Balcony", price: Number(balconyPrice), isBooked: false });
-    }
-  });
-
-  // FIRST CLASS (E–H)
-  ["E", "F", "G", "H"].forEach((row) => {
-    for (let i = 1; i <= 12; i++) {
-      seats.push({ seatNumber: `${row}${i}`, category: "First Class", price: Number(firstPrice), isBooked: false });
-    }
-  });
-
-  // SECOND CLASS (I–L)
-  ["I", "J", "K", "L"].forEach((row) => {
-    for (let i = 1; i <= 12; i++) {
-      seats.push({ seatNumber: `${row}${i}`, category: "Second Class", price: Number(secondPrice), isBooked: false });
-    }
-  });
-
-  return seats;
 };
 
 // Validates show fields. With `partial`, only fields that are present are checked.
@@ -88,8 +67,12 @@ exports.addShow = async (req, res, next) => {
       return res.status(400).json({ message: "That movie doesn't exist" });
     }
 
-    const seats = generateSeats(values.balconyPrice, values.firstClassPrice, values.secondClassPrice);
-    const show = await Show.create({ ...values, seats });
+    const layoutId = req.body.layoutId === undefined ? DEFAULT_LAYOUT_ID : req.body.layoutId;
+    const layout = typeof layoutId === "string" ? getLayout(layoutId) : null;
+    if (!layout) return res.status(400).json({ message: "Unknown auditorium layout" });
+
+    const seats = generateSeatsFromLayout(layout, values);
+    const show = await Show.create({ ...values, layoutId: layout.id, seats });
 
     // Auto create parking if not exists
     const exists = await Parking.findOne({ theatre: exactInsensitive(values.theatre) });
@@ -112,7 +95,8 @@ exports.getShowById = async (req, res, next) => {
     if (req.query.expand === "movie") query.populate("movieId");
     const show = await query;
     if (!show) return res.status(404).json({ message: "Show not found" });
-    return res.json(showForUser(show, req.user?.id));
+    // The seat map and the 3D auditorium are both drawn from `layout`.
+    return res.json({ ...showForUser(show, req.user?.id), layout: layoutForShow(show) });
   } catch (err) {
     return next(err);
   }
@@ -193,3 +177,6 @@ exports.updateShow = async (req, res, next) => {
     return next(err);
   }
 };
+
+/* ---------- AVAILABLE LAYOUTS ---------- */
+exports.getLayouts = (req, res) => res.json(listLayouts());

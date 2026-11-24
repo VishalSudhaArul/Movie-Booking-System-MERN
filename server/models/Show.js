@@ -97,6 +97,13 @@ const showSchema = new mongoose.Schema({
     required: true
   },
 
+  /* Auditorium layout template (see utils/auditoriumLayouts.js).
+     Shows created before layouts existed have none and use the classic hall. */
+  layoutId: {
+    type: String,
+    default: null
+  },
+
   /* Seat List */
   seats: [seatSchema]
 

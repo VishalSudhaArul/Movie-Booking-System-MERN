@@ -7,6 +7,7 @@ const { adminAccess } = require("../middleware/adminMiddleware");
 
 // Public reads
 router.get("/", showController.getAllShows);
+router.get("/layouts", showController.getLayouts);
 // Signed-in users also see which seats they hold and until when.
 router.get("/single/:showId", optionalAuth, showController.getShowById);
 router.get("/movie/:movieId", showController.getShowsByMovie);

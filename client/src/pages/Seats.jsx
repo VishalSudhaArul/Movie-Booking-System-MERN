@@ -6,6 +6,7 @@ import Poster from "../components/Poster";
 import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
 import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../lib/format";
+import { buildAuditorium } from "../lib/auditorium";
 
 export const MAX_SEATS = 10;
 export const seatStorageKey = (showId) => `cinebook:seats:${showId}`;
@@ -103,9 +104,25 @@ export default function Seats() {
     sessionStorage.setItem(seatStorageKey(showId), JSON.stringify(selectedSeats));
   }, [showId, selectedSeats]);
 
-  // Categories in their stored order, each with rows of seats sorted by number.
+  // Categories top-to-bottom (back of the hall first, screen at the bottom), each
+  // with rows of seats. Rows, aisles and recliners come from the show's layout.
   const layout = useMemo(() => {
     if (!show?.seats) return [];
+    const hall = buildAuditorium(show.layout, show.seats);
+    if (hall) {
+      const categories = [];
+      [...hall.rows].reverse().forEach((row) => {
+        if (row.seats.length === 0) return;
+        let category = categories[categories.length - 1];
+        if (!category || category.name !== row.section) {
+          category = { name: row.section, price: row.seats[0].price, rows: [] };
+          categories.push(category);
+        }
+        category.rows.push({ label: row.label, seats: row.seats, aisleAfter: row.aisleAfter || [], seatType: row.seatType });
+      });
+      return categories;
+    }
+    // Fallback for responses without a layout: one aisle in the middle of each row.
     const categories = [];
     show.seats.forEach((seat) => {
       const name = seat.category || "Standard";
@@ -399,35 +416,38 @@ export default function Seats() {
 
                         <div className="space-y-1.5">
                           {category.rows.map((row) => {
-                            const half = Math.ceil(row.seats.length / 2);
+                            const aisles = row.aisleAfter || [Math.ceil(row.seats.length / 2)];
+                            // Split the row into blocks wherever an aisle runs.
+                            const blocks = [];
+                            row.seats.forEach((seat) => {
+                              const n = numberOf(seat.seatNumber);
+                              const startsBlock = blocks.length === 0 || aisles.includes(n - 1);
+                              if (startsBlock) blocks.push([]);
+                              blocks[blocks.length - 1].push(seat);
+                            });
+                            const recliner = row.seatType === "recliner";
                             return (
-                              <div key={row.label} className="flex items-center justify-center gap-2">
+                              <div key={row.label} className={`flex items-center justify-center gap-2 ${recliner ? "py-0.5" : ""}`}>
                                 <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
                                   {row.label}
                                 </span>
-                                <div className="flex gap-1.5">
-                                  {row.seats.slice(0, half).map((seat) => (
-                                    <SeatButton
-                                      key={seat.seatNumber}
-                                      seat={seat}
-                                      premium={isPremium}
-                                      selected={selectedSeats.includes(seat.seatNumber)}
-                                      onToggle={toggleSeat}
-                                    />
-                                  ))}
-                                </div>
-                                <span className="w-6 sm:w-10" aria-hidden="true" />
-                                <div className="flex gap-1.5">
-                                  {row.seats.slice(half).map((seat) => (
-                                    <SeatButton
-                                      key={seat.seatNumber}
-                                      seat={seat}
-                                      premium={isPremium}
-                                      selected={selectedSeats.includes(seat.seatNumber)}
-                                      onToggle={toggleSeat}
-                                    />
-                                  ))}
-                                </div>
+                                {blocks.map((block, i) => (
+                                  <React.Fragment key={i}>
+                                    {i > 0 && <span className="w-6 sm:w-10" aria-hidden="true" />}
+                                    <div className="flex gap-1.5">
+                                      {block.map((seat) => (
+                                        <SeatButton
+                                          key={seat.seatNumber}
+                                          seat={seat}
+                                          premium={isPremium}
+                                          recliner={recliner}
+                                          selected={selectedSeats.includes(seat.seatNumber)}
+                                          onToggle={toggleSeat}
+                                        />
+                                      ))}
+                                    </div>
+                                  </React.Fragment>
+                                ))}
                                 <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
                                   {row.label}
                                 </span>
@@ -454,6 +474,9 @@ export default function Seats() {
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-white/[0.07] px-4 py-4 text-xs text-gray-400">
               <LegendItem className="border-white/25 bg-white/[0.03]" label="Available" />
               {premiumCategory && <LegendItem className="border-gold-500/60 bg-gold-500/[0.08]" label={`Premium (${premiumCategory})`} />}
+              {layout.some((c) => c.rows.some((r) => r.seatType === "recliner")) && (
+                <LegendItem className="w-6 rounded-t-lg border-white/25 bg-white/[0.03]" label="Recliner" />
+              )}
               <LegendItem className="border-brand-500 bg-brand-500" label="Selected" />
               <LegendItem className="border-dashed border-sky-400/50 bg-sky-400/[0.08]" label="Reserved (someone is checking out)" />
               <LegendItem className="border-transparent bg-white/[0.08]" label="Booked" />
@@ -507,9 +530,10 @@ export default function Seats() {
   );
 }
 
-function SeatButton({ seat, selected, premium, onToggle }) {
-  const base =
-    "flex h-7 w-7 items-center justify-center rounded-t-lg rounded-b-[4px] border text-[10px] font-semibold transition duration-150 sm:h-8 sm:w-8 sm:text-[11px]";
+function SeatButton({ seat, selected, premium, recliner, onToggle }) {
+  const size = recliner ? "h-7 w-8 rounded-t-xl sm:h-8 sm:w-10" : "h-7 w-7 rounded-t-lg sm:h-8 sm:w-8";
+  const base = `flex ${size} items-center justify-center rounded-b-[4px] border text-[10px] font-semibold transition duration-150 sm:text-[11px]`;
+  const kind = recliner ? "recliner, " : "";
   let style;
   if (seat.reserved) {
     style = "cursor-not-allowed border-dashed border-sky-400/50 bg-sky-400/[0.08] text-transparent";
@@ -534,9 +558,9 @@ function SeatButton({ seat, selected, premium, onToggle }) {
           ? `Seat ${seat.seatNumber}, reserved by another customer`
           : seat.isBooked
           ? `Seat ${seat.seatNumber}, booked`
-          : `Seat ${seat.seatNumber}, ${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}`
+          : `Seat ${seat.seatNumber}, ${kind}${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}`
       }
-      title={seat.reserved ? `${seat.seatNumber} · Reserved` : seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${seat.category} · ${formatPrice(seat.price)}`}
+      title={seat.reserved ? `${seat.seatNumber} · Reserved` : seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${recliner ? "Recliner · " : ""}${seat.category} · ${formatPrice(seat.price)}`}
       className={`${base} ${style}`}
     >
       {numberOf(seat.seatNumber)}
