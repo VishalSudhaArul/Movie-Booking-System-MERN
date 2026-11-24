@@ -25,7 +25,7 @@ export default function ConfirmDialog({
             {cancelLabel}
           </button>
           <button
-            className={danger ? "btn bg-brand-600 text-white hover:bg-brand-500" : "btn-primary"}
+            className={danger ? "btn bg-danger-600 text-white hover:bg-danger-500" : "btn-primary"}
             onClick={onConfirm}
             disabled={loading}
           >

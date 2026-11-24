@@ -1,319 +1,237 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import API from "../../api";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import RevenueCharts from "../../components/RevenueCharts";
 import AdminLayout from "../../components/AdminLayout";
+import PageHeader, { StatCard } from "../../components/ui/PageHeader";
+import Icon from "../../components/ui/Icon";
+import Poster from "../../components/Poster";
+import { EmptyState, ErrorState } from "../../components/ui/Feedback";
+import { formatPrice } from "../../lib/format";
+
+const PERIODS = ["All", "Today", "Week", "Month"];
+const isoDay = (d) => d.toISOString().split("T")[0];
 
 export default function AdminAnalytics() {
-  const [data, setData] = useState({});
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState("loading");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [activeQuickFilter, setActiveQuickFilter] = useState("All");
+  const [period, setPeriod] = useState("All");
+
+  const fetchAnalytics = useCallback((start = "", end = "") => {
+    setStatus("loading");
+    const params = start && end ? { startDate: start, endDate: `${end}T23:59:59` } : {};
+    API.get("/api/analytics", { params })
+      .then((res) => {
+        setData(res.data || {});
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
+  }, []);
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [fetchAnalytics]);
 
-  const fetchAnalytics = (customStart = startDate, customEnd = endDate) => {
-    API.get("/api/analytics", {
-      params: { startDate: customStart, endDate: customEnd },
-    })
-      .then((res) => setData(res.data || {}))
-      .catch((err) => console.log("Analytics error:", err));
-  };
-
-  const handleQuickFilter = (period) => {
-    setActiveQuickFilter(period);
-    const today = new Date();
-    let start = "";
-    let end = today.toISOString().split("T")[0];
-
-    if (period === "Today") {
-      start = end;
-    } else if (period === "Week") {
-      const past = new Date(today);
-      past.setDate(past.getDate() - 7);
-      start = past.toISOString().split("T")[0];
-    } else if (period === "Month") {
-      const past = new Date(today);
-      past.setDate(past.getDate() - 30);
-      start = past.toISOString().split("T")[0];
+  const choosePeriod = (p) => {
+    setPeriod(p);
+    if (p === "All") {
+      setStartDate("");
+      setEndDate("");
+      fetchAnalytics();
+      return;
     }
-
-    setStartDate(start);
-    setEndDate(end);
-    fetchAnalytics(start, end);
+    const today = new Date();
+    const start = new Date(today);
+    if (p === "Week") start.setDate(start.getDate() - 7);
+    if (p === "Month") start.setDate(start.getDate() - 30);
+    setStartDate(isoDay(start));
+    setEndDate(isoDay(today));
+    fetchAnalytics(isoDay(start), isoDay(today));
   };
 
-  /* EXPORT CSV */
+  const applyRange = (e) => {
+    e.preventDefault();
+    if (!startDate || !endDate) return;
+    setPeriod("Custom");
+    fetchAnalytics(startDate, endDate);
+  };
+
+  const movieStats = [...(data?.movieStats || [])].sort((a, b) => b.ticketRevenue - a.ticketRevenue);
+  const theatreStats = data?.theatreStats || [];
+  const summary = data?.summary || {};
+  const ticketTotal = movieStats.reduce((n, m) => n + (m.ticketRevenue || 0), 0);
+
   const exportCSV = () => {
-    if (!data.movieStats || data.movieStats.length === 0) return;
-    const rows = data.movieStats.map((m) => ({
-      Movie: m.title,
-      TicketsSold: m.ticketsSold,
-      RevenueINR: m.ticketRevenue,
-    }));
-
+    if (!movieStats.length) return;
     const csv = [
-      Object.keys(rows[0]).join(","),
-      ...rows.map((r) => Object.values(r).join(",")),
+      "Movie,Tickets,Ticket value (INR)",
+      ...movieStats.map((m) => `"${String(m.title).replace(/"/g, '""')}",${m.ticketsSold},${m.ticketRevenue}`),
     ].join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     link.download = `CineBook_Analytics_${Date.now()}.csv`;
     link.click();
   };
 
-  /* EXPORT PDF */
   const exportPDF = () => {
-    if (!data.movieStats) return;
+    if (!movieStats.length) return;
     const doc = new jsPDF();
-    doc.text("CineBook Financial Analytics Report", 14, 15);
-
+    doc.text("CineBook analytics (demo checkout: values are not collected payments)", 14, 15);
     autoTable(doc, {
       startY: 22,
-      head: [["Movie Title", "Tickets Sold", "Revenue (INR)"]],
-      body: data.movieStats.map((m) => [m.title, m.ticketsSold, `Rs. ${m.ticketRevenue}`]),
+      head: [["Movie", "Tickets", "Ticket value (INR)"]],
+      body: movieStats.map((m) => [m.title, m.ticketsSold, `Rs. ${m.ticketRevenue}`]),
     });
-
-    doc.save(`CineBook_Financial_Report_${Date.now()}.pdf`);
+    doc.save(`CineBook_Analytics_${Date.now()}.pdf`);
   };
-
-  const grandTotalRevenue = data.summary?.totalRevenue || 1;
-  const highestMovie = data.movieStats?.length
-    ? [...data.movieStats].sort((a, b) => b.ticketRevenue - a.ticketRevenue)[0]
-    : null;
 
   return (
     <AdminLayout>
-
-      <div className="max-w-7xl mx-auto space-y-10 relative z-10">
-        
-        {/* Header & Controls */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[#0F0F17]/90 border border-gray-800/80 p-6 rounded-3xl backdrop-blur-2xl shadow-2xl">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="bg-red-600/20 text-red-400 border border-red-500/30 text-[10px] font-black px-3 py-0.5 rounded-full uppercase">
-                📊 Financial Intelligence
-              </span>
-              <span className="text-[10px] text-gray-500 font-mono">Real-time Revenue Telemetry</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black text-white">
-              Revenue & Performance Analytics
-            </h1>
-            <p className="text-xs text-gray-400">
-              Box office ticket collections, theater F&B breakdown, and sales reports
-            </p>
-          </div>
-
-          {/* Quick Date Filters & Export */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center bg-gray-950 border border-gray-800 p-1.5 rounded-2xl gap-1">
-              {["All", "Today", "Week", "Month"].map((period) => (
-                <button
-                  key={period}
-                  onClick={() => handleQuickFilter(period)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    activeQuickFilter === period
-                      ? "bg-red-600 text-white shadow-md"
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {period}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-gray-950 border border-gray-800 text-white text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-red-500"
-              />
-              <span className="text-gray-500 text-xs">to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-gray-950 border border-gray-800 text-white text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-red-500"
-              />
-              <button
-                onClick={() => fetchAnalytics()}
-                className="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
-              >
-                Apply
+      <div className="mx-auto max-w-7xl space-y-8">
+        <PageHeader
+          eyebrow="Admin"
+          title="Analytics"
+          subtitle="Booking value by movie and theatre. Checkout is a demo, so these are booked values, not collected payments."
+          icon="chart"
+          actions={
+            <>
+              <button onClick={exportCSV} className="btn-secondary btn-sm" disabled={!movieStats.length}>
+                <Icon name="download" className="h-4 w-4" /> CSV
               </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={exportCSV}
-                className="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 font-bold px-3.5 py-2 rounded-xl transition text-xs shadow-lg"
-              >
-                📊 CSV
+              <button onClick={exportPDF} className="btn-secondary btn-sm" disabled={!movieStats.length}>
+                <Icon name="download" className="h-4 w-4" /> PDF
               </button>
-              <button
-                onClick={exportPDF}
-                className="bg-blue-950/80 hover:bg-blue-900 border border-blue-700/80 text-blue-300 font-bold px-3.5 py-2 rounded-xl transition text-xs shadow-lg"
-              >
-                📄 PDF
+            </>
+          }
+        />
+
+        {/* Filters: one row above everything they affect */}
+        <div className="card flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex gap-1 rounded-xl bg-white/[0.03] p-1" role="group" aria-label="Time period">
+            {PERIODS.map((p) => (
+              <button key={p} onClick={() => choosePeriod(p)} aria-pressed={period === p} className={`btn-sm rounded-lg px-3 py-1.5 text-xs font-semibold transition ${period === p ? "bg-brand-gradient text-white" : "text-gray-400 hover:text-white"}`}>
+                {p === "All" ? "All time" : p === "Week" ? "Last 7 days" : p === "Month" ? "Last 30 days" : p}
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Executive Overview Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          <StatBox title="Active Movies" value={data.summary?.totalMovies} color="text-blue-400" icon="🎬" />
-          <StatBox title="Active Showtimes" value={data.summary?.totalShows} color="text-purple-400" icon="🎭" />
-          <StatBox title="Tickets Issued" value={data.summary?.totalTickets} color="text-emerald-400" icon="🎟️" />
-          <StatBox
-            title="Total Revenue"
-            value={`₹${(data.summary?.totalRevenue || 0).toLocaleString()}`}
-            color="text-red-500"
-            icon="💰"
-          />
-        </div>
-
-        {/* 🏆 BOX OFFICE COLLECTION LEADERBOARD */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-black uppercase tracking-wider text-gray-300 flex items-center gap-2">
-              <span>🎬 Movie Box Office Collections</span>
-            </h2>
-            {highestMovie && (
-              <span className="bg-amber-950/80 border border-amber-500/50 text-amber-300 text-[10px] font-black px-3 py-1 rounded-full flex items-center gap-1.5">
-                🏆 Box Office Leader: {highestMovie.title} (₹{highestMovie.ticketRevenue})
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
-            {data.movieStats?.map((movie) => {
-              const share = Math.round((movie.ticketRevenue / grandTotalRevenue) * 100) || 0;
-              const isTop = highestMovie && highestMovie._id === movie._id;
-
-              return (
-                <div
-                  key={movie._id}
-                  className={`bg-[#0F0F17]/80 border p-4 rounded-3xl shadow-2xl backdrop-blur-2xl space-y-3 flex flex-col justify-between group transition duration-300 ${
-                    isTop ? "border-amber-500/60 shadow-amber-500/10" : "border-gray-800/80 hover:border-gray-700"
-                  }`}
-                >
-                  <div className="relative h-60 w-full rounded-2xl overflow-hidden">
-                    <img
-                      src={movie.poster}
-                      alt={movie.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      onError={(e) => {
-                        e.target.src = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800";
-                      }}
-                    />
-                    {isTop && (
-                      <span className="absolute top-2 left-2 bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full shadow">
-                        👑 Top Grosser
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="font-extrabold text-white text-sm truncate">{movie.title}</h3>
-                    <p className="text-[11px] text-gray-400 mt-0.5">
-                      Tickets Sold: <span className="text-white font-bold">{movie.ticketsSold}</span>
-                    </p>
-
-                    {/* Collection Progress Bar */}
-                    <div className="w-full h-1.5 bg-gray-900 rounded-full mt-2 overflow-hidden border border-gray-800">
-                      <div
-                        className="h-full bg-gradient-to-r from-red-600 to-pink-500 rounded-full"
-                        style={{ width: `${Math.min(100, Math.max(5, share))}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500 font-mono">{share}% share</span>
-                    <span className="text-base font-black text-red-500">₹{movie.ticketRevenue}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 🏢 MULTIPLEX THEATER FINANCIAL PERFORMANCE BREAKDOWN */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-black uppercase tracking-wider text-gray-300">
-            🏢 Multiplex Revenue Breakdown
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.theatreStats?.map((t) => (
-              <div
-                key={t._id}
-                className="bg-[#0F0F17]/80 border border-gray-800/80 p-6 rounded-3xl shadow-2xl backdrop-blur-2xl space-y-4 hover:border-red-500/50 transition flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-800/80">
-                    <h3 className="font-extrabold text-base text-white flex items-center gap-2">
-                      <span>🏰 {t._id} Multiplex</span>
-                    </h3>
-                    <span className="text-xs font-black text-red-400 bg-red-950/80 border border-red-800 px-2.5 py-0.5 rounded-full">
-                      Total: ₹{t.totalRevenue}
-                    </span>
-                  </div>
-
-                  {/* Movies playing */}
-                  <div className="mt-3 space-y-1.5 text-xs">
-                    {t.movies?.map((m, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-gray-300">
-                        <span className="truncate pr-2">🎬 {m.title}</span>
-                        <span className="font-mono text-gray-400">₹{m.revenue}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Stream Breakdown */}
-                <div className="pt-3 border-t border-gray-800/80 space-y-1.5 text-xs text-gray-400">
-                  <div className="flex justify-between">
-                    <span>🎟️ Ticket Revenue:</span>
-                    <span className="text-white font-semibold">₹{t.ticketRevenue}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>🍿 Refreshments F&B:</span>
-                    <span className="text-white font-semibold">₹{t.snackRevenue}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>🚗 Parking Pass:</span>
-                    <span className="text-white font-semibold">₹{t.parkingRevenue}</span>
-                  </div>
-                </div>
-              </div>
             ))}
           </div>
+          <form onSubmit={applyRange} className="flex flex-wrap items-center gap-2">
+            <label htmlFor="a-start" className="sr-only">From</label>
+            <input id="a-start" type="date" className="input w-auto py-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <span className="text-xs text-gray-500">to</span>
+            <label htmlFor="a-end" className="sr-only">To</label>
+            <input id="a-end" type="date" className="input w-auto py-2" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <button type="submit" className="btn-secondary btn-sm" disabled={!startDate || !endDate}>Apply</button>
+          </form>
         </div>
 
-        {/* Visual Charts */}
-        <RevenueCharts movieStats={data.movieStats} theatreStats={data.theatreStats} />
+        {status === "error" ? (
+          <ErrorState title="We couldn't load analytics" onRetry={() => fetchAnalytics(startDate, endDate)} />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 lg:grid-cols-4">
+              {status === "loading" ? (
+                Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[104px] rounded-2xl" />)
+              ) : (
+                <>
+                  <StatCard label="Movies" value={summary.totalMovies ?? 0} icon="film" />
+                  <StatCard label="Showtimes" value={summary.totalShows ?? 0} icon="calendar" tone="accent" />
+                  <StatCard label="Tickets" value={summary.totalTickets ?? 0} icon="ticket" tone="green" />
+                  <StatCard label="Booking value" value={formatPrice(summary.totalRevenue || 0)} icon="chart" tone="gold" />
+                </>
+              )}
+            </div>
 
+            {status === "ready" && movieStats.length === 0 ? (
+              <EmptyState icon="chart" title="No bookings in this period" message="Try a longer time range." />
+            ) : (
+              status === "ready" && (
+                <>
+                  <section className="card overflow-hidden" aria-labelledby="by-movie">
+                    <h2 id="by-movie" className="border-b border-white/[0.07] px-5 py-4 font-semibold text-white">By movie</h2>
+                    <div className="overflow-x-auto">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Movie</th>
+                            <th scope="col" className="text-right">Tickets</th>
+                            <th scope="col" className="text-right">Ticket value</th>
+                            <th scope="col" className="w-1/4">Share</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {movieStats.map((m, i) => {
+                            const share = ticketTotal ? Math.round((m.ticketRevenue / ticketTotal) * 100) : 0;
+                            return (
+                              <tr key={m._id}>
+                                <td>
+                                  <span className="flex items-center gap-3">
+                                    <Poster src={m.poster} alt="" className="h-10 w-7 shrink-0 rounded" />
+                                    <span className="font-medium text-white">{m.title}</span>
+                                    {i === 0 && <span className="badge-accent">Top</span>}
+                                  </span>
+                                </td>
+                                <td className="text-right">{m.ticketsSold}</td>
+                                <td className="text-right font-semibold text-white">{formatPrice(m.ticketRevenue)}</td>
+                                <td>
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                                      <span className="block h-full rounded-full bg-[#3987e5]" style={{ width: `${share}%` }} />
+                                    </span>
+                                    <span className="w-9 text-right text-xs text-gray-400">{share}%</span>
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section aria-labelledby="by-theatre" className="space-y-4">
+                    <h2 id="by-theatre" className="font-semibold text-white">By theatre</h2>
+                    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {theatreStats.map((t) => (
+                        <li key={t._id} className="card p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="font-semibold text-white">{t._id}</h3>
+                            <span className="font-display text-lg font-bold text-white">{formatPrice(t.totalRevenue)}</span>
+                          </div>
+                          <dl className="mt-4 space-y-2 text-sm">
+                            {[
+                              ["Tickets", t.ticketRevenue, "#3987e5"],
+                              ["Snacks", t.snackRevenue, "#d95926"],
+                              ["Parking", t.parkingRevenue, "#199e70"],
+                            ].map(([label, value, color]) => (
+                              <div key={label} className="flex items-center justify-between">
+                                <dt className="flex items-center gap-2 text-gray-400">
+                                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: color }} aria-hidden="true" />
+                                  {label}
+                                </dt>
+                                <dd className="font-medium text-gray-200">{formatPrice(value)}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                          {t.movies?.length > 0 && (
+                            <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs text-gray-500">
+                              {t.movies.map((m) => m.title).join(" · ")}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+
+                  <RevenueCharts movieStats={movieStats} theatreStats={theatreStats} />
+                </>
+              )
+            )}
+          </>
+        )}
       </div>
     </AdminLayout>
-  );
-}
-
-function StatBox({ title, value, color, icon }) {
-  return (
-    <div className="bg-[#0F0F17]/90 border border-gray-800/80 p-5 rounded-3xl backdrop-blur-2xl shadow-xl space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">{title}</span>
-        <span className="text-lg">{icon}</span>
-      </div>
-      <p className={`text-2xl font-black ${color}`}>{value || 0}</p>
-    </div>
   );
 }

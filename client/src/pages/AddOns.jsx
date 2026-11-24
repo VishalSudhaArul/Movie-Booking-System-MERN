@@ -326,7 +326,7 @@ function AddOns() {
   const paying = phase === "paying";
 
   return (
-    <main id="main" className="min-h-screen bg-ink-950 pb-16">
+    <main id="main" className="min-h-screen pb-16">
       <div className="border-b border-white/[0.07] bg-ink-900">
         <div className="container-page flex items-center gap-3 py-4">
           <button onClick={() => navigate(`/seats/${showId}`)} className="btn-icon" aria-label="Back to seat selection" disabled={paying}>
@@ -550,7 +550,7 @@ function AddOns() {
               <div className="border-t border-white/[0.07] p-5">
                 <HoldTimer leftMs={holdLeftMs} busy={holdBusy} onRenew={ensureHold} />
                 {payError && (
-                  <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border border-brand-500/40 bg-brand-500/10 p-3 text-xs text-brand-300">
+                  <div role="alert" className="alert-error mb-3 text-xs">
                     <Icon name="alert" className="mt-px h-4 w-4 shrink-0" />
                     <span>{payError}</span>
                   </div>

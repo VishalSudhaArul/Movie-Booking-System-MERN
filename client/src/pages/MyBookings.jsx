@@ -106,7 +106,7 @@ function MyBookings() {
   const list = activeTab === "upcoming" ? upcoming : past;
 
   return (
-    <main id="main" className="min-h-screen bg-ink-950 pb-20">
+    <main id="main" className="min-h-screen pb-20">
       {/* ───────────── Profile header ───────────── */}
       <div className="border-b border-white/[0.07] bg-ink-900">
         <div className="container-page py-8 sm:py-10">

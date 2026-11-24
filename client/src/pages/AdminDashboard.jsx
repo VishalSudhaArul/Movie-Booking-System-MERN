@@ -1,57 +1,65 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import API from "../api";
 import AdminLayout from "../components/AdminLayout";
+import PageHeader, { StatCard } from "../components/ui/PageHeader";
+import Icon from "../components/ui/Icon";
+import { ErrorState } from "../components/ui/Feedback";
+import { clearSession } from "../lib/session";
+import { formatPrice } from "../lib/format";
+
+const MODULES = [
+  { icon: "film", title: "Movies", desc: "Add titles, trailers, posters and details.", path: "/admin/movies" },
+  { icon: "calendar", title: "Showtimes", desc: "Schedule shows, halls, dates and seat prices.", path: "/admin/shows" },
+  { icon: "popcorn", title: "Snacks", desc: "Manage each theatre's food and drinks menu.", path: "/admin/snacks" },
+  { icon: "car", title: "Parking", desc: "Set bike and car parking prices per theatre.", path: "/admin/parking" },
+  { icon: "chart", title: "Analytics", desc: "Revenue by movie and theatre, with charts.", path: "/admin/analytics" },
+  { icon: "qr", title: "Scan tickets", desc: "Verify tickets and admit guests at the door.", path: "/admin/scan" },
+  { icon: "settings", title: "IoT console", desc: "Hardware simulator for gates, parking and sensors.", path: "/admin/iot" },
+];
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalMovies: 0,
-    totalShows: 0,
-    totalTickets: 0,
-    totalRevenue: 0,
-  });
+  const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState("loading"); // loading | ready | error
 
-  useEffect(() => {
-    // Fetch Summary & Recent Bookings
-    Promise.all([
-      API.get("/api/analytics").catch(() => ({ data: {} })),
-      API.get("/api/bookings/all").catch(() => ({ data: [] })),
-    ]).then(([resAnalytics, resBookings]) => {
-      if (resAnalytics.data && resAnalytics.data.summary) {
-        setStats(resAnalytics.data.summary);
-      }
-      if (Array.isArray(resBookings.data)) {
-        setRecentBookings(resBookings.data.slice(0, 5));
-      }
-      setLoading(false);
-    });
+  const load = useCallback(() => {
+    setStatus("loading");
+    Promise.all([API.get("/api/analytics"), API.get("/api/bookings/all")])
+      .then(([resAnalytics, resBookings]) => {
+        setStats(resAnalytics.data?.summary || {});
+        setRecentBookings(Array.isArray(resBookings.data) ? resBookings.data.slice(0, 6) : []);
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
   }, []);
 
-  const logoutAdmin = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const signOut = () => {
+    clearSession();
     navigate("/login");
   };
 
   const exportCSVReport = () => {
+    const s = stats || {};
     const csvContent =
       "data:text/csv;charset=utf-8," +
       [
         "Metric,Value",
-        `Total Movies,${stats.totalMovies}`,
-        `Total Shows,${stats.totalShows}`,
-        `Total Tickets Sold,${stats.totalTickets}`,
-        `Total Revenue (INR),${stats.totalRevenue}`,
+        `Total Movies,${s.totalMovies || 0}`,
+        `Total Shows,${s.totalShows || 0}`,
+        `Total Tickets Sold,${s.totalTickets || 0}`,
+        `Total Booking Value (INR),${s.totalRevenue || 0}`,
         `Report Generated,${new Date().toLocaleString()}`,
       ].join("\n");
 
-    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `CineBook_Executive_Report_${Date.now()}.csv`);
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `CineBook_Report_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -59,243 +67,114 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
+      <div className="mx-auto max-w-7xl space-y-8">
+        <PageHeader
+          eyebrow="Admin"
+          title="Dashboard"
+          subtitle="Bookings, showtimes and revenue across your theatres."
+          icon="grid"
+          actions={
+            <>
+              <button onClick={exportCSVReport} className="btn-secondary btn-sm" disabled={status !== "ready"}>
+                <Icon name="download" className="h-4 w-4" /> Export CSV
+              </button>
+              <button onClick={signOut} className="btn-ghost btn-sm">
+                <Icon name="logout" className="h-4 w-4" /> Sign out
+              </button>
+            </>
+          }
+        />
 
-      <div className="max-w-7xl mx-auto space-y-10 relative z-10">
-        
-        {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[#0F0F17]/90 border border-gray-800/80 p-6 rounded-3xl backdrop-blur-2xl shadow-2xl">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="bg-red-600/20 border border-red-500/30 text-red-400 text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider">
-                ⚡ Executive Operations
-              </span>
-              <span className="text-[10px] text-gray-500 font-mono">
-                System Status: <span className="text-emerald-400 font-bold">● ONLINE</span>
-              </span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-              <span>⚙️ Admin Command Center</span>
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">
-              Real-time multi-theater operations, booking audit logs, and revenue metrics
-            </p>
+        {status === "error" ? (
+          <ErrorState title="We couldn't load the dashboard" onRetry={load} />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 lg:grid-cols-4">
+            {status === "loading" ? (
+              Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[118px] rounded-2xl" />)
+            ) : (
+              <>
+                <StatCard label="Movies" value={stats.totalMovies ?? 0} icon="film" />
+                <StatCard label="Showtimes" value={stats.totalShows ?? 0} icon="calendar" tone="accent" />
+                <StatCard label="Tickets booked" value={stats.totalTickets ?? 0} icon="ticket" tone="green" />
+                <StatCard
+                  label="Booking value"
+                  value={formatPrice(stats.totalRevenue || 0)}
+                  icon="chart"
+                  tone="gold"
+                  hint="Demo checkout: no money collected"
+                />
+              </>
+            )}
           </div>
+        )}
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={exportCSVReport}
-              className="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 font-bold px-4 py-2.5 rounded-2xl transition text-xs flex items-center gap-2 shadow-lg"
-            >
-              📥 Export CSV Report
-            </button>
-            <button
-              onClick={logoutAdmin}
-              className="bg-red-950/80 hover:bg-red-900 border border-red-800/80 text-red-300 font-bold px-5 py-2.5 rounded-2xl transition text-xs shadow-lg"
-            >
-              Exit Console
-            </button>
-          </div>
-        </div>
-
-        {/* Executive KPI Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <KpiCard
-            icon="🎬"
-            title="Total Catalog Movies"
-            value={stats.totalMovies}
-            badge="+ Active Catalog"
-            badgeColor="bg-blue-950/80 text-blue-400 border-blue-800"
-            subtext="Available across all screens"
-          />
-          <KpiCard
-            icon="🎭"
-            title="Scheduled Showtimes"
-            value={stats.totalShows}
-            badge="Live Shows"
-            badgeColor="bg-purple-950/80 text-purple-400 border-purple-800"
-            subtext="Today & upcoming dates"
-          />
-          <KpiCard
-            icon="🎟️"
-            title="Tickets Sold"
-            value={stats.totalTickets}
-            badge="Audience Volume"
-            badgeColor="bg-emerald-950/80 text-emerald-400 border-emerald-800"
-            subtext="Verified seat passes"
-          />
-          <KpiCard
-            icon="💰"
-            title="Total Revenue"
-            value={`₹${(stats.totalRevenue || 0).toLocaleString()}`}
-            badge="Gross Sales"
-            badgeColor="bg-amber-950/80 text-amber-400 border-amber-800"
-            subtext="Includes tickets & snacks"
-          />
-        </div>
-
-        {/* Management Module Grid */}
-        <div className="space-y-4">
-          <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">
-            Operational Management Modules
+        <section aria-labelledby="modules-title" className="space-y-4">
+          <h2 id="modules-title" className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+            Manage
           </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ModuleCard
-              icon="🎬"
-              title="Manage Movies Catalog"
-              desc="Add new titles, edit trailers, poster URLs, genres, and active movie lists."
-              path="/admin/movies"
-              accentColor="hover:border-blue-500/60"
-              btnText="Open Movies Manager →"
-            />
-            <ModuleCard
-              icon="🎭"
-              title="Manage Showtimes & Screens"
-              desc="Create show schedules, assign theater halls, set date & time slots, and seat prices."
-              path="/admin/shows"
-              accentColor="hover:border-purple-500/60"
-              btnText="Schedule Showtimes →"
-            />
-            <ModuleCard
-              icon="🍿"
-              title="Manage CinePantry F&B"
-              desc="Update food inventory, add snacks, beverages, popcorn pricing, and combo deals."
-              path="/admin/snacks"
-              accentColor="hover:border-amber-500/60"
-              btnText="Manage Refreshments →"
-            />
-            <ModuleCard
-              icon="🚗"
-              title="Manage Vehicle Parking"
-              desc="Configure bike and car parking slot fees for all multiplex locations."
-              path="/admin/parking"
-              accentColor="hover:border-cyan-500/60"
-              btnText="Configure Parking →"
-            />
-            <ModuleCard
-              icon="📊"
-              title="Analytics & Financial Reports"
-              desc="Deep-dive into revenue charts, peak show hour trends, and sales analytics."
-              path="/admin/analytics"
-              accentColor="hover:border-emerald-500/60"
-              btnText="View Full Analytics →"
-            />
-            <ModuleCard
-              icon="🎟️"
-              title="Gate Ticket QR Scanner"
-              desc="Live QR scanner for theater entrance door staff to verify customer ticket passes."
-              path="/admin/scan"
-              accentColor="hover:border-red-500/60"
-              btnText="Launch QR Scanner →"
-            />
-            <ModuleCard
-              icon="📡"
-              title="Smart IoT Hardware Console"
-              desc="Hardware turnstile relays, ANPR parking barriers, seat pressure sensors, and AC dimmers."
-              path="/admin/iot"
-              accentColor="hover:border-cyan-500/60"
-              btnText="Launch IoT Hardware Console →"
-            />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {MODULES.map((m) => (
+              <Link key={m.path} to={m.path} className="card card-interactive group flex items-start gap-4 p-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-300 shadow-inner-line">
+                  <Icon name={m.icon} className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1.5 font-semibold text-white">
+                    {m.title}
+                    <Icon name="arrowRight" className="h-3.5 w-3.5 text-gray-500 transition group-hover:translate-x-0.5 group-hover:text-brand-300" />
+                  </span>
+                  <span className="mt-1 block text-sm text-gray-400">{m.desc}</span>
+                </span>
+              </Link>
+            ))}
           </div>
-        </div>
+        </section>
 
-        {/* Real-time Recent Bookings Audit Stream */}
-        <div className="bg-[#0F0F17]/90 border border-gray-800/80 rounded-3xl p-6 shadow-2xl backdrop-blur-2xl space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-800/80 pb-4">
+        <section className="card overflow-hidden" aria-labelledby="recent-title">
+          <div className="flex items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
             <div>
-              <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                <span>🧾 Recent Transaction Stream</span>
-              </h3>
-              <p className="text-[11px] text-gray-400">Live feed of latest customer ticket bookings</p>
+              <h2 id="recent-title" className="font-semibold text-white">Recent bookings</h2>
+              <p className="text-xs text-gray-400">The latest tickets booked across all theatres</p>
             </div>
-            <Link
-              to="/admin/analytics"
-              className="text-xs text-red-400 hover:text-red-300 font-bold transition"
-            >
-              View All Transactions →
+            <Link to="/admin/analytics" className="btn-ghost btn-sm">
+              Analytics <Icon name="arrowRight" className="h-3.5 w-3.5" />
             </Link>
           </div>
 
-          {recentBookings.length === 0 ? (
-            <p className="text-xs text-gray-500 py-6 text-center italic">
-              No recent customer transactions recorded yet.
-            </p>
+          {status === "loading" ? (
+            <div className="space-y-2 p-5">
+              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-12" />)}
+            </div>
+          ) : recentBookings.length === 0 ? (
+            <p className="px-5 py-10 text-center text-sm text-gray-400">No bookings yet.</p>
           ) : (
-            <div className="space-y-3">
-              {recentBookings.map((b) => (
-                <div
-                  key={b._id}
-                  className="bg-gray-950/80 border border-gray-800/80 p-4 rounded-2xl flex items-center justify-between gap-4 text-xs hover:border-gray-700 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-600/10 border border-red-500/30 rounded-xl flex items-center justify-center font-bold text-red-500 text-lg">
-                      🎟️
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white">
-                        {b.showId?.movieId?.title || "Movie Booking"}
-                      </h4>
-                      <p className="text-[11px] text-gray-400">
-                        {b.showId?.theatre} • Seats: <span className="text-emerald-400 font-bold">{b.seats?.join(", ")}</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-sm font-black text-white">₹{b.totalPrice}</span>
-                    <span className="block text-[10px] text-gray-500 font-mono">ID: {b._id.slice(-6)}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Movie</th>
+                    <th scope="col">Theatre</th>
+                    <th scope="col">Seats</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col" className="text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentBookings.map((b) => (
+                    <tr key={b._id}>
+                      <td className="font-medium text-white">{b.showId?.movieId?.title || "—"}</td>
+                      <td>{b.showId?.theatre || "—"}</td>
+                      <td className="font-mono text-xs">{b.seats?.join(", ")}</td>
+                      <td>{b.userId?.name || "—"}</td>
+                      <td className="text-right font-semibold text-white">{formatPrice(b.totalPrice || 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
-
+        </section>
       </div>
     </AdminLayout>
-  );
-}
-
-function KpiCard({ icon, title, value, badge, badgeColor, subtext }) {
-  return (
-    <div className="bg-[#0F0F17]/90 border border-gray-800/80 p-6 rounded-3xl backdrop-blur-2xl shadow-xl space-y-3 relative overflow-hidden group hover:border-gray-700 transition">
-      <div className="flex items-center justify-between">
-        <span className="text-2xl">{icon}</span>
-        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${badgeColor}`}>
-          {badge}
-        </span>
-      </div>
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</p>
-        <p className="text-2xl font-black text-white mt-0.5 tracking-tight">{value}</p>
-      </div>
-      <p className="text-[10px] text-gray-500 font-medium pt-2 border-t border-gray-800/80">{subtext}</p>
-    </div>
-  );
-}
-
-function ModuleCard({ icon, title, desc, path, accentColor, btnText }) {
-  return (
-    <Link
-      to={path}
-      className={`bg-[#0F0F17]/80 border border-gray-800/80 p-6 rounded-3xl backdrop-blur-2xl shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 group ${accentColor} hover:scale-[1.02]`}
-    >
-      <div className="space-y-2">
-        <div className="w-12 h-12 bg-gray-950 border border-gray-800 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition">
-          {icon}
-        </div>
-        <h3 className="text-base font-extrabold text-white group-hover:text-red-400 transition">
-          {title}
-        </h3>
-        <p className="text-xs text-gray-400 leading-relaxed">
-          {desc}
-        </p>
-      </div>
-
-      <div className="pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs font-bold text-red-500 group-hover:text-red-400 transition">
-        <span>{btnText}</span>
-        <span className="group-hover:translate-x-1 transition-transform">→</span>
-      </div>
-    </Link>
   );
 }

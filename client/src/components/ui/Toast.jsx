@@ -5,7 +5,7 @@ const ToastContext = createContext(null);
 
 const STYLES = {
   success: { icon: "check", ring: "border-emerald-500/40", tint: "bg-emerald-500/15 text-emerald-300" },
-  error: { icon: "alert", ring: "border-brand-500/50", tint: "bg-brand-500/15 text-brand-300" },
+  error: { icon: "alert", ring: "border-danger-500/50", tint: "bg-danger-500/15 text-danger-300" },
   info: { icon: "info", ring: "border-white/15", tint: "bg-white/10 text-gray-200" },
 };
 

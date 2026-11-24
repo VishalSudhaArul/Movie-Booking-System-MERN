@@ -15,7 +15,7 @@ const PERKS = [
 /** Two-column shell shared by the sign-in and registration screens. */
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
-    <main id="main" className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center bg-ink-950 px-4 py-10">
+    <main id="main" className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
       <div className="card grid w-full max-w-4xl overflow-hidden lg:grid-cols-2">
         {/* Visual panel */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-ink-900 p-10 lg:flex">
@@ -67,7 +67,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
 export function FormAlert({ message, onDismiss }) {
   if (!message) return null;
   return (
-    <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-xl border border-brand-500/40 bg-brand-500/10 p-3.5 text-sm text-brand-300">
+    <div role="alert" className="alert-error mb-5">
       <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
       <span className="flex-1">{message}</span>
       {onDismiss && (

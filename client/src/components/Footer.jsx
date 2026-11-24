@@ -1,6 +1,7 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Logo } from "./Navbar";
+import { getSession } from "../lib/session";
 
 const COLUMNS = [
   {
@@ -23,15 +24,21 @@ const COLUMNS = [
     title: "Account",
     links: [
       { to: "/my-bookings", label: "My bookings" },
-      { to: "/scanner", label: "Ticket scanner" },
-      { to: "/admin/dashboard", label: "Admin console" },
+      // Staff-only tools are listed only for staff (the pages are also protected).
+      { to: "/scanner", label: "Ticket scanner", staff: true },
+      { to: "/admin/dashboard", label: "Admin console", staff: true },
     ],
   },
 ];
 
 function Footer() {
+  // Re-read the session on every navigation so links update after sign-in/out.
+  useLocation();
+  const { isAdmin } = getSession();
+
   return (
-    <footer className="mt-auto border-t border-white/[0.07] bg-ink-900">
+    <footer className="mt-auto border-t border-white/[0.07] bg-ink-950/80">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-brand-500/40 to-transparent" aria-hidden="true" />
       <div className="container-page py-12">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-5">
           <div className="col-span-2">
@@ -39,7 +46,7 @@ function Footer() {
               <Logo />
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-gray-400">
-              Book movie tickets, pick the perfect seats and pre-order snacks — all in a few taps.
+              Book movie tickets, pick the perfect seats and pre-order snacks, all in a few taps.
             </p>
           </div>
 
@@ -47,13 +54,15 @@ function Footer() {
             <nav key={col.title} aria-label={col.title}>
               <h2 className="font-sans text-xs font-bold uppercase tracking-wider text-gray-300">{col.title}</h2>
               <ul className="mt-4 space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link to={link.to} className="text-sm text-gray-400 transition hover:text-white">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                {col.links
+                  .filter((link) => !link.staff || isAdmin)
+                  .map((link) => (
+                    <li key={link.label}>
+                      <Link to={link.to} className="text-sm text-gray-400 transition hover:text-brand-300">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
               </ul>
             </nav>
           ))}

@@ -38,7 +38,7 @@ export default function MovieCard({ movie, onPlayTrailer }) {
               </span>
             ) : null}
             {comingSoon && (
-              <span className="rounded-lg bg-gold-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black">
+              <span className="rounded-lg bg-accent-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
                 Coming soon
               </span>
             )}

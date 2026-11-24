@@ -1,656 +1,170 @@
-// import { useParams } from "react-router-dom";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-// function VerifyTicket() {
-
-//   const { bookingId } = useParams();
-//   const [booking, setBooking] = useState(null);
-
-//   useEffect(() => {
-
-//     axios
-//       .get(`http://localhost:5000/api/bookings/${bookingId}`)
-//       .then(res => setBooking(res.data))
-//       .catch(() => alert("Invalid Ticket"));
-
-//   }, [bookingId]);
-
-//   if (!booking) return <p>Loading ticket...</p>;
-
-//   return (
-//     <div className="bg-black min-h-screen text-white p-8 flex justify-center">
-
-//       <div className="bg-gray-900 p-8 rounded-xl w-[400px]">
-
-//         <h1 className="text-2xl font-bold mb-6 text-center">
-//           🎟 Ticket Verified
-//         </h1>
-
-//         {/* Movie */}
-//         <img
-//           src={booking.showId?.movieId?.poster}
-//           alt="poster"
-//           className="w-full h-60 object-cover rounded mb-4"
-//         />
-
-//         <h2 className="text-xl font-semibold">
-//           {booking.showId?.movieId?.title}
-//         </h2>
-
-//         <p className="text-gray-400">
-//           {booking.showId?.movieId?.genre}
-//         </p>
-
-//         {/* Theatre */}
-//         <p className="mt-3">
-//           🎭 Theatre: {booking.showId?.theatre}
-//         </p>
-
-//         {/* Date */}
-//         <p>
-//           📅 {booking.showId?.date}
-//         </p>
-
-//         {/* Time */}
-//         <p>
-//           ⏰ {booking.showId?.time}
-//         </p>
-
-//         {/* Seats */}
-//         <p className="mt-3">
-//           💺 Seats: {booking.seats.join(", ")}
-//         </p>
-
-//         {/* Snacks */}
-//         <p className="mt-3">
-//           🍿 Snacks:
-//           {booking.snacks?.length > 0
-//             ? booking.snacks.map(s => ` ${s.name} x${s.qty}`).join(", ")
-//             : " None"}
-//         </p>
-
-//         {/* Parking */}
-//         <p className="mt-3">
-//           🚗 Parking: {booking.parking?.type || "None"}
-//         </p>
-
-//         {/* Amount */}
-//         <p className="text-red-500 font-bold mt-4">
-//           ₹ {booking.totalPrice}
-//         </p>
-
-//       </div>
-
-//     </div>
-//   );
-// }
-
-// export default VerifyTicket;
-
-
-
-
-
-
-// import { useParams } from "react-router-dom";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-// function VerifyTicket() {
-
-//   const { id } = useParams();
-//   const [booking, setBooking] = useState(undefined);
-
-//   useEffect(() => {
-
-//     axios
-//       .get(`http://10.131.192.148:5000/api/bookings/verify/${id}`)
-//       .then(res => {
-//         console.log("Booking Response:", res.data);
-//         setBooking(res.data);
-//       })
-//       .catch(() => setBooking(null));
-
-//   }, [id]);
-
-//   // Loading
-//   if (booking === undefined) return <h2>Loading ticket...</h2>;
-
-//   // If booking not found
-//   if (!booking) return <h2>Ticket Not Found</h2>;
-
-//   return (
-//     <div style={{ padding: 20 }}>
-
-//       <h1>🎟 Ticket Details</h1>
-
-//       <h2>{booking.showId?.movieId?.title}</h2>
-
-//       <p>🎭 Theatre: {booking.showId?.theatre}</p>
-//       <p>📅 Date: {booking.showId?.date}</p>
-//       <p>⏰ Time: {booking.showId?.time}</p>
-
-//       <p>💺 Seats: {booking.seats?.join(", ")}</p>
-
-//       <p>
-//         🍿 Snacks:
-//         {booking.snacks?.length
-//           ? booking.snacks.map(s => `${s.name} x${s.qty}`).join(", ")
-//           : "None"}
-//       </p>
-
-//       <p>🚗 Parking: {booking.parking?.type || "None"}</p>
-
-//       <h3>₹ {booking.totalPrice}</h3>
-
-//     </div>
-//   );
-// }
-
-// export default VerifyTicket;
-
-
-
-
-
-
-
-
-// import { useParams } from "react-router-dom";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-// function VerifyTicket() {
-
-//   const { id } = useParams();
-
-//   const [booking, setBooking] = useState(null);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-
-//     axios
-//       .get(`http://10.131.192.148:5000/api/bookings/verify/${id}`)
-//       .then(res => {
-//         console.log("Booking Response:", res.data);
-//         setBooking(res.data);
-//       })
-//       .catch(err => {
-//         console.log("Verify Error:", err);
-//         setBooking(null);
-//       })
-//       .finally(() => setLoading(false));
-
-//   }, [id]);
-
-//   // ✅ Proper loading state
-//   if (loading) return <h2 style={{ padding: 20 }}>Loading ticket...</h2>;
-
-//   // ✅ If booking missing
-//   if (!booking) return <h2 style={{ padding: 20 }}>Ticket Not Found</h2>;
-
-//   return (
-//     <div style={{ padding: 20 }}>
-
-//       <h1>🎟 Ticket Details</h1>
-
-//       {/* Poster */}
-//       <img
-//         src={booking.showId?.movieId?.poster}
-//         alt="poster"
-//         style={{ width: 200, borderRadius: 10 }}
-//       />
-
-//       <h2>{booking.showId?.movieId?.title}</h2>
-
-//       <p>🎭 Theatre: {booking.showId?.theatre}</p>
-//       <p>📅 Date: {booking.showId?.date}</p>
-//       <p>⏰ Time: {booking.showId?.time}</p>
-
-//       <p>💺 Seats: {booking.seats?.join(", ")}</p>
-
-//       <p>
-//         🍿 Snacks:
-//         {booking.snacks?.length
-//           ? booking.snacks.map(s => `${s.name} x${s.qty}`).join(", ")
-//           : " None"}
-//       </p>
-
-//       <p>🚗 Parking: {booking.parking?.type || "None"}</p>
-
-//       <h3>₹ {booking.totalPrice}</h3>
-
-//     </div>
-//   );
-// }
-
-// export default VerifyTicket;
-
-
-
-
-
-
-
-//       WORKING CORRCT
-
-
-// import { useParams } from "react-router-dom";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-// function VerifyTicket() {
-
-//   //const { bookingId } = useParams();
-//   const { bookingId } = useParams();
-
-//   const [booking, setBooking] = useState(undefined);
-
-//   useEffect(() => {
-
-//     if (!bookingId) return;
-// // http://10.131.192.148:5000/api/bookings/verify/${bookingId}
-// // https://pentamerous-jefferson-laudatorily.ngrok-free.dev/api/bookings/verify/${bookingId}
-//     axios
-//       .get(`http://10.131.192.148:5000/api/bookings/verify/${bookingId}`)
-//       .then(res => {
-//         console.log("Booking Response:", res.data);
-//         setBooking(res.data);
-//       })
-//       .catch(() => setBooking(null));
-
-//   }, [bookingId]);
-
-//   if (booking === undefined) return <h2>Loading ticket...</h2>;
-
-//   if (!booking) return <h2>Invalid Ticket</h2>;
-
-//   return (
-//     <div style={{ padding: 20 }}>
-//       <h1>🎟 Ticket Details</h1>
-
-//       <h2>{booking.showId?.movieId?.title}</h2>
-
-//       <p>🎭 Theatre: {booking.showId?.theatre}</p>
-//       <p>📅 Date: {booking.showId?.date}</p>
-//       <p>⏰ Time: {booking.showId?.time}</p>
-
-//       <p>💺 Seats: {booking.seats?.join(", ")}</p>
-
-//       <p>
-//         🍿 Snacks:
-//         {booking.snacks?.length
-//           ? booking.snacks.map(s => `${s.name} x${s.qty}`).join(", ")
-//           : " None"}
-//       </p>
-
-//       <p>🚗 Parking: {booking.parking?.type || "None"}</p>
-
-//       <h3>₹ {booking.totalPrice}</h3>
-//     </div>
-//   );
-// }
-
-// export default VerifyTicket;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { useParams } from "react-router-dom";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-
-// function VerifyTicket() {
-
-//   const { bookingId } = useParams();
-//   const [booking, setBooking] = useState(undefined);
-
-//   // useEffect(() => {
-
-//   //   if (!bookingId) return;
-
-//   //   axios
-//   //     .get(`http://10.131.192.148:5000/api/bookings/verify/${bookingId}`)
-//   //     .then(res => setBooking(res.data))
-//   //     .catch(() => setBooking(null));
-
-//   // }, [bookingId]);
-
-
-//   useEffect(() => {
-
-//   if (!bookingId) return;
-
-//   const API_URL =
-//     process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-//   axios
-//     .get(`${API_URL}/api/bookings/verify/${bookingId}`)
-//     .then(res => setBooking(res.data))
-//     .catch(err => {
-//       console.log("Verify ticket error:", err);
-//       setBooking(null);
-//     });
-
-// }, [bookingId]);
-
-
-//   /* ---------- Loading ---------- */
-
-//   if (booking === undefined)
-//     return (
-//       <div className="bg-black min-h-screen flex justify-center items-center text-white text-xl">
-//         Loading Ticket...
-//       </div>
-//     );
-
-//   /* ---------- Invalid ---------- */
-
-//   if (!booking)
-//     return (
-//       <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-xl">
-//         Invalid Ticket
-//       </div>
-//     );
-
-//   /* ---------- UI ---------- */
-
-//   return (
-//     <div className="bg-black min-h-screen flex justify-center items-center p-4">
-
-//       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-white">
-
-//         {/* Movie Poster */}
-//         <img
-//           src={booking.showId?.movieId?.poster}
-//           alt="poster"
-//           className="w-full h-56 rounded-xl mb-4"
-//         />
-
-//         {/* Movie Name */}
-//         <h1 className="text-2xl font-bold">
-//           {booking.showId?.movieId?.title}
-//         </h1>
-
-//         <p className="text-gray-400 mb-4">
-//           {booking.showId?.movieId?.genre}
-//         </p>
-
-//         {/* Ticket Info */}
-//         <div className="space-y-2 border-t border-gray-700 pt-4">
-
-//           <p>🎭 Theatre: <span className="text-gray-300">{booking.showId?.theatre}</span></p>
-
-//           <p>📅 Date: <span className="text-gray-300">{booking.showId?.date}</span></p>
-
-//           <p>⏰ Time: <span className="text-gray-300">{booking.showId?.time}</span></p>
-
-//           <p>💺 Seats: <span className="text-gray-300">{booking.seats?.join(", ")}</span></p>
-
-//           <p>
-// 🍿 Snacks:
-// {booking.snacks?.length > 0
-//   ? booking.snacks.map(s =>
-//       `${s.name} x${s.qty} (₹${s.price * s.qty})`
-//     ).join(", ")
-//   : "None"}
-// </p>
-
-
-// <p>
-// 🚗 Parking:
-// {booking.parking
-//   ? `${booking.parking.type} (₹${booking.parking.price})`
-//   : "None"}
-// </p>
-
-//         </div>
-
-//         {/* Price */}
-//         <div className="border-t border-gray-700 mt-5 pt-4 text-center">
-
-//           <h2 className="text-3xl font-bold text-red-500">
-//             ₹ {booking.totalPrice}
-//           </h2>
-
-//           <p className="text-green-400 mt-1 font-semibold">
-//             Payment Successful ✔
-//           </p>
-
-//         </div>
-
-//       </div>
-
-//     </div>
-//   );
-// }
-
-// export default VerifyTicket;
-
-
-
-
-
-
-
-
-
-
-
-
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { QRCodeCanvas } from "qrcode.react";
 import API from "../api";
+import Icon from "../components/ui/Icon";
+import Poster from "../components/Poster";
+import { EmptyState } from "../components/ui/Feedback";
+import TicketResult from "../components/TicketResult";
 import { getSession } from "../lib/session";
+import { amountLabel, formatPrice, formatShowDate, formatShowTime } from "../lib/format";
 
+/**
+ * The page a ticket's QR code opens.
+ * - The ticket owner sees their digital ticket. Opening it never uses it up.
+ * - Staff opening it at the door admit the ticket (only the first scan can).
+ */
 function VerifyTicket() {
   const { bookingId } = useParams();
+  const { isAdmin } = getSession();
 
-  const [booking, setBooking] = useState(undefined);
-  const [status, setStatus] = useState("");
+  const [booking, setBooking] = useState(undefined); // undefined = loading, null = not found
+  const [status, setStatus] = useState(""); // VALID | USED | ADMITTED
 
   useEffect(() => {
-    if (!bookingId) {
-      setBooking(null);
-      return;
-    }
-
-    const verifyTicket = async () => {
+    let cancelled = false;
+    const run = async () => {
       try {
-        const res = await API.get(`/api/bookings/verify/${bookingId}`);
-
-        if (!res.data) {
-          setBooking(null);
-          return;
-        }
-
-        setBooking(res.data);
-
-        if (res.data.used) {
+        const { data } = await API.get(`/api/bookings/verify/${bookingId}`);
+        if (cancelled) return;
+        setBooking(data);
+        if (data.used) {
           setStatus("USED");
-        } else if (getSession().isAdmin) {
-          // Staff scanning at the entrance admit the ticket. The server also checks
-          // the role, and only the first scan of a ticket can admit it.
-          const { data } = await API.put(`/api/bookings/use/${bookingId}`);
-          setStatus(data?.alreadyUsed ? "USED" : "VALID");
+        } else if (isAdmin) {
+          const res = await API.put(`/api/bookings/use/${bookingId}`);
+          if (!cancelled) setStatus(res.data?.alreadyUsed ? "USED" : "ADMITTED");
         } else {
-          // The ticket owner opening their own QR link: show it, don't use it up.
           setStatus("VALID");
         }
       } catch (err) {
-        console.log(err);
-        setBooking(null);
+        if (!cancelled) setBooking(null);
       }
     };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId, isAdmin]);
 
-    verifyTicket();
-  }, [bookingId]);
-
-
-
-  /* ---------- Loading ---------- */
-
-  if (booking === undefined)
+  if (booking === undefined) {
     return (
-      <div className="bg-black min-h-screen flex justify-center items-center text-white text-xl">
-        Checking Ticket...
-      </div>
+      <main id="main" className="container-page flex min-h-[70vh] items-center justify-center py-12" role="status" aria-label="Loading ticket">
+        <div className="w-full max-w-md space-y-3">
+          <div className="skeleton h-48 rounded-2xl" />
+          <div className="skeleton h-64 rounded-2xl" />
+        </div>
+      </main>
     );
+  }
 
-
-  /* ---------- Invalid ---------- */
-
-  if (!booking)
+  if (!booking) {
     return (
-      <div className="bg-black min-h-screen flex justify-center items-center text-red-500 text-3xl font-bold">
-        ❌ INVALID TICKET
-      </div>
+      <main id="main" className="container-page flex min-h-[70vh] items-center justify-center py-12">
+        <div className="w-full max-w-md">
+          <EmptyState
+            icon="ticket"
+            title="Ticket not found"
+            message="This ticket doesn't exist, or it belongs to a different account."
+            action={<Link to="/my-bookings" className="btn-primary">My bookings</Link>}
+          />
+        </div>
+      </main>
     );
+  }
 
+  // Staff at the door get the scan result first.
+  if (isAdmin) {
+    return (
+      <main id="main" className="container-page py-10">
+        <div className="mx-auto max-w-xl space-y-4">
+          <TicketResult state={status === "ADMITTED" ? "admitted" : status === "USED" ? "used" : "valid"} booking={booking} />
+          <Link to="/scanner" className="btn-secondary w-full">
+            <Icon name="qr" className="h-4 w-4" /> Scan another ticket
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
-  const snacks =
-    booking.snacks?.length > 0
-      ? booking.snacks
-          .map(s => `${s.name} x${s.qty}`)
-          .join(", ")
-      : "None";
-
-  const parking =
-    booking.parking
-      ? `${booking.parking.type}`
-      : "None";
-
+  const show = booking.showId || {};
+  const movie = show.movieId || {};
+  const used = status === "USED";
+  const snacks = booking.snacks?.length ? booking.snacks.map((s) => `${s.name} × ${s.qty}`).join(", ") : null;
 
   return (
-
-    <div className="bg-black min-h-screen flex justify-center items-center p-6">
-
-      <div className="bg-[#0f172a] border border-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-
-        {/* Movie Poster */}
-
-        <img
-          src={booking.showId?.movieId?.poster}
-          alt="poster"
-          className="w-full h-56 object-cover"
-        />
-
-
-        <div className="p-6 text-white">
-
-          {/* Movie Title */}
-
-          <h1 className="text-2xl font-bold text-center">
-            {booking.showId?.movieId?.title}
-          </h1>
-
-          <p className="text-gray-400 text-center mb-6">
-            {booking.showId?.movieId?.genre}
-          </p>
-
-
-          {/* Ticket Divider */}
-
-          <div className="border-t border-dashed border-gray-600 mb-6"></div>
-
-
-          {/* Ticket Info */}
-
-          <div className="space-y-3 text-sm">
-
-            <div className="flex justify-between">
-              <span>🎭 Theatre</span>
-              <span>{booking.showId?.theatre}</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span>📅 Date</span>
-              <span>{booking.showId?.date}</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span>⏰ Time</span>
-              <span>{booking.showId?.time}</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span>💺 Seats</span>
-              <span className="text-green-400 font-semibold">
-                {booking.seats?.join(", ")}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span>🍿 Snacks</span>
-              <span>{snacks}</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span>🚗 Parking</span>
-              <span>{parking}</span>
-            </div>
-
+    <main id="main" className="container-page py-10">
+      <article className="mx-auto max-w-md overflow-hidden rounded-3xl border border-white/[0.08] bg-ink-850 shadow-card" aria-label={`Ticket for ${movie.title || "your movie"}`}>
+        {/* Header with poster */}
+        <div className="relative">
+          <Poster src={movie.poster} alt="" className="h-44 w-full opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-850 via-ink-850/60 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-5">
+            <span className={used ? "badge" : "badge-green"}>{used ? "Checked in" : "Valid ticket"}</span>
+            <h1 className="mt-2 font-display text-2xl font-bold text-white">{movie.title || "Movie ticket"}</h1>
+            <p className="text-sm text-gray-300">{show.theatre}</p>
           </div>
-
-
-          {/* Divider */}
-
-          <div className="border-t border-dashed border-gray-600 my-6"></div>
-
-
-          {/* Price */}
-
-          <div className="text-center">
-
-            <p className="text-gray-400 text-sm">
-              Total Amount
-            </p>
-
-            <h2 className="text-4xl font-bold text-red-500">
-              ₹ {booking.totalPrice}
-            </h2>
-
-          </div>
-
-
-          {/* Status */}
-
-          <div className="mt-6 text-center">
-
-            {status === "VALID" && (
-              <div className="bg-green-600 text-white py-3 rounded-xl text-lg font-bold shadow-lg">
-                ✅ ENTRY ALLOWED
-              </div>
-            )}
-
-            {status === "USED" && (
-              <div className="bg-red-600 text-white py-3 rounded-xl text-lg font-bold shadow-lg">
-                ❌ TICKET ALREADY USED
-              </div>
-            )}
-
-          </div>
-
         </div>
 
+        <dl className="grid grid-cols-2 gap-4 px-5 py-5 text-sm">
+          <div>
+            <dt className="text-xs text-gray-500">Date</dt>
+            <dd className="font-semibold text-white">{formatShowDate(show.date)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-500">Time</dt>
+            <dd className="font-semibold text-white">{formatShowTime(show.time)}</dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-xs text-gray-500">Seats</dt>
+            <dd className="font-mono text-lg font-bold text-white">{booking.seats?.join(", ")}</dd>
+          </div>
+          {snacks && (
+            <div className="col-span-2">
+              <dt className="text-xs text-gray-500">Food</dt>
+              <dd className="text-gray-200">{snacks}</dd>
+            </div>
+          )}
+          {booking.parking?.type && (
+            <div>
+              <dt className="text-xs text-gray-500">Parking</dt>
+              <dd className="text-gray-200">{booking.parking.type}</dd>
+            </div>
+          )}
+          <div>
+            <dt className="text-xs text-gray-500">{amountLabel(booking)}</dt>
+            <dd className="font-semibold text-white">{formatPrice(booking.totalPrice)}</dd>
+          </div>
+        </dl>
+
+        {/* Tear line */}
+        <div className="relative px-5" aria-hidden="true">
+          <div className="border-t border-dashed border-white/15" />
+          <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full bg-ink-950" />
+          <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full bg-ink-950" />
+        </div>
+
+        <div className="flex flex-col items-center gap-3 px-5 py-6 text-center">
+          {used ? (
+            <p className="text-sm text-gray-400">This ticket has already been used to enter.</p>
+          ) : (
+            <>
+              <div className="rounded-2xl bg-white p-3">
+                <QRCodeCanvas value={`${window.location.origin}/verify/${booking._id}`} size={160} aria-label="Ticket QR code" role="img" />
+              </div>
+              <p className="text-sm text-gray-400">Show this code at the entrance.</p>
+            </>
+          )}
+          <p className="break-all font-mono text-[11px] text-gray-500">Booking ID {booking._id}</p>
+        </div>
+      </article>
+
+      <div className="mx-auto mt-4 max-w-md">
+        <Link to="/my-bookings" className="btn-ghost w-full">
+          <Icon name="arrowLeft" className="h-4 w-4" /> All my bookings
+        </Link>
       </div>
-
-    </div>
-
+    </main>
   );
-
 }
 
 export default VerifyTicket;

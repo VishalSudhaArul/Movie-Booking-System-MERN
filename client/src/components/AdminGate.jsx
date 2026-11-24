@@ -24,9 +24,9 @@ function AdminGate({ children }) {
   if (isAdmin) return children;
 
   return (
-    <main id="main" className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-ink-950 p-4">
+    <main id="main" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
       <div className="card w-full max-w-sm p-8 text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gold-500/15 text-gold-400">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-500/15 text-accent-300">
           <Icon name="lock" className="h-7 w-7" />
         </span>
         <h1 className="mt-4 font-display text-2xl font-bold text-white">Staff only</h1>

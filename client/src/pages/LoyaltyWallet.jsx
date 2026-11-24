@@ -1,155 +1,121 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import API from "../api";
+import Icon from "../components/ui/Icon";
+import PageHeader from "../components/ui/PageHeader";
+import { EmptyState, ErrorState } from "../components/ui/Feedback";
+import { useToast } from "../components/ui/Toast";
+import { formatPrice } from "../lib/format";
 
+const PLANNED_PERKS = [
+  { icon: "popcorn", title: "Free popcorn", text: "Turn points into snacks at any theatre." },
+  { icon: "ticket", title: "Ticket discounts", text: "Use points to take money off a booking." },
+  { icon: "crown", title: "Recliner upgrades", text: "Move up to the balcony recliners." },
+];
+
+/**
+ * Rewards: promo codes that work today (from the server), plus the planned
+ * points programme, which isn't live yet and is labelled as such.
+ */
 export default function LoyaltyWallet() {
-  const [points, setPoints] = useState(380);
-  const [redeemedCode, setRedeemedCode] = useState(null);
+  const toast = useToast();
+  const [offers, setOffers] = useState([]);
+  const [status, setStatus] = useState("loading");
 
-  const rewardVouchers = [
-    {
-      id: 1,
-      title: "🍿 Free Large Cheese Popcorn",
-      cost: 150,
-      code: "POPCORN-FREE150",
-      desc: "Redeem for 1 tub of gourmet cheese popcorn at any theater pantry.",
-      badge: "Snack Perk",
-    },
-    {
-      id: 2,
-      title: "🎟️ ₹100 Ticket Discount Voucher",
-      cost: 200,
-      code: "CINE100-POINT",
-      desc: "Get ₹100 instant discount on any movie ticket checkout.",
-      badge: "Ticket Pass",
-    },
-    {
-      id: 3,
-      title: "👑 Free VIP Recliner Upgrade",
-      cost: 300,
-      code: "VIP-UPGRADE300",
-      desc: "Upgrade standard executive seats to plush VIP recliners.",
-      badge: "Luxury Perk",
-    },
-  ];
+  const load = useCallback(() => {
+    setStatus("loading");
+    API.get("/api/coupons/active")
+      .then((res) => {
+        setOffers(Array.isArray(res.data) ? res.data : []);
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
+  }, []);
 
-  const handleRedeem = (voucher) => {
-    if (points < voucher.cost) {
-      alert(`You need ${voucher.cost - points} more CinePoints to unlock this perk.`);
-      return;
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const copy = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success(`Copied ${code}. Apply it at checkout.`);
+    } catch (e) {
+      toast.info(`Your code is ${code}. Enter it at checkout.`);
     }
-
-    setPoints(points - voucher.cost);
-    setRedeemedCode({
-      title: voucher.title,
-      code: voucher.code,
-    });
   };
 
   return (
-    <div className="bg-[#07070B] min-h-screen text-white p-4 md:p-10 relative selection:bg-red-600 selection:text-white">
-      {/* Background glow */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-600/10 rounded-full blur-[160px] pointer-events-none" />
+    <main id="main" className="container-page space-y-10 py-8 sm:py-10">
+      <PageHeader
+        eyebrow="Rewards"
+        title="Offers & rewards"
+        subtitle="Promo codes you can use at checkout today, and what's coming next."
+        icon="crown"
+      />
 
-      <div className="max-w-5xl mx-auto space-y-10 relative z-10">
-        
-        {/* Top Header Card */}
-        <div className="bg-gradient-to-r from-[#170E03] via-[#0F0F17] to-[#07070B] border border-amber-500/30 p-8 rounded-3xl backdrop-blur-2xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left">
-            <span className="bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-              👑 CineClub Member Tier
-            </span>
-            <h1 className="text-3xl md:text-4xl font-black text-white">
-              CinePoints Rewards Wallet
-            </h1>
-            <p className="text-xs text-gray-400">
-              Earn 10 CinePoints for every ₹100 spent on movie tickets and snacks
-            </p>
+      <section aria-labelledby="offers-title" className="space-y-4">
+        <h2 id="offers-title" className="font-semibold text-white">Promo codes</h2>
+        {status === "loading" ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-36 rounded-2xl" />)}
           </div>
-
-          {/* Points Balance Badge */}
-          <div className="bg-gray-950/80 border border-amber-500/40 p-6 rounded-2xl text-center min-w-[200px] shadow-2xl">
-            <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest block">
-              Available Balance
-            </span>
-            <span className="text-4xl font-black text-amber-400 tracking-tight">
-              {points} <span className="text-sm font-normal text-amber-300">pts</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Redeem Rewards Section */}
-        <div className="space-y-4">
-          <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">
-            Available Reward Vouchers
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {rewardVouchers.map((v) => {
-              const canAfford = points >= v.cost;
-
-              return (
-                <div
-                  key={v.id}
-                  className="bg-[#0F0F17]/90 border border-gray-800/80 p-6 rounded-3xl backdrop-blur-2xl shadow-xl space-y-4 flex flex-col justify-between hover:border-amber-500/50 transition"
-                >
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-950/80 border border-amber-800 text-amber-300">
-                        {v.badge}
-                      </span>
-                      <span className="text-xs font-black text-amber-400 font-mono">
-                        {v.cost} PTS
-                      </span>
-                    </div>
-
-                    <h3 className="font-extrabold text-base text-white">{v.title}</h3>
-                    <p className="text-xs text-gray-400 leading-relaxed">{v.desc}</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleRedeem(v)}
-                    disabled={!canAfford}
-                    className={`w-full font-bold py-3 rounded-2xl text-xs transition shadow-lg ${
-                      canAfford
-                        ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black shadow-amber-500/20"
-                        : "bg-gray-900 text-gray-600 border border-gray-800 cursor-not-allowed"
-                    }`}
-                  >
-                    {canAfford ? "🎁 Redeem Reward Code" : `Need ${v.cost - points} More Pts`}
+        ) : status === "error" ? (
+          <ErrorState title="We couldn't load offers" onRetry={load} />
+        ) : offers.length === 0 ? (
+          <EmptyState icon="tag" title="No offers right now" message="Check back soon." />
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-3">
+            {offers.map((o) => (
+              <li key={o.code} className="card flex flex-col p-5">
+                <span className="badge-brand w-fit">
+                  {o.discountType === "PERCENTAGE" ? `${o.discountValue}% off` : `${formatPrice(o.discountValue)} off`}
+                </span>
+                <p className="mt-3 text-sm text-gray-300">{o.description}</p>
+                {o.minBookingAmount > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">On orders of {formatPrice(o.minBookingAmount)} or more</p>
+                )}
+                <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+                  <code className="rounded-lg border border-dashed border-white/20 px-3 py-1.5 font-mono text-sm font-bold tracking-wider text-white">
+                    {o.code}
+                  </code>
+                  <button onClick={() => copy(o.code)} className="btn-secondary btn-sm" aria-label={`Copy code ${o.code}`}>
+                    Copy
                   </button>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Redeemed Voucher Alert Modal */}
-        {redeemedCode && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
-            <div className="bg-[#0F0F17] border border-amber-500/40 p-8 rounded-3xl text-center space-y-6 max-w-sm w-full shadow-2xl">
-              <div className="w-16 h-16 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center text-3xl mx-auto">
-                🎉
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-base font-extrabold text-white">{redeemedCode.title}</h3>
-                <p className="text-xs text-gray-400">Use this voucher promo code at checkout</p>
-              </div>
-
-              <div className="bg-gray-950 border border-amber-500/30 p-4 rounded-2xl font-mono text-amber-400 font-black text-lg tracking-wider">
-                {redeemedCode.code}
-              </div>
-
-              <button
-                onClick={() => setRedeemedCode(null)}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-2xl text-xs transition"
-              >
-                Got It
-              </button>
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
         )}
+        <p className="text-xs text-gray-500">Codes are checked and applied by our server at checkout.</p>
+      </section>
 
-      </div>
-    </div>
+      <section aria-labelledby="points-title" className="card overflow-hidden">
+        <div className="bg-brand-gradient-soft px-5 py-6 sm:px-8">
+          <span className="badge-accent">Coming soon</span>
+          <h2 id="points-title" className="mt-3 font-display text-2xl font-bold text-white">CinePoints</h2>
+          <p className="mt-1 max-w-xl text-sm text-gray-300">
+            We're building a points programme: earn points on bookings and spend them on perks. It isn't live yet, so no
+            points are being collected or shown.
+          </p>
+        </div>
+        <ul className="grid gap-px bg-white/[0.06] sm:grid-cols-3">
+          {PLANNED_PERKS.map((p) => (
+            <li key={p.title} className="flex gap-3 bg-ink-850 p-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-300">
+                <Icon name={p.icon} className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block font-semibold text-white">{p.title}</span>
+                <span className="text-sm text-gray-400">{p.text}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="border-t border-white/[0.06] px-5 py-4 sm:px-8">
+          <Link to="/movies" className="btn-primary btn-sm">Book a movie</Link>
+        </div>
+      </section>
+    </main>
   );
 }

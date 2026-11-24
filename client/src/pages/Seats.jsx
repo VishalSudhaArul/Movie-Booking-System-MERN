@@ -44,6 +44,7 @@ export default function Seats() {
   });
 
   const selectedRef = useRef(selectedSeats);
+  const mapScrollRef = useRef(null);
 
   const fetchShow = useCallback(
     async (silent = false) => {
@@ -89,6 +90,13 @@ export default function Seats() {
   useEffect(() => {
     fetchShow();
   }, [fetchShow]);
+
+  // On narrow screens the map scrolls sideways; start centred on the aisle.
+  useEffect(() => {
+    const el = mapScrollRef.current;
+    if (status !== "ready" || !el) return;
+    if (el.scrollWidth > el.clientWidth) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+  }, [status]);
 
   // Keep availability fresh when the user comes back to the tab.
   useEffect(() => {
@@ -307,7 +315,7 @@ export default function Seats() {
   );
 
   return (
-    <main id="main" className="min-h-screen bg-ink-950 pb-32 lg:pb-16">
+    <main id="main" className="min-h-screen pb-32 lg:pb-16">
       {/* ───────────── Show header ───────────── */}
       <div className="border-b border-white/[0.07] bg-ink-900">
         <div className="container-page flex flex-wrap items-center justify-between gap-4 py-4">
@@ -397,7 +405,8 @@ export default function Seats() {
               </div>
             </div>
 
-            <div className="overflow-x-auto px-4 py-8 sm:px-6">
+            <p className="px-4 pt-3 text-center text-xs text-gray-500 sm:hidden">Swipe sideways to see every seat.</p>
+            <div ref={mapScrollRef} data-testid="seat-map-scroll" className="overflow-x-auto px-3 py-6 sm:px-4 sm:py-8">
               <div className="mx-auto w-max min-w-full">
                 <div className="mx-auto flex w-max flex-col items-stretch gap-8">
                   {layout.map((category) => {
@@ -407,7 +416,7 @@ export default function Seats() {
                         <div className="mb-3 flex items-center gap-3">
                           <span className="h-px flex-1 bg-white/[0.08]" />
                           <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                            {isPremium && <Icon name="crown" className="h-3.5 w-3.5 text-gold-400" />}
+                            {isPremium && <Icon name="crown" className="h-3.5 w-3.5 text-accent-300" />}
                             {category.name}
                             <span className="text-white">{formatPrice(category.price)}</span>
                           </span>
@@ -433,7 +442,7 @@ export default function Seats() {
                                 </span>
                                 {blocks.map((block, i) => (
                                   <React.Fragment key={i}>
-                                    {i > 0 && <span className="w-6 sm:w-10" aria-hidden="true" />}
+                                    {i > 0 && <span className="w-5 sm:w-8" aria-hidden="true" />}
                                     <div className="flex gap-1.5">
                                       {block.map((seat) => (
                                         <SeatButton
@@ -473,7 +482,7 @@ export default function Seats() {
             {/* Legend */}
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-white/[0.07] px-4 py-4 text-xs text-gray-400">
               <LegendItem className="border-white/25 bg-white/[0.03]" label="Available" />
-              {premiumCategory && <LegendItem className="border-gold-500/60 bg-gold-500/[0.08]" label={`Premium (${premiumCategory})`} />}
+              {premiumCategory && <LegendItem className="border-accent-400/60 bg-accent-500/[0.1]" label={`Premium (${premiumCategory})`} />}
               {layout.some((c) => c.rows.some((r) => r.seatType === "recliner")) && (
                 <LegendItem className="w-6 rounded-t-lg border-white/25 bg-white/[0.03]" label="Recliner" />
               )}
@@ -542,7 +551,7 @@ function SeatButton({ seat, selected, premium, recliner, onToggle }) {
   } else if (selected) {
     style = "scale-105 border-brand-500 bg-brand-500 text-white shadow-glow";
   } else if (premium) {
-    style = "border-gold-500/60 bg-gold-500/[0.08] text-gold-400 hover:bg-gold-500/25";
+    style = "border-accent-400/60 bg-accent-500/[0.1] text-accent-200 hover:bg-accent-500/25";
   } else {
     style = "border-white/25 bg-white/[0.03] text-gray-300 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white";
   }

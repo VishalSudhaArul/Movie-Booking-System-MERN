@@ -173,7 +173,7 @@ function MovieDetails() {
   ].filter((f) => f.value);
 
   return (
-    <main id="main" className="min-h-screen bg-ink-950">
+    <main id="main" className="min-h-screen">
       {/* ───────────── Banner ───────────── */}
       <section className="relative -mt-16 overflow-hidden pt-16">
         <div className="absolute inset-0" aria-hidden="true">

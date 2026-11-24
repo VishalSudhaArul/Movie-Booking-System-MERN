@@ -35,11 +35,11 @@ const CITIES = [
 export function Logo({ className = "" }) {
   return (
     <span className={`flex items-center gap-2.5 ${className}`}>
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white shadow-glow">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gradient text-white shadow-glow">
         <Icon name="ticket" className="h-5 w-5" />
       </span>
       <span className="font-display text-xl font-extrabold tracking-tight text-white">
-        Cine<span className="text-brand-400">Book</span>
+        Cine<span className="text-gradient">Book</span>
       </span>
     </span>
   );
@@ -134,7 +134,7 @@ export default function Navbar() {
 
   const linkClass = ({ isActive }) =>
     `rounded-lg px-3 py-2 text-sm font-medium transition ${
-      isActive ? "bg-white/[0.08] text-white" : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+      isActive ? "bg-brand-500/[0.12] text-white shadow-inner-line" : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
     }`;
 
   return (
@@ -148,7 +148,7 @@ export default function Navbar() {
 
       <header
         className={`sticky top-0 z-40 w-full border-b transition-colors duration-300 ${
-          scrolled ? "border-white/[0.07] bg-ink-950/90 backdrop-blur-xl" : "border-transparent bg-ink-950/70 backdrop-blur-md"
+          scrolled ? "border-white/[0.08] bg-ink-950/85 shadow-card backdrop-blur-xl" : "border-transparent bg-ink-950/60 backdrop-blur-md"
         }`}
       >
         <nav className="container-page flex h-16 items-center justify-between gap-3" aria-label="Main">
@@ -181,8 +181,8 @@ export default function Navbar() {
                 className={({ isActive }) =>
                   `rounded-lg px-3 py-2 text-sm font-medium transition ${
                     isActive || location.pathname.startsWith("/admin")
-                      ? "bg-gold-500/15 text-gold-400"
-                      : "text-gold-400 hover:bg-gold-500/10"
+                      ? "bg-accent-500/15 text-accent-200"
+                      : "text-accent-300 hover:bg-accent-500/10"
                   }`
                 }
               >

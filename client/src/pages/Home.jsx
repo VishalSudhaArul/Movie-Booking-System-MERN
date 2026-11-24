@@ -78,7 +78,7 @@ function Home() {
   const isFiltering = query.trim() !== "" || genre !== "All";
 
   return (
-    <main id="main" className="min-h-screen bg-ink-950">
+    <main id="main" className="min-h-screen">
       {/* ───────────── Hero ───────────── */}
       <section
         className="relative -mt-16 overflow-hidden pt-16"

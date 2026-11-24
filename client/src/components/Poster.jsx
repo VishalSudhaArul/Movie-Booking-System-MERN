@@ -4,11 +4,21 @@ import Icon from "./ui/Icon";
 /** Movie poster with lazy loading, a fade-in and a graceful fallback when the image fails. */
 export default function Poster({ src, alt = "", className = "", eager = false }) {
   const [status, setStatus] = useState(src ? "loading" : "error");
+  const [shownSrc, setShownSrc] = useState(src);
+
+  // The image address often arrives after the first render (data still loading)
+  // or changes (a different movie). Start over only when it really changes, during
+  // render, so a cached image's onLoad can never be overwritten afterwards.
+  if (src !== shownSrc) {
+    setShownSrc(src);
+    setStatus(src ? "loading" : "error");
+  }
 
   return (
     <div className={`relative overflow-hidden bg-ink-800 ${className}`}>
       {status !== "error" && (
         <img
+          key={src}
           src={src}
           alt={alt}
           loading={eager ? "eager" : "lazy"}

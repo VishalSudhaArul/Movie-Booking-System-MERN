@@ -80,7 +80,7 @@ function Movies() {
   const isFiltering = !!query.trim() || genre !== "All" || language !== "All" || status !== "all";
 
   return (
-    <main id="main" className="min-h-screen bg-ink-950">
+    <main id="main" className="min-h-screen">
       <div className="border-b border-white/[0.07] bg-ink-900">
         <div className="container-page py-10">
           <p className="eyebrow mb-2">Browse</p>

@@ -131,7 +131,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         x: Math.random() * 1920,
         y: Math.random() * 1080,
         radius: Math.random() * 2.5 + 0.5,
-        color: Math.random() > 0.4 ? "#00f0ff" : "#ff0055",
+        color: Math.random() > 0.4 ? "#4DA8FF" : "#8B5CF6",
         alpha: Math.random() * 0.7 + 0.2,
         speedY: -(Math.random() * 0.6 + 0.2),
         speedX: (Math.random() - 0.5) * 0.4,
@@ -205,9 +205,9 @@ const HeroTrailer = ({ onLaunchClick }) => {
       ];
 
       ctx.lineWidth = 3;
-      ctx.strokeStyle = "#00f0ff";
+      ctx.strokeStyle = "#4DA8FF";
       ctx.shadowBlur = 12;
-      ctx.shadowColor = "#00f0ff";
+      ctx.shadowColor = "#4DA8FF";
 
       connections.forEach(([i, j]) => {
         ctx.beginPath();
@@ -218,9 +218,9 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
       joints.forEach((pt, idx) => {
         const isTip = [4, 8, 12, 16, 20].includes(idx);
-        ctx.fillStyle = isTip ? "#ffffff" : "#00f0ff";
+        ctx.fillStyle = isTip ? "#ffffff" : "#4DA8FF";
         ctx.shadowBlur = isTip ? 18 : 10;
-        ctx.shadowColor = isTip ? "#ffffff" : "#00f0ff";
+        ctx.shadowColor = isTip ? "#ffffff" : "#4DA8FF";
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, isTip ? 6 : 4, 0, Math.PI * 2);
         ctx.fill();
@@ -288,7 +288,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
           ctx.save();
           ctx.translate(posX, height * 0.45);
           ctx.shadowBlur = idx === 0 ? 30 : 12;
-          ctx.shadowColor = "#00f0ff";
+          ctx.shadowColor = "#4DA8FF";
           ctx.fillStyle = "#070b19";
           ctx.beginPath();
           ctx.roundRect(-posterW / 2, -posterH / 2, posterW, posterH, 18);
@@ -298,7 +298,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             ctx.clip();
             ctx.drawImage(p.img, -posterW / 2, -posterH / 2, posterW, posterH);
           }
-          ctx.strokeStyle = idx === 0 ? "#00f0ff" : "rgba(255,255,255,0.2)";
+          ctx.strokeStyle = idx === 0 ? "#4DA8FF" : "rgba(255,255,255,0.2)";
           ctx.lineWidth = idx === 0 ? 3 : 1;
           ctx.strokeRect(-posterW / 2, -posterH / 2, posterW, posterH);
           ctx.restore();
@@ -324,7 +324,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         ctx.save();
         ctx.translate(targetX, targetY);
         ctx.shadowBlur = 40;
-        ctx.shadowColor = "#00f0ff";
+        ctx.shadowColor = "#4DA8FF";
         ctx.fillStyle = "#050914";
         ctx.beginPath();
         ctx.roundRect(-posterW / 2, -posterH / 2, posterW, posterH, 20);
@@ -333,7 +333,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
           ctx.clip();
           ctx.drawImage(posters[0], -posterW / 2, -posterH / 2, posterW, posterH);
         }
-        ctx.strokeStyle = "#00f0ff";
+        ctx.strokeStyle = "#4DA8FF";
         ctx.lineWidth = 4;
         ctx.strokeRect(-posterW / 2, -posterH / 2, posterW, posterH);
         ctx.restore();
@@ -346,14 +346,14 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
         ctx.save();
         ctx.fillStyle = "rgba(10, 15, 30, 0.88)";
-        ctx.strokeStyle = "#00f0ff";
+        ctx.strokeStyle = "#4DA8FF";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.roundRect(panelX, panelY, panelW, panelH, 20);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = "#ff0055";
+        ctx.fillStyle = "#8B5CF6";
         ctx.font = '800 12px "Space Grotesk"';
         ctx.fillText("FEATURED BLOCKBUSTERS • 4K IMAX 3D", panelX + 30, panelY + 40);
 
@@ -361,7 +361,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         ctx.font = '900 32px "Outfit"';
         ctx.fillText("CYBER GENESIS", panelX + 30, panelY + 80);
 
-        ctx.fillStyle = "#00f0ff";
+        ctx.fillStyle = "#4DA8FF";
         ctx.font = '700 13px "Space Grotesk"';
         ctx.fillText("IMAX 3D • DOLBY ATMOS • RATING: 9.8 / 10", panelX + 30, panelY + 120);
 
@@ -382,10 +382,10 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
         // Screen Bar
         ctx.save();
-        ctx.strokeStyle = "#00f0ff";
+        ctx.strokeStyle = "#4DA8FF";
         ctx.lineWidth = 4;
         ctx.shadowBlur = 20;
-        ctx.shadowColor = "#00f0ff";
+        ctx.shadowColor = "#4DA8FF";
         ctx.beginPath();
         ctx.arc(width * 0.5, height * -0.4, width * 0.45, Math.PI * 0.35, Math.PI * 0.65);
         ctx.stroke();
@@ -404,7 +404,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             const isSel = r === 3 && (c === 5 || c === 6) && isPinched;
 
             ctx.save();
-            ctx.fillStyle = isSel ? "#00f0ff" : "rgba(0, 240, 255, 0.15)";
+            ctx.fillStyle = isSel ? "#4DA8FF" : "rgba(0, 240, 255, 0.15)";
             ctx.beginPath();
             ctx.roundRect(sx, sy, seatW, seatH, 6);
             ctx.fill();
@@ -434,13 +434,13 @@ const HeroTrailer = ({ onLaunchClick }) => {
         const btnY = height * 0.35;
 
         ctx.save();
-        ctx.fillStyle = isAct ? "#00f0ff" : "rgba(10, 20, 40, 0.85)";
+        ctx.fillStyle = isAct ? "#4DA8FF" : "rgba(10, 20, 40, 0.85)";
         ctx.shadowBlur = isAct ? 50 : 20;
-        ctx.shadowColor = "#00f0ff";
+        ctx.shadowColor = "#4DA8FF";
         ctx.beginPath();
         ctx.roundRect(btnX, btnY, btnW, btnH, 25);
         ctx.fill();
-        ctx.strokeStyle = isAct ? "#ffffff" : "#00f0ff";
+        ctx.strokeStyle = isAct ? "#ffffff" : "#4DA8FF";
         ctx.lineWidth = 3;
         ctx.stroke();
 
@@ -469,16 +469,16 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
         ctx.fillStyle = "rgba(8, 15, 35, 0.92)";
         ctx.shadowBlur = 40;
-        ctx.shadowColor = "#00f0ff";
+        ctx.shadowColor = "#4DA8FF";
         ctx.beginPath();
         ctx.roundRect(-ticketW / 2, -ticketH / 2, ticketW, ticketH, 20);
         ctx.fill();
-        ctx.strokeStyle = "#00f0ff";
+        ctx.strokeStyle = "#4DA8FF";
         ctx.lineWidth = 3;
         ctx.stroke();
 
         if (Math.abs(Math.cos(angle)) > 0.25) {
-          ctx.fillStyle = "#ff0055";
+          ctx.fillStyle = "#8B5CF6";
           ctx.font = '800 11px "Space Grotesk"';
           ctx.textAlign = "center";
           ctx.fillText("CINEBOOK DIGITAL TICKET", 0, -ticketH / 2 + 35);
@@ -499,14 +499,14 @@ const HeroTrailer = ({ onLaunchClick }) => {
         ctx.fillStyle = "#ffffff";
         ctx.font = '900 48px "Outfit"';
         ctx.shadowBlur = 30;
-        ctx.shadowColor = "#00f0ff";
+        ctx.shadowColor = "#4DA8FF";
         ctx.fillText("THE FUTURE OF MOVIE BOOKING", width * 0.5, height * 0.38);
 
-        ctx.fillStyle = "#00f0ff";
+        ctx.fillStyle = "#4DA8FF";
         ctx.font = '700 20px "Space Grotesk"';
         ctx.fillText("Book Movies Without Touching the Screen", width * 0.5, height * 0.48);
 
-        ctx.fillStyle = "#ff0055";
+        ctx.fillStyle = "#8B5CF6";
         ctx.font = '800 24px "Space Grotesk"';
         ctx.fillText("AI Motion Controller v4.2", width * 0.5, height * 0.58);
         ctx.restore();
@@ -565,7 +565,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
   };
 
   return (
-    <div className="relative w-full overflow-hidden bg-[#040409] rounded-3xl border border-cyan-500/20 shadow-2xl my-8">
+    <div className="relative w-full overflow-hidden bg-[#040409] rounded-3xl border border-brand-500/20 shadow-2xl my-8">
       
       {/* 16:9 Aspect Ratio Container */}
       <div ref={containerRef} className="relative w-full aspect-video bg-black overflow-hidden">
@@ -578,22 +578,22 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
         {/* HUD Top Bar */}
         <div className="absolute top-4 left-6 right-6 z-20 flex items-center justify-between pointer-events-none">
-          <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-cyan-500/30">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00f0ff]" />
+          <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-brand-500/30">
+            <span className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-pulse shadow-[0_0_10px_#4DA8FF]" />
             <span className="text-xs font-mono font-bold text-white tracking-widest uppercase">
               CINEBOOK AI • GESTURE ENGINE
             </span>
           </div>
 
           <div className="hidden sm:flex items-center gap-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 text-[11px] font-mono text-gray-300">
-            <div>FPS: <span className="text-cyan-400 font-bold">{fps}</span></div>
-            <div>GESTURE: <span className="text-cyan-400 font-bold">{currentGesture}</span></div>
-            <div>CONFIDENCE: <span className="text-cyan-400 font-bold">99.8%</span></div>
+            <div>FPS: <span className="text-brand-400 font-bold">{fps}</span></div>
+            <div>GESTURE: <span className="text-brand-400 font-bold">{currentGesture}</span></div>
+            <div>CONFIDENCE: <span className="text-brand-400 font-bold">99.8%</span></div>
           </div>
         </div>
 
         {/* Scene Tag */}
-        <div className="absolute top-16 left-6 z-20 pointer-events-none bg-cyan-950/60 backdrop-blur-md border-l-4 border-cyan-400 px-4 py-1.5 rounded-r-lg text-xs font-mono font-bold text-cyan-300 tracking-wider">
+        <div className="absolute top-16 left-6 z-20 pointer-events-none bg-ink-900/60 backdrop-blur-md border-l-4 border-brand-400 px-4 py-1.5 rounded-r-lg text-xs font-mono font-bold text-brand-300 tracking-wider">
           {currentSceneTag}
         </div>
 
@@ -609,7 +609,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             className="w-full h-1.5 bg-gray-800 rounded-full cursor-pointer overflow-hidden relative"
           >
             <div
-              className="h-full bg-gradient-to-r from-cyan-400 to-pink-500 shadow-[0_0_12px_#00f0ff]"
+              className="h-full bg-gradient-to-r from-brand-400 to-accent-500 shadow-[0_0_12px_#4DA8FF]"
               style={{ width: `${(currentTime / duration) * 100}%` }}
             />
           </div>
@@ -619,7 +619,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="px-3.5 py-2 bg-white/10 hover:bg-cyan-500/20 text-white rounded-xl border border-white/15 transition flex items-center gap-2"
+                className="px-3.5 py-2 bg-white/10 hover:bg-brand-500/20 text-white rounded-xl border border-white/15 transition flex items-center gap-2"
               >
                 <span>{isPlaying ? "⏸ PAUSE" : "▶ PLAY"}</span>
               </button>
@@ -629,7 +629,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
                   stateRef.current.currentTime = 0;
                   setIsPlaying(true);
                 }}
-                className="px-3.5 py-2 bg-white/10 hover:bg-cyan-500/20 text-white rounded-xl border border-white/15 transition"
+                className="px-3.5 py-2 bg-white/10 hover:bg-brand-500/20 text-white rounded-xl border border-white/15 transition"
               >
                 🔄 REPLAY
               </button>
@@ -638,8 +638,8 @@ const HeroTrailer = ({ onLaunchClick }) => {
                 onClick={() => setIsInteractive(!isInteractive)}
                 className={`px-3.5 py-2 rounded-xl transition border ${
                   isInteractive
-                    ? "bg-cyan-400 text-black border-cyan-400 font-extrabold shadow-[0_0_15px_#00f0ff]"
-                    : "bg-white/10 text-white border-white/15 hover:bg-cyan-500/20"
+                    ? "bg-brand-400 text-black border-brand-400 font-extrabold shadow-[0_0_15px_#4DA8FF]"
+                    : "bg-white/10 text-white border-white/15 hover:bg-brand-500/20"
                 }`}
               >
                 🖐️ INTERACTIVE HAND MODE
@@ -647,14 +647,14 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
               <button
                 onClick={() => setAudioEnabled(!audioEnabled)}
-                className="px-3.5 py-2 bg-white/10 hover:bg-cyan-500/20 text-white rounded-xl border border-white/15 transition"
+                className="px-3.5 py-2 bg-white/10 hover:bg-brand-500/20 text-white rounded-xl border border-white/15 transition"
               >
                 {audioEnabled ? "🔊 SOUND FX ON" : "🔇 SOUND FX OFF"}
               </button>
 
               <button
                 onClick={() => setShowGuide(!showGuide)}
-                className="px-3.5 py-2 bg-cyan-500/10 hover:bg-cyan-500/25 text-cyan-300 rounded-xl border border-cyan-500/30 transition font-mono"
+                className="px-3.5 py-2 bg-brand-500/10 hover:bg-brand-500/25 text-brand-300 rounded-xl border border-brand-500/30 transition font-mono"
               >
                 🎮 GESTURE GUIDE
               </button>
@@ -668,7 +668,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
                 href="/hero-video.html"
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-extrabold rounded-lg transition"
+                className="px-3 py-1.5 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-500 hover:to-accent-500 text-white font-extrabold rounded-lg transition"
               >
                  Launch 4K Trailer Window
               </a>
@@ -679,9 +679,9 @@ const HeroTrailer = ({ onLaunchClick }) => {
         {/* Gesture Quick Guide Overlay Modal */}
         {showGuide && (
           <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
-            <div className="bg-[#0b1021] border border-cyan-500/40 rounded-3xl p-6 max-w-lg w-full text-white shadow-2xl space-y-4">
+            <div className="bg-[#0b1021] border border-brand-500/40 rounded-3xl p-6 max-w-lg w-full text-white shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <h3 className="text-base font-extrabold font-mono text-cyan-300 flex items-center gap-2">
+                <h3 className="text-base font-extrabold font-mono text-brand-300 flex items-center gap-2">
                   <span>🖐️</span> CINEBOOK AI MOTION GESTURES
                 </h3>
                 <button
@@ -694,26 +694,26 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
               <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                 <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-                  <div className="text-cyan-400 font-bold mb-1">🖐️ OPEN PALM</div>
+                  <div className="text-brand-400 font-bold mb-1">🖐️ OPEN PALM</div>
                   <div className="text-gray-300">Swipe horizontally left/right to browse movies</div>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-                  <div className="text-cyan-400 font-bold mb-1">👆 POINT FINGER</div>
+                  <div className="text-brand-400 font-bold mb-1">👆 POINT FINGER</div>
                   <div className="text-gray-300">Aim target reticle to expand movie details & showtimes</div>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-                  <div className="text-cyan-400 font-bold mb-1">🤏 PINCH FINGERS</div>
+                  <div className="text-brand-400 font-bold mb-1">🤏 PINCH FINGERS</div>
                   <div className="text-gray-300">Pinch index + thumb to precision lock recliner seats</div>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-                  <div className="text-cyan-400 font-bold mb-1">👍 THUMBS UP</div>
+                  <div className="text-brand-400 font-bold mb-1">👍 THUMBS UP</div>
                   <div className="text-gray-300">Hold thumbs up for 1s to trigger biometric express booking</div>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowGuide(false)}
-                className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-extrabold rounded-xl hover:opacity-90 transition text-xs"
+                className="w-full py-2.5 bg-gradient-to-r from-brand-500 to-blue-600 text-black font-extrabold rounded-xl hover:opacity-90 transition text-xs"
               >
                 GOT IT, LET'S CONTROL!
               </button>

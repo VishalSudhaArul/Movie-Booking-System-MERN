@@ -1,405 +1,314 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import API from "../../api";
 import TrailerModal, { getYouTubeEmbedUrl } from "../../components/TrailerModal";
 import AdminLayout from "../../components/AdminLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Field from "../../components/ui/Field";
+import Icon from "../../components/ui/Icon";
+import Poster from "../../components/Poster";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { EmptyState, ErrorState, Spinner } from "../../components/ui/Feedback";
+import { useToast } from "../../components/ui/Toast";
+import { formatDuration, getErrorMessage, splitGenres } from "../../lib/format";
+
+const GENRES = ["Action", "Sci-Fi", "Drama", "Comedy", "Thriller", "Horror", "Romance", "Animation"];
+
+const EMPTY_FORM = {
+  title: "",
+  description: "",
+  duration: "",
+  poster: "",
+  genre: "",
+  trailerUrl: "",
+  language: "",
+  releaseDate: "",
+  cast: "",
+  director: "",
+};
 
 function AdminMovies() {
+  const toast = useToast();
   const [movies, setMovies] = useState([]);
+  const [status, setStatus] = useState("loading");
   const [search, setSearch] = useState("");
-  const [selectedGenreFilter, setSelectedGenreFilter] = useState("All");
+  const [genreFilter, setGenreFilter] = useState("All");
 
-  // Form state
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("");
-  const [poster, setPoster] = useState("");
-  const [genre, setGenre] = useState("");
-  const [trailerUrl, setTrailerUrl] = useState("");
-
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
   const [editId, setEditId] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // In-app Trailer Modal state for grid cards
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [activeTrailer, setActiveTrailer] = useState(null);
 
-  const predefinedGenres = [
-    "Action",
-    "Sci-Fi",
-    "Drama",
-    "Comedy",
-    "Thriller",
-    "Horror",
-    "Romance",
-    "Animation",
-  ];
-
-  /* FETCH MOVIES */
-  const fetchMovies = async () => {
+  const fetchMovies = useCallback(async () => {
     try {
       const res = await API.get("/api/movies");
-      setMovies(res.data || []);
+      setMovies(Array.isArray(res.data) ? res.data : []);
+      setStatus("ready");
     } catch (err) {
-      console.log("Fetch movies error:", err);
+      setStatus("error");
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMovies();
-  }, []);
+  }, [fetchMovies]);
 
-  /* SAVE / UPDATE MOVIE */
-  const saveMovie = async () => {
-    if (!title.trim() || !poster.trim()) {
-      return alert("Title and Poster URL are required!");
-    }
+  const update = (key) => (e) => {
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+    if (errors[key]) setErrors((x) => ({ ...x, [key]: "" }));
+  };
 
-    try {
-      const payload = {
-        title: title.trim(),
-        description: description.trim(),
-        duration: Number(duration) || 120,
-        poster: poster.trim(),
-        genre: genre.trim() || "Action",
-        trailerUrl: trailerUrl.trim(),
-      };
-
-      if (editId) {
-        await API.put(`/api/movies/${editId}`, payload);
-        setEditId(null);
-      } else {
-        await API.post("/api/movies", payload);
-      }
-
-      resetForm();
-      fetchMovies();
-    } catch (err) {
-      console.log("Save movie error:", err);
-      alert("Error saving movie: " + (err.response?.data?.message || err.message));
-    }
+  const validate = () => {
+    const next = {};
+    if (!form.title.trim()) next.title = "Enter a title.";
+    if (!form.poster.trim()) next.poster = "Enter a poster image URL.";
+    if (!form.description.trim()) next.description = "Add a short description.";
+    if (form.duration && !(Number(form.duration) > 0)) next.duration = "Enter the length in minutes.";
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setDuration("");
-    setPoster("");
-    setGenre("");
-    setTrailerUrl("");
+    setForm(EMPTY_FORM);
+    setErrors({});
     setEditId(null);
   };
 
-  /* EDIT HANDLER */
-  const handleEdit = (m) => {
-    setEditId(m._id);
-    setTitle(m.title || "");
-    setDescription(m.description || "");
-    setDuration(m.duration || "");
-    setPoster(m.poster || "");
-    setGenre(m.genre || "");
-    setTrailerUrl(m.trailerUrl || "");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  /* DELETE HANDLER */
-  const deleteMovie = async () => {
+  const saveMovie = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setSaving(true);
     try {
-      await API.delete(`/api/movies/${deleteId}`);
-      setDeleteId(null);
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        duration: Number(form.duration) || 120,
+        poster: form.poster.trim(),
+        genre: form.genre.trim() || "Action",
+        trailerUrl: form.trailerUrl.trim(),
+        language: form.language.trim(),
+        releaseDate: form.releaseDate.trim(),
+        cast: form.cast.trim(),
+        director: form.director.trim(),
+      };
+      if (editId) {
+        await API.put(`/api/movies/${editId}`, payload);
+        toast.success(`Saved changes to "${payload.title}".`);
+      } else {
+        await API.post("/api/movies", payload);
+        toast.success(`Added "${payload.title}".`);
+      }
+      resetForm();
       fetchMovies();
     } catch (err) {
-      console.log("Delete movie error:", err);
-      alert("Error deleting movie: " + (err.response?.data?.message || err.message));
+      toast.error(getErrorMessage(err, "We couldn't save the movie."));
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Format duration
-  const formatDuration = (mins) => {
-    if (!mins) return "N/A";
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  const handleEdit = (m) => {
+    setEditId(m._id);
+    setErrors({});
+    setForm({
+      title: m.title || "",
+      description: m.description || "",
+      duration: m.duration ? String(m.duration) : "",
+      poster: m.poster || "",
+      genre: m.genre || "",
+      trailerUrl: m.trailerUrl || "",
+      language: m.language || "",
+      releaseDate: m.releaseDate || "",
+      cast: m.cast || "",
+      director: m.director || "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const filteredMovies = movies.filter((m) => {
-    const matchesSearch =
-      m.title.toLowerCase().includes(search.toLowerCase()) ||
-      m.genre.toLowerCase().includes(search.toLowerCase());
-    const matchesGenre =
-      selectedGenreFilter === "All" ||
-      m.genre.toLowerCase() === selectedGenreFilter.toLowerCase();
-    return matchesSearch && matchesGenre;
-  });
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await API.delete(`/api/movies/${deleteTarget._id}`);
+      toast.success(`Deleted "${deleteTarget.title}".`);
+      if (editId === deleteTarget._id) resetForm();
+      setDeleteTarget(null);
+      fetchMovies();
+    } catch (err) {
+      toast.error(getErrorMessage(err, "We couldn't delete the movie."));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-  const previewEmbedUrl = getYouTubeEmbedUrl(trailerUrl);
+  const hasGenre = (m, g) => splitGenres(m.genre).some((x) => x.toLowerCase() === g.toLowerCase());
+  const query = search.trim().toLowerCase();
+  const filteredMovies = movies.filter(
+    (m) =>
+      (!query || m.title.toLowerCase().includes(query) || (m.genre || "").toLowerCase().includes(query)) &&
+      (genreFilter === "All" || hasGenre(m, genreFilter))
+  );
+
+  const previewEmbedUrl = getYouTubeEmbedUrl(form.trailerUrl);
 
   return (
     <AdminLayout>
-      
-      {/* Header */}
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white flex items-center gap-3">
-            <span>🎬 Movie Control Center & Trailer Studio</span>
-          </h1>
-          <p className="text-gray-400 text-xs md:text-sm mt-1">
-            Add movies with custom YouTube trailer links that play in-app for visitors.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="bg-gray-900 border border-gray-800 px-4 py-2 rounded-2xl text-center">
-            <span className="text-[10px] text-gray-400 uppercase font-bold block">Total Movies</span>
-            <span className="text-lg font-bold text-white">{movies.length}</span>
-          </div>
-          <div className="bg-gray-900 border border-gray-800 px-4 py-2 rounded-2xl text-center">
-            <span className="text-[10px] text-gray-400 uppercase font-bold block">With Trailers</span>
-            <span className="text-lg font-bold text-red-500">
-              {movies.filter((m) => !!m.trailerUrl).length}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 📝 MOVIE ADD/EDIT FORM WITH DEDICATED TRAILER LINK BOX */}
-      <div className="max-w-7xl mx-auto bg-gradient-to-br from-[#0f172a] to-[#020617] p-6 md:p-8 rounded-3xl mb-10 shadow-2xl border border-gray-800 space-y-6">
-        
-        <div className="flex items-center justify-between border-b border-gray-800/80 pb-4">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <span>{editId ? "✏️ Edit Movie Details" : "➕ Add New Movie"}</span>
-          </h2>
-          {editId && (
-            <button
-              onClick={resetForm}
-              className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold px-3 py-1.5 rounded-xl transition"
-            >
-              Cancel Edit
-            </button>
-          )}
-        </div>
-
-        {/* Inputs Row 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <input
-            placeholder="Movie Title *"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="p-3.5 bg-[#020617] border border-gray-800 rounded-2xl text-sm text-white focus:outline-none focus:border-red-500 transition"
-          />
-
-          <input
-            placeholder="Genre (e.g. Action)"
-            value={genre}
-            onChange={(e) => setGenre(e.target.value)}
-            className="p-3.5 bg-[#020617] border border-gray-800 rounded-2xl text-sm text-white focus:outline-none focus:border-red-500 transition"
-          />
-
-          <input
-            type="number"
-            placeholder="Duration (mins)"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            className="p-3.5 bg-[#020617] border border-gray-800 rounded-2xl text-sm text-white focus:outline-none focus:border-red-500 transition"
-          />
-
-          <input
-            placeholder="Poster Image URL *"
-            value={poster}
-            onChange={(e) => setPoster(e.target.value)}
-            className="p-3.5 bg-[#020617] border border-gray-800 rounded-2xl text-sm text-white focus:outline-none focus:border-red-500 transition"
-          />
-
-          {/* 🎬 YouTube Trailer Link Input Box */}
-          <input
-            placeholder="🎬 YouTube Trailer Link (URL)"
-            value={trailerUrl}
-            onChange={(e) => setTrailerUrl(e.target.value)}
-            className="p-3.5 bg-[#020617] border border-red-500/50 rounded-2xl text-sm text-white focus:outline-none focus:border-red-500 transition font-mono shadow-inner"
-          />
-
-          <button
-            onClick={saveMovie}
-            className="bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-2xl transition shadow-lg shadow-red-600/30 text-sm py-3.5"
-          >
-            {editId ? "Update Movie" : "Add Movie"}
-          </button>
-        </div>
-
-        {/* Quick Genre Tags */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-gray-500 font-bold mr-1">Quick Genre:</span>
-          {predefinedGenres.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGenre(g)}
-              className="text-[11px] bg-gray-900 hover:bg-red-950/60 border border-gray-800 hover:border-red-800 text-gray-300 hover:text-red-400 px-2.5 py-1 rounded-xl transition"
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-
-        {/* Row 2: Description */}
-        <textarea
-          placeholder="Movie Synopsis / Description..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows="2"
-          className="w-full p-4 bg-[#020617] border border-gray-800 rounded-2xl text-sm text-white focus:outline-none focus:border-red-500 transition"
+      <div className="mx-auto max-w-7xl space-y-8">
+        <PageHeader
+          eyebrow="Admin"
+          title="Movies"
+          subtitle="Add and edit the films shown on the site, including in-app trailers."
+          icon="film"
+          actions={
+            <>
+              <span className="badge">{movies.length} movies</span>
+              <span className="badge-accent">{movies.filter((m) => !!m.trailerUrl).length} with trailers</span>
+            </>
+          }
         />
 
-        {/* Row 3: Embedded Live YouTube Player Preview Box */}
-        <div className="bg-gray-950 border border-gray-800 p-4 rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
-              <span>📺</span> Live Embedded Trailer Preview Box (Plays In-App)
-            </span>
-            <span className="text-[10px] text-gray-400">
-              {trailerUrl ? "YouTube Link Detected" : "Paste YouTube URL above to preview"}
-            </span>
-          </div>
-
-          {previewEmbedUrl ? (
-            <div className="relative aspect-video max-w-xl mx-auto rounded-2xl overflow-hidden border border-red-500/40 bg-black shadow-2xl">
-              <iframe
-                src={previewEmbedUrl}
-                title="Trailer Live Preview"
-                className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-          ) : (
-            <div className="p-4 border border-dashed border-gray-800 rounded-xl text-center text-xs text-gray-500">
-              🎬 Paste a YouTube link in the <span className="text-red-400 font-bold">🎬 YouTube Trailer Link</span> box above to test the trailer player right here inside the app!
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* 🔍 SEARCH BAR */}
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-        <input
-          placeholder="🔍 Search Movies by Title or Genre..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="p-3.5 bg-[#020617] border border-gray-800 rounded-2xl w-full sm:w-80 text-sm text-white focus:outline-none focus:border-red-500 transition"
-        />
-
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 custom-scrollbar">
-          <button
-            onClick={() => setSelectedGenreFilter("All")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
-              selectedGenreFilter === "All"
-                ? "bg-red-600 text-white shadow-md"
-                : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
-            }`}
-          >
-            All ({movies.length})
-          </button>
-          {predefinedGenres.map((g) => {
-            const count = movies.filter((m) => m.genre.toLowerCase() === g.toLowerCase()).length;
-            return (
-              <button
-                key={g}
-                onClick={() => setSelectedGenreFilter(g)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
-                  selectedGenreFilter === g
-                    ? "bg-red-600 text-white shadow-md"
-                    : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
-                }`}
-              >
-                {g} ({count})
+        {/* Add / edit form */}
+        <form onSubmit={saveMovie} className="card space-y-5 p-5 sm:p-6" noValidate aria-labelledby="movie-form-title">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="movie-form-title" className="text-lg font-semibold text-white">
+              {editId ? "Edit movie" : "Add a movie"}
+            </h2>
+            {editId && (
+              <button type="button" onClick={resetForm} className="btn-ghost btn-sm">
+                Cancel editing
               </button>
-            );
-          })}
-        </div>
-      </div>
+            )}
+          </div>
 
-      {/* 🎬 MOVIE GRID CATALOG */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        {filteredMovies.map((m) => {
-          const hasTrailer = !!m.trailerUrl;
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field id="m-title" label="Title" required error={errors.title} className="lg:col-span-2">
+              <input id="m-title" className={`input ${errors.title ? "input-error" : ""}`} value={form.title} onChange={update("title")} />
+            </Field>
+            <Field id="m-genre" label="Genres" hint="Comma-separated, e.g. Sci-Fi, Thriller">
+              <input id="m-genre" className="input" value={form.genre} onChange={update("genre")} />
+            </Field>
+            <Field id="m-duration" label="Length (minutes)" error={errors.duration}>
+              <input id="m-duration" type="number" min="1" inputMode="numeric" className={`input ${errors.duration ? "input-error" : ""}`} value={form.duration} onChange={update("duration")} />
+            </Field>
+            <Field id="m-poster" label="Poster image URL" required error={errors.poster} className="sm:col-span-2">
+              <input id="m-poster" className={`input ${errors.poster ? "input-error" : ""}`} value={form.poster} onChange={update("poster")} />
+            </Field>
+            <Field id="m-trailer" label="YouTube trailer URL" className="sm:col-span-2">
+              <input id="m-trailer" className="input font-mono" value={form.trailerUrl} onChange={update("trailerUrl")} />
+            </Field>
+            <Field id="m-language" label="Language">
+              <input id="m-language" className="input" value={form.language} onChange={update("language")} />
+            </Field>
+            <Field id="m-release" label="Release date">
+              <input id="m-release" type="date" className="input" value={form.releaseDate} onChange={update("releaseDate")} />
+            </Field>
+            <Field id="m-director" label="Director">
+              <input id="m-director" className="input" value={form.director} onChange={update("director")} />
+            </Field>
+            <Field id="m-cast" label="Cast">
+              <input id="m-cast" className="input" value={form.cast} onChange={update("cast")} />
+            </Field>
+            <Field id="m-desc" label="Description" required error={errors.description} className="sm:col-span-2 lg:col-span-4">
+              <textarea id="m-desc" rows="3" className={`input ${errors.description ? "input-error" : ""}`} value={form.description} onChange={update("description")} />
+            </Field>
+          </div>
 
-          return (
-            <div
-              key={m._id}
-              className="relative group rounded-2xl overflow-hidden shadow-2xl bg-[#020617] border border-gray-800 flex flex-col justify-between"
-            >
-              {/* Poster */}
-              <div className="relative h-[280px] w-full overflow-hidden">
-                <img
-                  src={m.poster}
-                  alt={m.title}
-                  className="h-full w-full object-cover group-hover:scale-110 transition duration-500"
-                  onError={(e) => {
-                    e.target.src = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800";
-                  }}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs text-gray-500">Quick genre:</span>
+            {GENRES.map((g) => (
+              <button key={g} type="button" onClick={() => setForm((f) => ({ ...f, genre: g }))} className="chip px-3 py-1.5">
+                {g}
+              </button>
+            ))}
+          </div>
+
+          {previewEmbedUrl && (
+            <div className="card-muted space-y-2 p-3">
+              <p className="text-xs font-semibold text-gray-400">Trailer preview</p>
+              <div className="mx-auto aspect-video max-w-xl overflow-hidden rounded-xl bg-black">
+                <iframe
+                  src={previewEmbedUrl}
+                  title="Trailer preview"
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
                 />
-
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent p-4 flex flex-col justify-between">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-white bg-red-600/90 px-2 py-0.5 rounded shadow">
-                      {m.genre}
-                    </span>
-                    <span className="text-[10px] font-bold text-green-400 bg-black/60 px-2 py-0.5 rounded border border-gray-800">
-                      ⏱ {formatDuration(m.duration)}
-                    </span>
-                  </div>
-
-                  {/* 🎬 Watch Trailer Button */}
-                  {hasTrailer && (
-                    <button
-                      onClick={() => setActiveTrailer({ url: m.trailerUrl, title: m.title })}
-                      className="self-center bg-red-600/90 hover:bg-red-600 text-white font-extrabold text-xs px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-xl backdrop-blur-md hover:scale-105 transition"
-                    >
-                      <span>▶</span> Watch Trailer
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Info & Actions */}
-              <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                <div>
-                  <h2 className="text-base font-bold text-white truncate">{m.title}</h2>
-                  <p className="text-gray-400 text-xs mt-1 line-clamp-2">{m.description || "No description."}</p>
-                </div>
-
-                <div className="flex gap-2 pt-2 border-t border-gray-800/80">
-                  <button
-                    onClick={() => handleEdit(m)}
-                    className="flex-1 bg-yellow-400 hover:bg-yellow-500 px-3 py-1.5 rounded text-black text-xs font-bold transition text-center"
-                  >
-                    Edit
-                  </button>
-
-                  {hasTrailer && (
-                    <button
-                      onClick={() => setActiveTrailer({ url: m.trailerUrl, title: m.title })}
-                      className="bg-red-950/80 border border-red-800 text-red-400 px-2.5 py-1.5 rounded text-xs font-bold transition"
-                      title="Play Trailer In-App"
-                    >
-                      ▶
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setDeleteId(m._id)}
-                    className="bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded text-white text-xs font-bold transition"
-                  >
-                    Delete
-                  </button>
-                </div>
               </div>
             </div>
-          );
-        })}
+          )}
+
+          <div className="flex justify-end">
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? <><Spinner className="h-4 w-4" /> Saving…</> : editId ? "Save changes" : <><Icon name="plus" className="h-4 w-4" /> Add movie</>}
+            </button>
+          </div>
+        </form>
+
+        {/* Search and filters */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="relative md:w-80">
+            <label htmlFor="movie-search" className="sr-only">Search movies</label>
+            <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <input id="movie-search" placeholder="Search by title or genre" value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-10" />
+          </div>
+          <div className="scroll-row -mx-4 px-4 md:mx-0 md:px-0" role="group" aria-label="Filter by genre">
+            {["All", ...GENRES].map((g) => {
+              const count = g === "All" ? movies.length : movies.filter((m) => hasGenre(m, g)).length;
+              return (
+                <button key={g} onClick={() => setGenreFilter(g)} aria-pressed={genreFilter === g} className={`chip ${genreFilter === g ? "chip-active" : ""}`}>
+                  {g} <span className="opacity-70">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Catalogue */}
+        {status === "loading" ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton aspect-[2/3] rounded-2xl" />)}
+          </div>
+        ) : status === "error" ? (
+          <ErrorState title="We couldn't load movies" onRetry={fetchMovies} />
+        ) : filteredMovies.length === 0 ? (
+          <EmptyState icon="film" title={movies.length ? "No movies match" : "No movies yet"} message={movies.length ? "Try a different search or genre." : "Add your first movie with the form above."} />
+        ) : (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {filteredMovies.map((m) => (
+              <li key={m._id} className={`card flex flex-col overflow-hidden ${editId === m._id ? "ring-2 ring-brand-500" : ""}`}>
+                <div className="relative">
+                  <Poster src={m.poster} alt="" className="aspect-[2/3] w-full" />
+                  <span className="badge absolute left-2 top-2 border-white/15 bg-ink-950/80 backdrop-blur">
+                    <Icon name="clock" className="h-3 w-3" /> {formatDuration(m.duration)}
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col gap-3 p-3.5">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold text-white">{m.title}</h3>
+                    <p className="truncate text-xs text-gray-400">{splitGenres(m.genre).join(" · ") || "—"}</p>
+                  </div>
+                  <div className="mt-auto flex gap-1.5">
+                    <button onClick={() => handleEdit(m)} className="btn-secondary btn-sm flex-1" aria-label={`Edit ${m.title}`}>
+                      Edit
+                    </button>
+                    {m.trailerUrl && (
+                      <button onClick={() => setActiveTrailer({ url: m.trailerUrl, title: m.title })} className="btn-icon h-8 w-8" aria-label={`Play trailer for ${m.title}`}>
+                        <Icon name="play" filled className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button onClick={() => setDeleteTarget(m)} className="btn-icon h-8 w-8 hover:border-danger-500/40 hover:text-danger-300" aria-label={`Delete ${m.title}`}>
+                      <Icon name="trash" className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* 📺 IN-APP TRAILER MODAL FOR GRID CARDS */}
       {activeTrailer && (
         <TrailerModal
           isOpen={!!activeTrailer}
@@ -409,26 +318,16 @@ function AdminMovies() {
         />
       )}
 
-      {/* DELETE MODAL */}
-      {deleteId && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 z-[100] animate-fadeIn">
-          <div className="bg-[#0f172a] border border-red-500/40 p-8 rounded-3xl text-center space-y-4 max-w-sm w-full shadow-2xl animate-modalScaleIn">
-            <div className="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 text-red-500 flex items-center justify-center text-xl mx-auto">
-              🎬
-            </div>
-            <h2 className="text-lg font-extrabold text-white">Delete this movie?</h2>
-            <p className="text-xs text-gray-400">All associated showtimes and bookings will be updated.</p>
-            <div className="flex justify-center gap-3 pt-2">
-              <button onClick={deleteMovie} className="flex-1 bg-red-600 hover:bg-red-700 px-6 py-2.5 rounded-2xl text-white font-bold text-xs transition shadow-lg shadow-red-600/30">
-                Confirm Delete
-              </button>
-              <button onClick={() => setDeleteId(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 px-6 py-2.5 rounded-2xl text-white font-bold text-xs transition">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete this movie?"
+        message={`"${deleteTarget?.title}" will be removed from the catalogue. Its existing showtimes and bookings are not deleted.`}
+        confirmLabel="Delete movie"
+        danger
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </AdminLayout>
   );
 }
