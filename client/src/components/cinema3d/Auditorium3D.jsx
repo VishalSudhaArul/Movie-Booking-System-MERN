@@ -50,6 +50,58 @@ function FirstFrame({ onFirstFrame }) {
   return null;
 }
 
+// The longest part of startup is the GPU compiling the scene's shader programs
+// (about 0.7 s on integrated graphics). Drawing the first frame would freeze the
+// page while that happens, so the canvas starts with rendering switched off,
+// compiles every material in the background (KHR_parallel_shader_compile, via
+// three's compileAsync) and only then draws. Without that extension, or if
+// anything goes wrong, rendering simply starts and compiles as it always did.
+const SHADER_WARMUP_TIMEOUT_MS = 8000;
+
+/** Compiles the scene's shaders once, then tells the parent rendering can start. */
+function ShaderWarmup({ ready, onDone }) {
+  const { gl, scene, camera } = useThree();
+  const get = useThree((s) => s.get);
+  const started = useRef(false);
+
+  useEffect(() => {
+    // Placed after the hall and seats, so their objects are already in the scene.
+    // The ref keeps re-renders and React's development double-effects from
+    // starting a second compile on the same renderer.
+    if (started.current) return;
+    started.current = true;
+    const start = performance.now();
+    let settled = false;
+    const finish = (how) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      onDone({ how, ms: Math.round(performance.now() - start) });
+    };
+    // Never leave the loading screen up for ever (e.g. a lost GPU context).
+    const timer = setTimeout(() => finish("timeout"), SHADER_WARMUP_TIMEOUT_MS);
+    const parallel = typeof gl.compileAsync === "function" && gl.extensions?.has?.("KHR_parallel_shader_compile");
+    if (!parallel) {
+      // No background compilation here: start rendering straight away, as before.
+      finish("unsupported");
+      return;
+    }
+    Promise.resolve()
+      .then(() => gl.compileAsync(scene, camera))
+      .then(
+        () => finish("async"),
+        () => finish("error")
+      );
+  }, [gl, scene, camera, onDone]);
+
+  // Rendering was paused while compiling; draw the first frame now.
+  useEffect(() => {
+    if (ready) get().invalidate();
+  }, [ready, get]);
+
+  return null;
+}
+
 /** Inside the canvas: exposes the camera to the overlay (tests, projection). */
 function SceneBridge({ onReady }) {
   const { camera, gl, invalidate } = useThree();
@@ -82,6 +134,12 @@ export default function Auditorium3D({
     timingsRef.current.canvasCreated = performance.now();
   }, []);
   const [ready, setReady] = useState(false);
+  // Rendering stays off ("never") until the shaders are compiled.
+  const [shadersReady, setShadersReady] = useState(false);
+  const onShadersDone = useCallback((result) => {
+    timingsRef.current.shaders = result;
+    setShadersReady(true);
+  }, []);
   const onFirstFrame = useCallback((t) => {
     timingsRef.current.firstFrame = t;
     setReady(true);
@@ -446,7 +504,7 @@ export default function Auditorium3D({
         onKeyDown={onKeyDown}
       >
         <Canvas
-          frameloop="demand"
+          frameloop={shadersReady ? "demand" : "never"}
           shadows={shadows ? "percentage" : false}
           dpr={lowPower ? 1 : [1, 1.75]}
           camera={{ fov: 52, near: 0.05, far: 120, position: presets.stage.pos }}
@@ -469,6 +527,8 @@ export default function Auditorium3D({
             onPick={handlePick}
             shadows={shadows}
           />
+          {/* After the hall and seats, so everything it compiles is already in the scene. */}
+          <ShaderWarmup ready={shadersReady} onDone={onShadersDone} />
           <CameraControls ref={onControlsReady} makeDefault />
         </Canvas>
 
