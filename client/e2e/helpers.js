@@ -77,7 +77,9 @@ async function settle(page) {
   // Scroll through the page so lazy-loaded images below the fold load, like
   // they would for a visitor, then return to the top.
   await page.evaluate(async () => {
-    const step = window.innerHeight;
+    // Half-screen steps, so sections that fade in as they scroll into view
+    // are seen at least once (as they would be by a person scrolling).
+    const step = Math.round(window.innerHeight / 2);
     for (let y = 0; y < document.body.scrollHeight; y += step) {
       window.scrollTo(0, y);
       await new Promise((r) => setTimeout(r, 60));

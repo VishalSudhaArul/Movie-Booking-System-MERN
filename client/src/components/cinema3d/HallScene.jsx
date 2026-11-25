@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import { useThemeColors } from "../../lib/theme";
 import { AdditiveBlending, CanvasTexture, DoubleSide, PlaneGeometry, RepeatWrapping, SRGBColorSpace } from "three";
 
 // Surfaces
@@ -9,9 +10,8 @@ const WALL = "#182348";
 const PANEL_A = "#223063";
 const PANEL_B = "#2a3a76";
 const CEILING = "#0e1430";
-const STEP_LIGHT = "#7fb8ff";
-const COVE = "#4d8dff";
-const COVE_VIOLET = "#8b6cff";
+// Accent lighting (wall washes, sconces, step lights) follows the colour theme;
+// see useThemeColors below.
 const EXIT_GREEN = "#2fe07a";
 
 /** Low-contrast speckled carpet, drawn in the browser (no image download). */
@@ -97,6 +97,10 @@ function useCurvedScreen(width, height, curve) {
 
 export default function HallScene({ hall, movieTitle, shadows, topView = false }) {
   const { room, screen, geometry: g } = hall;
+  const theme = useThemeColors(["brand-300", "brand-500", "accent-400"]);
+  const STEP_LIGHT = theme["brand-300"];
+  const COVE = theme["brand-500"];
+  const COVE_VIOLET = theme["accent-400"];
   const halfW = room.width / 2;
   const rows = hall.rows;
   const stalls = rows.filter((r) => r.tier !== "balcony");
@@ -281,7 +285,7 @@ export default function HallScene({ hall, movieTitle, shadows, topView = false }
         r.floorY > 0 ? (
           <mesh key={`nose-${r.label}`} position={[0, r.floorY - 0.01, r.z - pitchOf(r) / 2 + 0.05]}>
             <boxGeometry args={[g.aisleWidth * 0.8, 0.025, 0.04]} />
-            <meshBasicMaterial color="#9ec8ff" toneMapped={false} />
+            <meshBasicMaterial color={STEP_LIGHT} toneMapped={false} />
           </mesh>
         ) : null
       )}

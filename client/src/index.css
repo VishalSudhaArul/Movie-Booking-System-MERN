@@ -2,6 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────── Colour themes ─────────────────────────
+   Only the accent colours change between themes. Values are RGB channels so
+   Tailwind can add opacity (bg-brand-500/20). Errors (danger), warnings (gold)
+   and seat states keep their own fixed colours. --on-brand is the text colour
+   used on solid brand fills and --on-accent on solid accent fills: white, or
+   near-black where white text wouldn't be readable on that colour. */
+
+/* Electric Blue (default) */
+:root,
+:root[data-color-theme="blue"] {
+  --brand-200: 191 224 255;
+  --brand-300: 140 200 255;
+  --brand-400: 77 168 255;
+  --brand-500: 30 140 255;
+  --brand-600: 10 111 224;
+  --brand-700: 8 87 179;
+  --accent-200: 221 214 254;
+  --accent-300: 196 181 253;
+  --accent-400: 167 139 250;
+  --accent-500: 139 92 246;
+  --accent-600: 124 58 237;
+  --accent-700: 109 40 217;
+  --grad-from: 10 111 224;
+  --grad-via: 99 82 240;
+  --grad-to: 124 58 237;
+  --on-brand: 255 255 255;
+  --on-accent: 255 255 255;
+}
+
+/* Royal Violet */
+:root[data-color-theme="violet"] {
+  --brand-200: 221 214 254;
+  --brand-300: 196 181 253;
+  --brand-400: 167 139 250;
+  --brand-500: 139 92 246;
+  --brand-600: 124 58 237;
+  --brand-700: 109 40 217;
+  --accent-200: 245 208 254;
+  --accent-300: 240 171 252;
+  --accent-400: 232 121 249;
+  --accent-500: 217 70 239;
+  --accent-600: 192 38 211;
+  --accent-700: 162 28 175;
+  --grad-from: 124 58 237;
+  --grad-via: 147 51 234;
+  --grad-to: 192 38 211;
+  --on-brand: 255 255 255;
+  --on-accent: 28 6 34;
+}
+
+/* Crimson Red */
+:root[data-color-theme="crimson"] {
+  --brand-200: 252 165 165;
+  --brand-300: 248 113 113;
+  --brand-400: 239 68 68;
+  --brand-500: 220 38 38;
+  --brand-600: 185 28 28;
+  --brand-700: 153 27 27;
+  --accent-200: 254 215 170;
+  --accent-300: 253 186 116;
+  --accent-400: 251 146 60;
+  --accent-500: 249 115 22;
+  --accent-600: 234 88 12;
+  --accent-700: 194 65 12;
+  --grad-from: 220 38 38;
+  --grad-via: 190 24 60;
+  --grad-to: 159 18 57;
+  --on-brand: 255 255 255;
+  --on-accent: 26 10 3;
+}
+
+/* Emerald Green */
+:root[data-color-theme="emerald"] {
+  --brand-200: 167 243 208;
+  --brand-300: 110 231 183;
+  --brand-400: 52 211 153;
+  --brand-500: 16 185 129;
+  --brand-600: 5 150 105;
+  --brand-700: 4 120 87;
+  --accent-200: 165 243 252;
+  --accent-300: 103 232 249;
+  --accent-400: 34 211 238;
+  --accent-500: 6 182 212;
+  --accent-600: 8 145 178;
+  --accent-700: 14 116 144;
+  --grad-from: 16 185 129;
+  --grad-via: 20 184 166;
+  --grad-to: 6 182 212;
+  --on-brand: 3 20 15;
+  --on-accent: 3 20 15;
+}
+
+/* Amber Gold */
+:root[data-color-theme="amber"] {
+  --brand-200: 253 230 138;
+  --brand-300: 252 211 77;
+  --brand-400: 251 191 36;
+  --brand-500: 245 158 11;
+  --brand-600: 217 119 6;
+  --brand-700: 180 83 9;
+  --accent-200: 254 215 170;
+  --accent-300: 253 186 116;
+  --accent-400: 251 146 60;
+  --accent-500: 249 115 22;
+  --accent-600: 234 88 12;
+  --accent-700: 194 65 12;
+  --grad-from: 251 191 36;
+  --grad-via: 245 158 11;
+  --grad-to: 249 115 22;
+  --on-brand: 26 16 3;
+  --on-accent: 26 16 3;
+}
+
+/* A brief colour cross-fade while switching themes (added by lib/theme.js
+   for 450 ms, and never when the visitor prefers reduced motion). */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition-property: color, background-color, border-color, outline-color, fill, stroke, box-shadow !important;
+  transition-duration: 350ms !important;
+  transition-timing-function: ease !important;
+  transition-delay: 0s !important;
+}
+
 /* ───────────────────────── Base ───────────────────────── */
 
 @layer base {
@@ -20,10 +145,10 @@
 
   body {
     @apply bg-ink-950 font-sans text-gray-200 antialiased;
-    /* Soft blue and violet light from the top of the page. Fixed so it doesn't
+    /* Soft accent-coloured light from the top of the page. Fixed so it doesn't
        repaint while scrolling. */
-    background-image: radial-gradient(1200px 600px at 10% -10%, rgba(30, 140, 255, 0.09), transparent 60%),
-      radial-gradient(900px 500px at 95% -5%, rgba(139, 92, 246, 0.08), transparent 60%);
+    background-image: radial-gradient(1200px 600px at 10% -10%, rgb(var(--brand-500) / 0.09), transparent 60%),
+      radial-gradient(900px 500px at 95% -5%, rgb(var(--accent-500) / 0.08), transparent 60%);
     background-attachment: fixed;
   }
 
@@ -36,12 +161,12 @@
 
   /* Visible keyboard focus everywhere, without changing mouse behaviour */
   :focus-visible {
-    outline: 2px solid #4da8ff;
+    outline: 2px solid rgb(var(--brand-400));
     outline-offset: 2px;
   }
 
   ::selection {
-    background: rgba(30, 140, 255, 0.4);
+    background: rgb(var(--brand-500) / 0.4);
     color: #fff;
   }
 }
@@ -60,7 +185,7 @@
       disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-brand-gradient text-white shadow-glow hover:brightness-110 active:brightness-95
+    @apply btn bg-brand-gradient text-on-brand shadow-glow hover:brightness-110 active:brightness-95
       disabled:hover:brightness-100;
   }
   .btn-secondary {
@@ -122,7 +247,7 @@
       px-4 py-2 text-xs font-semibold text-gray-300 transition hover:border-white/20 hover:text-white;
   }
   .chip-active {
-    @apply border-transparent bg-brand-gradient text-white shadow-glow hover:border-transparent;
+    @apply border-transparent bg-brand-gradient text-on-brand shadow-glow hover:border-transparent;
   }
   .badge {
     @apply inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06]
@@ -286,6 +411,80 @@
 
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* ─────────────────────── Homepage effects ─────────────────────── */
+
+/* A light sweep across a button on hover. */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+}
+.btn-shine:hover::after,
+.btn-shine:focus-visible::after {
+  transform: translateX(120%);
+}
+
+/* Featured-movie timer bar: fills over one slide, then advances the carousel. */
+@keyframes heroProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.hero-progress {
+  transform-origin: left center;
+  animation: heroProgress var(--hero-ms, 7000ms) linear forwards;
+}
+
+/* A soft light that follows the pointer across a card (--mx / --my set in JS). */
+.spotlight {
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), rgb(var(--brand-500) / 0.18), transparent 70%);
+}
+
+/* Slow drifting haze in the hero. */
+@keyframes haze {
+  0%,
+  100% {
+    transform: translate3d(-3%, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(3%, -2%, 0) scale(1.08);
+    opacity: 0.85;
+  }
+}
+.animate-haze {
+  animation: haze 14s ease-in-out infinite;
+}
+
+@keyframes scrollCue {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+.animate-scroll-cue {
+  animation: scrollCue 1.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

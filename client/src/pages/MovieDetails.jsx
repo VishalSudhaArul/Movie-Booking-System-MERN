@@ -348,7 +348,7 @@ function MovieDetails() {
                             onClick={() => setSelectedDate(d.date)}
                             className={`flex min-w-[72px] shrink-0 flex-col items-center rounded-xl border px-3 py-2.5 transition ${
                               active
-                                ? "border-brand-500 bg-brand-500 text-white"
+                                ? "border-brand-500 bg-brand-500 text-on-brand"
                                 : "border-white/[0.08] bg-ink-850 text-gray-300 hover:border-white/20"
                             }`}
                           >

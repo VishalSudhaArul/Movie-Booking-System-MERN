@@ -7,6 +7,7 @@ const Parking = require("../models/Parking");
 const { evaluateCoupon } = require("../utils/coupons");
 const { findCombo } = require("../utils/combos");
 const { toObjectId, seatsFreeFor, unavailableSeats } = require("../utils/seatHolds");
+const { hasStarted } = require("../utils/showTime");
 const { isObjectId, cleanNumber, exactInsensitive } = require("../utils/validate");
 const { isStaff } = require("../middleware/adminMiddleware");
 
@@ -110,6 +111,7 @@ exports.bookSeats = async (req, res, next) => {
 
     const show = await Show.findById(showId);
     if (!show) return res.status(404).json({ message: "Show not found" });
+    if (hasStarted(show)) return res.status(400).json({ message: "This showtime has already started, so it can't be booked" });
 
     const selectedSeatObjects = show.seats.filter((s) => seats.includes(s.seatNumber));
     if (selectedSeatObjects.length !== seats.length)

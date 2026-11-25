@@ -193,6 +193,10 @@ export default function Seats() {
 
   const toggleSeat = (seat) => {
     if (seat.isBooked) return;
+    if (show && !isUpcomingShow(show)) {
+      toast.info("This showtime has already started, so seats can't be booked.");
+      return;
+    }
     if (selectedSeats.includes(seat.seatNumber)) {
       setSelectedSeats(selectedSeats.filter((n) => n !== seat.seatNumber));
     } else if (selectedSeats.length >= MAX_SEATS) {
@@ -250,7 +254,7 @@ export default function Seats() {
   const { hold, flush, renew } = useSeatHold({
     showId,
     selected: selectedSeats,
-    enabled: status === "ready",
+    enabled: status === "ready" && !!show && isUpcomingShow(show),
     onConflict: handleHoldConflict,
   });
 
@@ -416,7 +420,7 @@ export default function Seats() {
         {/* Steps */}
         <ol className="mb-6 flex items-center gap-2 text-xs font-semibold text-gray-500" aria-label="Booking progress">
           <li className="flex items-center gap-2 text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px]">1</span> Seats
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] text-on-brand">1</span> Seats
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
@@ -431,7 +435,7 @@ export default function Seats() {
         {ended && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.06] p-4 text-sm text-gray-300">
             <Icon name="info" className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
-            <p>This showtime's date has already passed. Check the date before you book.</p>
+            <p>This showtime has already started, so seats can no longer be booked. <Link to={movieId ? `/movies/${movieId}` : "/movies"} className="font-semibold text-brand-300 underline">Pick another showtime</Link>.</p>
           </div>
         )}
 
@@ -444,7 +448,7 @@ export default function Seats() {
                 {webgl && (
                   <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Seat view">
                     {[["3d", "3D hall"], ["2d", "2D map"]].map(([v, label]) => (
-                      <button key={v} onClick={() => chooseView(v)} aria-pressed={view === v} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${view === v ? "bg-brand-gradient text-white" : "text-gray-400 hover:text-white"}`}>
+                      <button key={v} onClick={() => chooseView(v)} aria-pressed={view === v} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${view === v ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                         {label}
                       </button>
                     ))}
@@ -630,7 +634,7 @@ export default function Seats() {
       </div>
 
       {/* ───────────── Summary bar (mobile & tablet) ───────────── */}
-      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "md:hidden" : ""}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "hidden" : ""}`}>
         <div className="container-page flex items-center justify-between gap-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-xs text-gray-400" aria-live="polite">
@@ -660,7 +664,7 @@ function SeatButton({ seat, selected, premium, recliner, onToggle }) {
   } else if (seat.isBooked) {
     style = "cursor-not-allowed border-transparent bg-white/[0.08] text-transparent";
   } else if (selected) {
-    style = "scale-105 border-brand-500 bg-brand-500 text-white shadow-glow";
+    style = "scale-105 border-brand-500 bg-brand-500 text-on-brand shadow-glow";
   } else if (premium) {
     style = "border-accent-400/60 bg-accent-500/[0.1] text-accent-200 hover:bg-accent-500/25";
   } else {

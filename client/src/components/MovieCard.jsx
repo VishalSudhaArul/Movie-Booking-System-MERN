@@ -38,7 +38,7 @@ export default function MovieCard({ movie, onPlayTrailer }) {
               </span>
             ) : null}
             {comingSoon && (
-              <span className="rounded-lg bg-accent-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="rounded-lg bg-accent-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-on-accent">
                 Coming soon
               </span>
             )}
@@ -49,7 +49,7 @@ export default function MovieCard({ movie, onPlayTrailer }) {
             aria-pressed={saved}
             aria-label={saved ? `Remove ${movie.title} from watchlist` : `Add ${movie.title} to watchlist`}
             className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full backdrop-blur transition ${
-              saved ? "bg-brand-500 text-white" : "bg-black/60 text-white hover:bg-black/80"
+              saved ? "bg-brand-500 text-on-brand" : "bg-black/60 text-white hover:bg-black/80"
             }`}
           >
             <Icon name="heart" filled={saved} className="h-4 w-4" />

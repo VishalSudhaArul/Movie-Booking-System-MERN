@@ -6,7 +6,9 @@ import Icon from "./ui/Icon";
 import Poster from "./Poster";
 import { EmptyState } from "./ui/Feedback";
 import { useWatchlist } from "../context/WatchlistContext";
-import { clearSession, getSession } from "../lib/session";
+import { clearSession } from "../lib/session";
+import useVerifiedSession from "../lib/useVerifiedSession";
+import ThemePicker, { ThemeOptions } from "./ThemePicker";
 import { splitGenres } from "../lib/format";
 
 const NAV_LINKS = [
@@ -35,7 +37,7 @@ const CITIES = [
 export function Logo({ className = "" }) {
   return (
     <span className={`flex items-center gap-2.5 ${className}`}>
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gradient text-white shadow-glow">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gradient text-on-brand shadow-glow">
         <Icon name="ticket" className="h-5 w-5" />
       </span>
       <span className="font-display text-xl font-extrabold tracking-tight text-white">
@@ -49,7 +51,9 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { items: watchlistItems, toggle: toggleWatchlist } = useWatchlist();
-  const { isLoggedIn, isAdmin, userName } = getSession();
+  // Staff links appear only after the server confirms the role from the
+  // database; the role saved in the browser alone isn't enough.
+  const { isLoggedIn, isStaff, userName } = useVerifiedSession();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
@@ -141,7 +145,7 @@ export default function Navbar() {
     <>
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[300] focus:rounded-lg focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[300] focus:rounded-lg focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-on-brand"
       >
         Skip to content
       </a>
@@ -175,20 +179,6 @@ export default function Navbar() {
                 {link.label}
               </NavLink>
             ))}
-            {isAdmin && (
-              <NavLink
-                to="/admin/dashboard"
-                className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    isActive || location.pathname.startsWith("/admin")
-                      ? "bg-accent-500/15 text-accent-200"
-                      : "text-accent-300 hover:bg-accent-500/10"
-                  }`
-                }
-              >
-                Admin
-              </NavLink>
-            )}
           </div>
 
           {/* Actions */}
@@ -205,6 +195,22 @@ export default function Navbar() {
               </kbd>
             </button>
 
+            <ThemePicker className="hidden sm:block" />
+
+            {isStaff && (
+              <Link
+                to="/admin/dashboard"
+                className={`btn-icon ${
+                  location.pathname.startsWith("/admin") ? "border-brand-500/40 bg-brand-500/15 text-brand-200" : ""
+                }`}
+                aria-label="Admin dashboard"
+                title="Admin dashboard"
+                data-testid="admin-nav-link"
+              >
+                <Icon name="shield" className="h-[18px] w-[18px]" />
+              </Link>
+            )}
+
             <button
               onClick={() => setWatchlistOpen(true)}
               className="btn-icon relative hidden sm:inline-flex"
@@ -212,7 +218,7 @@ export default function Navbar() {
             >
               <Icon name="heart" className="h-[18px] w-[18px]" />
               {watchlistItems.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-on-brand">
                   {watchlistItems.length}
                 </span>
               )}
@@ -227,7 +233,7 @@ export default function Navbar() {
                   aria-expanded={userMenuOpen}
                   aria-label="Account menu"
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-xs font-bold text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-xs font-bold text-on-brand">
                     {initial}
                   </span>
                   <span className="hidden max-w-[90px] truncate text-sm font-medium text-gray-200 md:inline">
@@ -252,7 +258,7 @@ export default function Navbar() {
                       <MenuLink to="/watchlist" icon="heart" label="Watchlist" />
                       <MenuLink to="/loyalty" icon="crown" label="Rewards" />
                       <MenuLink to="/gift-cards" icon="gift" label="Gift cards" />
-                      {isAdmin && <MenuLink to="/admin/dashboard" icon="settings" label="Admin console" />}
+                      {isStaff && <MenuLink to="/admin/dashboard" icon="shield" label="Admin dashboard" />}
                     </div>
                     <div className="border-t border-white/[0.07] p-1.5">
                       <button
@@ -351,9 +357,17 @@ export default function Navbar() {
                   setCityOpen(true);
                 }}
               />
-              {isAdmin && (
-                <DrawerButton icon="settings" label="Admin console" onClick={() => navigate("/admin/dashboard")} />
+              {isStaff && (
+                <DrawerButton icon="shield" label="Admin dashboard" onClick={() => navigate("/admin/dashboard")} />
               )}
+
+              <div className="my-2 border-t border-white/[0.07]" />
+              <div className="px-3.5 py-2">
+                <p className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  <Icon name="palette" className="h-3.5 w-3.5" /> Colour theme
+                </p>
+                <ThemeOptions compact />
+              </div>
             </div>
 
             <div className="border-t border-white/[0.07] p-4">

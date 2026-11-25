@@ -112,7 +112,7 @@ function MyBookings() {
         <div className="container-page py-8 sm:py-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-500 font-display text-2xl font-bold text-white shadow-glow">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-500 font-display text-2xl font-bold text-on-brand shadow-glow">
                 {displayName.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">

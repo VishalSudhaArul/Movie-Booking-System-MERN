@@ -112,6 +112,29 @@ describe("creating bookings", () => {
   });
 });
 
+describe("showtimes that have started", () => {
+  test("can't be held or booked", async () => {
+    const show = await createShow();
+    await Show.updateOne({ _id: show._id }, { $set: { date: "2020-01-01", time: "10:00" } });
+    const { auth } = await createUser();
+    const booking = await book(auth, { showId: String(show._id), seats: ["A1"] });
+    expect(booking.status).toBe(400);
+    expect(booking.body.message).toMatch(/already started/);
+    const hold = await request(app).post(`/api/shows/${show._id}/holds`).set("Authorization", auth).send({ seats: ["A1"] });
+    expect(hold.status).toBe(400);
+    expect((await Show.findById(show._id)).seats.some((s) => s.isBooked || s.heldBy)).toBe(false);
+  });
+
+  test("start time is read in the cinema's time zone, including 12-hour times", () => {
+    const { showStartsAt, to24h } = require("../utils/showTime");
+    expect(to24h("6:30 PM")).toBe("18:30");
+    expect(to24h("12:15 AM")).toBe("00:15");
+    expect(to24h("12:15 PM")).toBe("12:15");
+    expect(showStartsAt({ date: "2026-11-26", time: "18:30" }).toISOString()).toBe("2026-11-26T13:00:00.000Z");
+    expect(showStartsAt({ date: "bad", time: "18:30" })).toBeNull();
+  });
+});
+
 describe("double-booking under concurrency", () => {
   test("simultaneous requests for the same seat: exactly one succeeds", async () => {
     const show = await createShow();

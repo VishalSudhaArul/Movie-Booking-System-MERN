@@ -5,6 +5,17 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="theme-color" content="#07080C" />
+    <!-- Apply the saved colour theme before the page paints (see src/lib/theme.js). -->
+    <script>
+      (function () {
+        var t = "blue";
+        try {
+          var s = localStorage.getItem("cinebook:theme");
+          if (/^(blue|violet|crimson|emerald|amber)$/.test(s)) t = s;
+        } catch (e) {}
+        document.documentElement.setAttribute("data-color-theme", t);
+      })();
+    </script>
     <meta
       name="description"
       content="CineBook — book movie tickets online. Browse what's showing, pick your seats on a live seat map, add snacks and get a QR ticket instantly."

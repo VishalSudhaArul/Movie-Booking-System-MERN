@@ -47,20 +47,27 @@ const loadCatalog = async () => {
     };
   });
 
-  return { movies, fetchedAt: Date.now() };
+  // Upcoming showtimes (without seat maps) for the showtime discovery sections.
+  const known = new Set(movies.map((m) => String(m._id)));
+  const upcomingShows = shows
+    .filter((show) => isUpcomingShow(show) && known.has(String(movieIdOf(show))))
+    .map((show) => ({ ...show, movieId: String(movieIdOf(show)) }));
+
+  return { movies, upcomingShows, fetchedAt: Date.now() };
 };
 
-/** Movies enriched with show availability and real review ratings. */
+/** Movies enriched with show availability and real review ratings, plus upcoming showtimes. */
 export default function useCatalog() {
   const [state, setState] = useState({
     movies: cache?.movies || [],
+    upcomingShows: cache?.upcomingShows || [],
     loading: !cache,
     error: null,
   });
 
   const load = useCallback((force = false) => {
     if (!force && cache && Date.now() - cache.fetchedAt < CACHE_MS) {
-      setState({ movies: cache.movies, loading: false, error: null });
+      setState({ movies: cache.movies, upcomingShows: cache.upcomingShows, loading: false, error: null });
       return;
     }
     if (!cache) setState((s) => ({ ...s, loading: true, error: null }));
@@ -72,10 +79,10 @@ export default function useCatalog() {
     inflight
       .then((result) => {
         cache = result;
-        setState({ movies: result.movies, loading: false, error: null });
+        setState({ movies: result.movies, upcomingShows: result.upcomingShows, loading: false, error: null });
       })
       .catch((error) => {
-        setState((s) => ({ movies: s.movies, loading: false, error }));
+        setState((s) => ({ ...s, loading: false, error }));
       });
   }, []);
 

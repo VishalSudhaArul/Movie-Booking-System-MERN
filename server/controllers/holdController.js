@@ -6,6 +6,7 @@ const Show = require("../models/Show");
 const { isObjectId } = require("../utils/validate");
 const { HOLD_MS, HOLD_MINUTES, toObjectId, seatsFreeFor, unavailableSeats } = require("../utils/seatHolds");
 const { MAX_SEATS_PER_BOOKING } = require("./bookingController");
+const { hasStarted } = require("../utils/showTime");
 
 const SEAT_NUMBER_RE = /^[A-Z]{1,2}\d{1,3}$/;
 
@@ -28,8 +29,9 @@ exports.holdSeats = async (req, res, next) => {
 
     if (seats.length === 0) return exports.releaseSeats(req, res, next);
 
-    const show = await Show.findById(showId).select("seats.seatNumber");
+    const show = await Show.findById(showId).select("seats.seatNumber date time");
     if (!show) return res.status(404).json({ message: "Show not found" });
+    if (hasStarted(show)) return res.status(400).json({ message: "This showtime has already started" });
     const existing = new Set(show.seats.map((s) => s.seatNumber));
     if (seats.some((s) => !existing.has(s))) {
       return res.status(400).json({ message: "One or more seats do not exist for this show" });

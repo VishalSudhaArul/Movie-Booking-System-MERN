@@ -467,4 +467,34 @@ test.describe("phones", () => {
     await expect(page.getByRole("button", { name: "3D hall" })).toBeVisible();
     await settle(page);
   });
+
+  test("3D on a phone: bottom-sheet booking panel, automatic hold, checkout", async ({ page, request }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const session = await signIn(page, "user");
+    const showId = await firstShowId(page);
+    await page.request.delete(`${API}/api/shows/${showId}/holds`, { headers: { Authorization: `Bearer ${session.token}` } });
+    await page.goto(`/seats/${showId}`);
+    await page.getByRole("button", { name: "3D hall" }).tap();
+    await page.waitForFunction(() => window.__cinema3d && window.__cinema3d.getState().timings.firstFrame, null, { timeout: 20000, polling: 100 });
+
+    // The sheet starts collapsed; the page's own bottom bar is not shown on top of it.
+    const sheet = panel(page);
+    await expect(sheet.getByLabel("Seat number")).toBeHidden();
+    await sheet.getByRole("button", { name: /Show seats/ }).tap();
+    await expect(sheet.getByLabel("Seat number")).toBeVisible();
+
+    const free = Object.values(await serverSeats(request, showId)).filter((s) => /^L\d+$/.test(s.seatNumber) && !s.isBooked && !s.isHeld);
+    const seat = free[0].seatNumber;
+    await findSeat(page, seat);
+    await expect(sheet).toContainText(seat);
+    await expect(heldTimer(page)).toHaveText(/^[78]:\d\d$/);
+    await settle(page);
+    await snap(page, testInfo, "3d-phone-sheet");
+
+    await sheet.getByRole("button", { name: /^Continue/ }).tap();
+    await expect(page).toHaveURL(/\/addons\//);
+    await page.getByRole("button", { name: /Confirm demo booking/ }).tap();
+    await expect(page.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
+    expect((await serverSeats(request, showId))[seat].isBooked).toBe(true);
+  });
 });

@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Logo } from "./Navbar";
-import { getSession } from "../lib/session";
+import useVerifiedSession from "../lib/useVerifiedSession";
 
 const COLUMNS = [
   {
@@ -34,7 +34,7 @@ const COLUMNS = [
 function Footer() {
   // Re-read the session on every navigation so links update after sign-in/out.
   useLocation();
-  const { isAdmin } = getSession();
+  const { isStaff: isAdmin } = useVerifiedSession();
 
   return (
     <footer className="mt-auto border-t border-white/[0.07] bg-ink-950/80">

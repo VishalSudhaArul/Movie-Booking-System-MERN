@@ -16,24 +16,29 @@ module.exports = {
           700: "#1B2541",
           600: "#283454",
         },
-        // Primary accent: electric blue
+        // Primary accent. Values come from CSS variables so the five colour
+        // themes (src/lib/theme.js, index.css) can swap them at runtime.
         brand: {
-          200: "#BFE0FF",
-          300: "#8CC8FF",
-          400: "#4DA8FF",
-          500: "#1E8CFF",
-          600: "#0A6FE0",
-          700: "#0857B3",
+          200: "rgb(var(--brand-200) / <alpha-value>)",
+          300: "rgb(var(--brand-300) / <alpha-value>)",
+          400: "rgb(var(--brand-400) / <alpha-value>)",
+          500: "rgb(var(--brand-500) / <alpha-value>)",
+          600: "rgb(var(--brand-600) / <alpha-value>)",
+          700: "rgb(var(--brand-700) / <alpha-value>)",
         },
-        // Secondary accent: violet
+        // Secondary accent, also themed
         accent: {
-          200: "#DDD6FE",
-          300: "#C4B5FD",
-          400: "#A78BFA",
-          500: "#8B5CF6",
-          600: "#7C3AED",
-          700: "#6D28D9",
+          200: "rgb(var(--accent-200) / <alpha-value>)",
+          300: "rgb(var(--accent-300) / <alpha-value>)",
+          400: "rgb(var(--accent-400) / <alpha-value>)",
+          500: "rgb(var(--accent-500) / <alpha-value>)",
+          600: "rgb(var(--accent-600) / <alpha-value>)",
+          700: "rgb(var(--accent-700) / <alpha-value>)",
         },
+        // Text and icons drawn on a solid brand fill (white or near-black,
+        // whichever reads better on that theme's accent)
+        "on-brand": "rgb(var(--on-brand) / <alpha-value>)",
+        "on-accent": "rgb(var(--on-accent) / <alpha-value>)",
         // Errors and destructive actions
         danger: {
           300: "#FDA4AF",
@@ -53,14 +58,15 @@ module.exports = {
       },
       boxShadow: {
         card: "0 1px 0 rgba(255,255,255,0.05) inset, 0 18px 40px -20px rgba(0,0,0,0.85)",
-        glow: "0 10px 30px -10px rgba(30,140,255,0.6)",
-        "glow-accent": "0 10px 30px -10px rgba(139,92,246,0.55)",
+        glow: "0 10px 30px -10px rgb(var(--brand-500) / 0.6)",
+        "glow-accent": "0 10px 30px -10px rgb(var(--accent-500) / 0.55)",
         "inner-line": "inset 0 0 0 1px rgba(255,255,255,0.06)",
       },
       backgroundImage: {
-        "brand-gradient": "linear-gradient(135deg, #1E8CFF 0%, #6D5CF6 55%, #8B5CF6 100%)",
+        "brand-gradient":
+          "linear-gradient(135deg, rgb(var(--grad-from)) 0%, rgb(var(--grad-via)) 55%, rgb(var(--grad-to)) 100%)",
         "brand-gradient-soft":
-          "linear-gradient(135deg, rgba(30,140,255,0.16) 0%, rgba(139,92,246,0.14) 100%)",
+          "linear-gradient(135deg, rgb(var(--brand-500) / 0.16) 0%, rgb(var(--accent-500) / 0.14) 100%)",
         "surface-gradient": "linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.01) 100%)",
       },
       keyframes: {
