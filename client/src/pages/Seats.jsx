@@ -508,6 +508,8 @@ export default function Seats() {
                       maxSeats={MAX_SEATS}
                       premiumCategory={premiumCategory}
                       movieTitle={movie?.title}
+                      moviePoster={movie?.poster}
+                      trailerUrl={movie?.trailerUrl}
                       reducedMotion={reducedMotion}
                       lowPower={lowPower}
                     />

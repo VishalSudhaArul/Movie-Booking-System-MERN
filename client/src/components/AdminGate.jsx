@@ -21,7 +21,7 @@ function AdminGate({ children }) {
   }, []);
 
   if (!isLoggedIn) {
-    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+    return <Navigate to="/admin/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
   if (status === "checking") return <PageLoader label="Checking your access…" />;
@@ -52,7 +52,14 @@ function AdminGate({ children }) {
         <p className="mt-1.5 text-sm text-gray-400">
           This area is for cinema staff. Your account doesn't have admin access.
         </p>
-        <Link to="/" className="btn-primary mt-6 w-full">Back to site</Link>
+        <Link
+          to="/admin/login"
+          state={{ from: location.pathname + location.search }}
+          className="btn-primary mt-6 w-full"
+        >
+          Sign in with an admin account
+        </Link>
+        <Link to="/" className="btn-ghost mt-2 w-full">Back to site</Link>
       </div>
     </main>
   );

@@ -23,6 +23,7 @@ const MyBookings = lazy(() => import("./pages/MyBookings"));
 const VerifyTicket = lazy(() => import("./pages/VerifyTicket"));
 const SnacksHub = lazy(() => import("./pages/SnacksHub"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminScan = lazy(() => import("./pages/AdminScan"));
 const Scanner = lazy(() => import("./pages/Scanner"));
 
@@ -142,6 +143,7 @@ function App() {
           />
 
           {/* ── Admin Routes ── */}
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route
             path="/admin/dashboard"

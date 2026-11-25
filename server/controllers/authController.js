@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { getJwtSecret } = require("../config/env");
 const { isEmail, cleanString } = require("../utils/validate");
+const { isStaff } = require("../middleware/adminMiddleware");
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72; // bcrypt only uses the first 72 bytes
@@ -59,25 +60,42 @@ exports.register = async (req, res, next) => {
   }
 };
 
+// Returns the user when the email and password match, otherwise null.
+const checkCredentials = async (body) => {
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const password = body.password;
+  if (!isEmail(email) || typeof password !== "string" || !password || password.length > 200) return null;
+
+  const user = await findByEmail(email);
+  if (!user || typeof user.password !== "string") return null;
+  return (await bcrypt.compare(password, user.password)) ? user : null;
+};
+
+// Same answer for an unknown email and a wrong password, so accounts can't be probed.
+const invalidCredentials = (res) => res.status(400).json({ message: "Invalid email or password" });
+
 // ✅ LOGIN
 exports.login = async (req, res, next) => {
   try {
-    const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
-    const password = req.body.password;
+    const user = await checkCredentials(req.body);
+    if (!user) return invalidCredentials(res);
+    return res.json(sessionResponse(user));
+  } catch (err) {
+    return next(err);
+  }
+};
 
-    // Same answer for an unknown email and a wrong password, so accounts can't be probed.
-    const invalid = () => res.status(400).json({ message: "Invalid email or password" });
-
-    if (!isEmail(email) || typeof password !== "string" || !password || password.length > 200) {
-      return invalid();
+// ✅ ADMIN LOGIN — the Admin entry in the navbar.
+// Same password check as LOGIN, then the role is read from the database: only
+// admins and theatre owners get a session. Anyone else is refused and no token
+// is issued, so this sign-in can never hand out a customer session either.
+exports.adminLogin = async (req, res, next) => {
+  try {
+    const user = await checkCredentials(req.body);
+    if (!user) return invalidCredentials(res);
+    if (!isStaff(user)) {
+      return res.status(403).json({ message: "This account doesn't have admin access." });
     }
-
-    const user = await findByEmail(email);
-    if (!user || typeof user.password !== "string") return invalid();
-
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return invalid();
-
     return res.json(sessionResponse(user));
   } catch (err) {
     return next(err);

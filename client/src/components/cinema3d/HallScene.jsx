@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { useThemeColors } from "../../lib/theme";
+import MovieScreen from "./MovieScreen";
 import { AdditiveBlending, CanvasTexture, DoubleSide, PlaneGeometry, RepeatWrapping, SRGBColorSpace } from "three";
 
 // Surfaces
@@ -44,41 +45,6 @@ function useCarpetTexture() {
   return texture;
 }
 
-/** The screen picture: a soft gradient with the film's title, drawn in the browser. */
-function useScreenTexture(title) {
-  const texture = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 440;
-    const ctx = canvas.getContext("2d");
-    const g = ctx.createLinearGradient(0, 0, 1024, 440);
-    g.addColorStop(0, "#0d2a5c");
-    g.addColorStop(0.55, "#1b2f7a");
-    g.addColorStop(1, "#3b1f74");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 1024, 440);
-    const glow = ctx.createRadialGradient(512, 200, 20, 512, 220, 520);
-    glow.addColorStop(0, "rgba(140,200,255,0.35)");
-    glow.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, 1024, 440);
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "700 64px Outfit, Inter, system-ui, sans-serif";
-    ctx.fillText(title || "Now showing", 512, 205, 900);
-    ctx.font = "500 24px Inter, system-ui, sans-serif";
-    ctx.fillStyle = "rgba(200,220,255,0.7)";
-    ctx.fillText("CINEBOOK  ·  NOW SHOWING", 512, 275);
-    const t = new CanvasTexture(canvas);
-    t.colorSpace = SRGBColorSpace;
-    t.anisotropy = 4;
-    return t;
-  }, [title]);
-  useEffect(() => () => texture.dispose(), [texture]);
-  return texture;
-}
-
 /** Plane bent into a gentle curve so the edges come towards the audience. */
 function useCurvedScreen(width, height, curve) {
   return useMemo(() => {
@@ -95,7 +61,7 @@ function useCurvedScreen(width, height, curve) {
   }, [width, height, curve]);
 }
 
-export default function HallScene({ hall, movieTitle, shadows, topView = false }) {
+export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowPower = false, shadows, topView = false }) {
   const { room, screen, geometry: g } = hall;
   const theme = useThemeColors(["brand-300", "brand-500", "accent-400"]);
   const STEP_LIGHT = theme["brand-300"];
@@ -113,7 +79,6 @@ export default function HallScene({ hall, movieTitle, shadows, topView = false }
   const backZ = Math.max(room.depth, (rows[rows.length - 1]?.z || 0) + 3);
   const screenCenterY = screen.bottom + screen.height / 2;
 
-  const screenTexture = useScreenTexture(movieTitle);
   const screenGeo = useCurvedScreen(screen.width, screen.height, screen.curve || 0);
 
   // Acoustic wall panels, alternating shades, along both side walls.
@@ -180,9 +145,15 @@ export default function HallScene({ hall, movieTitle, shadows, topView = false }
       )}
 
       {/* Screen, black masking, and the stage in front of it */}
-      <mesh geometry={screenGeo} position={[0, screenCenterY, 0]}>
-        <meshBasicMaterial map={screenTexture} toneMapped={false} />
-      </mesh>
+      <MovieScreen
+        geometry={screenGeo}
+        centerY={screenCenterY}
+        screen={screen}
+        title={movieTitle}
+        poster={moviePoster}
+        trailer={trailer}
+        lowPower={lowPower}
+      />
       <mesh position={[0, screenCenterY, -0.15]}>
         <boxGeometry args={[screen.width + 1.4, screen.height + 1.2, 0.1]} />
         <meshStandardMaterial color="#03040a" roughness={1} />

@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, CameraControlsImpl } from "@react-three/drei";
 import { Box3, MathUtils, Vector3 } from "three";
 import HallScene from "./HallScene";
+import { TrailerControls, useScreenTrailer } from "./ScreenTrailer";
 import SeatInstances, { seatState } from "./SeatInstances";
 import Icon from "../ui/Icon";
 import HoldCountdown from "../HoldCountdown";
@@ -125,9 +126,13 @@ export default function Auditorium3D({
   maxSeats,
   premiumCategory,
   movieTitle,
+  moviePoster,
+  trailerUrl,
   reducedMotion = false,
   lowPower = false,
 }) {
+  // The movie's trailer on the big screen (poster when there's none).
+  const trailer = useScreenTrailer(trailerUrl, { reducedMotion, lowPower });
   // Startup timings (ms since page start): mounted → canvas created → first frame.
   const timingsRef = useRef({ mounted: performance.now() });
   const onCanvasCreated = useCallback(() => {
@@ -392,7 +397,17 @@ export default function Auditorium3D({
           lowPower,
           programs: sceneRef.current?.gl.info.programs?.length,
           triangles: info?.triangles,
+          trailer: trailer.status,
         };
+      },
+      // Screen coordinates of a point on the cinema screen (u, v from -1 to 1).
+      projectScreen: (u = 0, v = 0) => {
+        const scene = sceneRef.current;
+        if (!scene) return null;
+        const { screen } = hall;
+        const p = new Vector3((u * screen.width) / 2, screen.bottom + screen.height / 2 + (v * screen.height) / 2, 0).project(scene.camera);
+        const r = scene.gl.domElement.getBoundingClientRect();
+        return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height, visible: p.z < 1 };
       },
       // Screen coordinates of a seat, so tests can click it like a person would.
       project: (seatNumber) => {
@@ -409,7 +424,7 @@ export default function Auditorium3D({
     return () => {
       delete window.__cinema3d;
     };
-  }, [mode, introDone, viewSeat, hall, goTo, presets]);
+  }, [mode, introDone, viewSeat, hall, goTo, presets, trailer.status]);
 
   /* ---------- Keyboard navigation (when the 3D view has focus) ---------- */
 
@@ -509,6 +524,9 @@ export default function Auditorium3D({
           dpr={lowPower ? 1 : [1, 1.75]}
           camera={{ fov: 52, near: 0.05, far: 120, position: presets.stage.pos }}
           gl={{ antialias: !lowPower, powerPreference: "high-performance" }}
+          // Its own stacking context: a YouTube trailer raises the canvas's
+          // z-index (see MovieScreen), which must never cover our overlays.
+          style={{ isolation: "isolate" }}
           onPointerMissed={() => setHover(null)}
           onCreated={onCanvasCreated}
           aria-hidden="true"
@@ -517,7 +535,15 @@ export default function Auditorium3D({
           <fog attach="fog" args={["#04060d", 40, 95]} />
           <SceneBridge onReady={handleSceneReady} />
           <FirstFrame onFirstFrame={onFirstFrame} />
-          <HallScene hall={hall} movieTitle={movieTitle} shadows={shadows} topView={mode === "map"} />
+          <HallScene
+            hall={hall}
+            movieTitle={movieTitle}
+            moviePoster={moviePoster}
+            trailer={trailer.screen}
+            lowPower={lowPower}
+            shadows={shadows}
+            topView={mode === "map"}
+          />
           <SeatInstances
             hall={hall}
             selected={selected}
@@ -556,6 +582,13 @@ export default function Auditorium3D({
             <Icon name="refresh" className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Trailer controls: outside the scene, never over the screen. On phones
+            the seat-view panel takes this spot, so they step aside there. */}
+        <TrailerControls
+          trailer={trailer}
+          className={`absolute left-3 top-14 z-10 ${mode === "seat" ? "hidden md:flex" : ""}`}
+        />
 
         {/* Hints */}
         {!introDone && introProgress < 1 ? (

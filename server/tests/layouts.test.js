@@ -147,6 +147,23 @@ describe("API", () => {
     expect(res.body.layoutId ?? null).toBeNull();
   });
 
+  test("show times must be readable, so a show can't stay bookable after it starts", async () => {
+    const { auth } = await createUser("admin");
+    const movie = await createMovie();
+    const body = { movieId: String(movie._id), theatre: "IMAX", date: "2027-02-01", ...PRICES };
+    const post = (time) => request(app).post("/api/shows").set("Authorization", auth).send({ ...body, time });
+
+    for (const time of ["18:00", "0:15", "6:30 PM", "12:00 AM", "9:05am"]) {
+      expect((await post(time)).status).toBe(201);
+    }
+    for (const time of ["23:00 PM", "13:30 PM", "0:30 AM", "24:00", "6:3 PM"]) {
+      expect((await post(time)).status).toBe(400);
+    }
+    const show = await createShow();
+    const update = await request(app).put(`/api/shows/${show._id}`).set("Authorization", auth).send({ time: "15:00 PM" });
+    expect(update.status).toBe(400);
+  });
+
   test("GET /api/shows/layouts lists the available layouts", async () => {
     const res = await request(app).get("/api/shows/layouts");
     expect(res.status).toBe(200);
