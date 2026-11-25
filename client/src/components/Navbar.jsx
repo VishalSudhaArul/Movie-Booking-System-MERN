@@ -136,6 +136,11 @@ export default function Navbar() {
 
   const initial = userName ? userName.charAt(0).toUpperCase() : "U";
 
+  // Admin is always listed. Verified staff go straight to the dashboard;
+  // everyone else gets the admin sign-in, where the server checks the role.
+  const adminHref = isStaff ? "/admin/dashboard" : "/admin/login";
+  const onAdminPage = location.pathname.startsWith("/admin");
+
   const linkClass = ({ isActive }) =>
     `rounded-lg px-3 py-2 text-sm font-medium transition ${
       isActive ? "bg-brand-500/[0.12] text-white shadow-inner-line" : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
@@ -179,6 +184,14 @@ export default function Navbar() {
                 {link.label}
               </NavLink>
             ))}
+            <Link
+              to={adminHref}
+              className={linkClass({ isActive: onAdminPage })}
+              aria-current={onAdminPage ? "page" : undefined}
+              data-testid="admin-nav-link"
+            >
+              Admin
+            </Link>
           </div>
 
           {/* Actions */}
@@ -196,20 +209,6 @@ export default function Navbar() {
             </button>
 
             <ThemePicker className="hidden sm:block" />
-
-            {isStaff && (
-              <Link
-                to="/admin/dashboard"
-                className={`btn-icon ${
-                  location.pathname.startsWith("/admin") ? "border-brand-500/40 bg-brand-500/15 text-brand-200" : ""
-                }`}
-                aria-label="Admin dashboard"
-                title="Admin dashboard"
-                data-testid="admin-nav-link"
-              >
-                <Icon name="shield" className="h-[18px] w-[18px]" />
-              </Link>
-            )}
 
             <button
               onClick={() => setWatchlistOpen(true)}
@@ -357,9 +356,12 @@ export default function Navbar() {
                   setCityOpen(true);
                 }}
               />
-              {isStaff && (
-                <DrawerButton icon="shield" label="Admin dashboard" onClick={() => navigate("/admin/dashboard")} />
-              )}
+              <DrawerButton
+                icon="shield"
+                label="Admin"
+                trailing={isStaff ? "Dashboard" : null}
+                onClick={() => navigate(adminHref)}
+              />
 
               <div className="my-2 border-t border-white/[0.07]" />
               <div className="px-3.5 py-2">

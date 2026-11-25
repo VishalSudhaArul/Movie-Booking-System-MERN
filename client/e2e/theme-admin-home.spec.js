@@ -112,34 +112,120 @@ test.describe("colour themes", () => {
   });
 });
 
-test.describe("admin link", () => {
-  test("hidden for visitors and customers, even if the saved role is edited", async ({ page }) => {
+// Clicks the Admin entry the way a visitor would at this screen size:
+// the navbar link on desktop, the menu drawer on tablets and phones.
+async function openAdminEntry(page, testInfo) {
+  if (testInfo.project.name === "desktop") {
+    const link = page.getByTestId("admin-nav-link");
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAccessibleName("Admin");
+    await link.click();
+  } else {
+    await expect(page.getByTestId("admin-nav-link")).toBeHidden();
+    await page.getByRole("button", { name: "Open menu" }).click();
+    const item = page.getByRole("dialog", { name: "Menu" }).getByRole("button", { name: /^Admin/ });
+    await expect(item).toBeVisible();
+    await item.click();
+  }
+}
+
+const adminSignIn = async (page, email, password) => {
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in to admin" }).click();
+};
+
+test.describe("admin entry", () => {
+  test("visible to visitors; leads to the admin sign-in; an admin reaches the dashboard", async ({ page }, testInfo) => {
+    // The refused sign-ins below log the browser's usual "failed to load" lines.
+    const errors = watchErrors(page, [/status of 40[03]/]);
+    if (testInfo.project.name === "desktop") {
+      // The narrowest width with the full desktop navbar still fits.
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await page.goto("/");
+      await expect(page.getByTestId("admin-nav-link")).toBeVisible();
+      expect(await horizontalOverflow(page)).toEqual([]);
+      await page.setViewportSize({ width: 1440, height: 900 });
+    }
     await page.goto("/");
     await expect(page.getByTestId("home-hero")).toBeVisible();
-    await expect(page.getByTestId("admin-nav-link")).toHaveCount(0);
+    await openAdminEntry(page, testInfo);
+    await expect(page).toHaveURL(/\/admin\/login$/);
+    await expect(page.getByRole("heading", { name: "Admin sign in" })).toBeVisible();
+    expect(await horizontalOverflow(page)).toEqual([]);
+    await snap(page, testInfo, "admin-login");
 
+    // Wrong password: refused, nothing saved.
+    await adminSignIn(page, "admin@e2e.test", "WrongPass123");
+    await expect(page.getByText("That email and password don't match")).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
+    await expect(page).toHaveURL(/\/admin\/login$/);
+
+    // Right password on a customer account: refused, nothing saved.
+    await adminSignIn(page, "user@e2e.test", "UserPass123");
+    await expect(page.getByText("This account doesn't have admin access")).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
+    await expect(page).toHaveURL(/\/admin\/login$/);
+
+    // The administrator: into the existing dashboard.
+    await adminSignIn(page, "admin@e2e.test", "AdminPass123");
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+    await expect(page.getByRole("heading", { name: "Staff only" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("role"))).toBe("admin");
+
+    // Now the entry goes straight to the dashboard.
+    await page.goto("/");
+    await openAdminEntry(page, testInfo);
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+    expect(errors).toEqual([]);
+  });
+
+  test("protected admin URLs send visitors to the admin sign-in and back afterwards", async ({ page }) => {
+    await page.goto("/admin/shows");
+    await expect(page).toHaveURL(/\/admin\/login$/);
+    await expect(page.getByRole("heading", { name: "Admin sign in" })).toBeVisible();
+    await adminSignIn(page, "admin@e2e.test", "AdminPass123");
+    await expect(page).toHaveURL(/\/admin\/shows$/);
+  });
+
+  test("a customer can't get in, even by editing the saved role", async ({ page }) => {
     await signIn(page, "user");
     // Pretend to be an admin by editing the browser's saved role.
     await page.addInitScript(() => localStorage.setItem("role", "admin"));
     await page.goto("/");
     await expect(page.getByTestId("home-hero")).toBeVisible();
     await page.waitForLoadState("networkidle");
-    await expect(page.getByTestId("admin-nav-link")).toHaveCount(0);
+    // The entry is still offered, but leads to the sign-in, not the dashboard.
+    expect(await page.evaluate(() => localStorage.getItem("role"))).toBe("user");
     await page.goto("/admin/dashboard");
     await expect(page.getByRole("heading", { name: "Staff only" })).toBeVisible();
-    // The server's answer also corrects the saved hint.
-    expect(await page.evaluate(() => localStorage.getItem("role"))).toBe("user");
+    await page.getByRole("link", { name: "Sign in with an admin account" }).click();
+    await expect(page).toHaveURL(/\/admin\/login$/);
+    await expect(page.getByTestId("admin-login-notice")).toBeVisible();
+
+    // Every staff API refuses this customer's token.
+    const token = await page.evaluate(() => localStorage.getItem("token"));
+    const auth = { Authorization: `Bearer ${token}` };
+    for (const path of ["/api/bookings/all", "/api/analytics", "/api/snack-orders/all", "/api/parking/all"]) {
+      expect((await page.request.get(`${API}${path}`, { headers: auth })).status()).toBe(403);
+    }
+    expect((await page.request.post(`${API}/api/movies`, { headers: auth, data: {} })).status()).toBe(403);
+    // And with no token at all, 401.
+    expect((await page.request.get(`${API}/api/bookings/all`)).status()).toBe(401);
   });
 
-  test("shown to a verified admin and opens the dashboard", async ({ page }) => {
+  test("a verified admin's entry opens the dashboard directly", async ({ page }, testInfo) => {
     await signIn(page, "admin");
     await page.goto("/");
-    const link = page.getByTestId("admin-nav-link");
-    await expect(link).toBeVisible();
-    await expect(link).toHaveAccessibleName("Admin dashboard");
-    await link.click();
+    await page.waitForLoadState("networkidle");
+    if (testInfo.project.name === "desktop") {
+      await page.getByTestId("admin-nav-link").click();
+    } else {
+      await page.getByRole("button", { name: "Open menu" }).click();
+      await page.getByRole("dialog", { name: "Menu" }).getByRole("button", { name: /^Admin/ }).click();
+    }
     await expect(page).toHaveURL(/\/admin\/dashboard$/);
-    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Staff only" })).toHaveCount(0);
   });
 });

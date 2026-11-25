@@ -13,7 +13,10 @@ const {
 
 const MAX_PRICE = 100000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d(\s?[AaPp][Mm])?$/;
+// 24-hour "18:30", or 12-hour "6:30 PM" (hour 1-12). Something like "23:00 PM"
+// would turn into hour 35, which can't be read, so the show would never count
+// as started and would stay bookable for ever.
+const TIME_RE = /^(?:([01]?\d|2[0-3]):[0-5]\d|(0?[1-9]|1[0-2]):[0-5]\d\s?[AaPp][Mm])$/;
 
 const CATEGORY_PRICE_FIELDS = {
   Balcony: "balconyPrice",
