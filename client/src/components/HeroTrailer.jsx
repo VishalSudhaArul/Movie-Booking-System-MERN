@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { THEME_EVENT, themeColor } from "../lib/theme";
+
+// Canvas colours follow the selected colour theme.
+const palette = { brand: "#4DA8FF", accent: "#8B5CF6" };
+const refreshPalette = () => {
+  palette.brand = themeColor("brand-400", "#4DA8FF");
+  palette.accent = themeColor("accent-500", "#8B5CF6");
+};
 
 const HeroTrailer = ({ onLaunchClick }) => {
   const canvasRef = useRef(null);
@@ -25,6 +33,12 @@ const HeroTrailer = ({ onLaunchClick }) => {
     mouseY: 500,
     lastTime: performance.now(),
   });
+
+  useEffect(() => {
+    refreshPalette();
+    window.addEventListener(THEME_EVENT, refreshPalette);
+    return () => window.removeEventListener(THEME_EVENT, refreshPalette);
+  }, []);
 
   // Keep ref synchronized with state
   useEffect(() => {
@@ -131,7 +145,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         x: Math.random() * 1920,
         y: Math.random() * 1080,
         radius: Math.random() * 2.5 + 0.5,
-        color: Math.random() > 0.4 ? "#4DA8FF" : "#8B5CF6",
+        color: Math.random() > 0.4 ? palette.brand : palette.accent,
         alpha: Math.random() * 0.7 + 0.2,
         speedY: -(Math.random() * 0.6 + 0.2),
         speedX: (Math.random() - 0.5) * 0.4,
@@ -205,9 +219,9 @@ const HeroTrailer = ({ onLaunchClick }) => {
       ];
 
       ctx.lineWidth = 3;
-      ctx.strokeStyle = "#4DA8FF";
+      ctx.strokeStyle = palette.brand;
       ctx.shadowBlur = 12;
-      ctx.shadowColor = "#4DA8FF";
+      ctx.shadowColor = palette.brand;
 
       connections.forEach(([i, j]) => {
         ctx.beginPath();
@@ -218,9 +232,9 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
       joints.forEach((pt, idx) => {
         const isTip = [4, 8, 12, 16, 20].includes(idx);
-        ctx.fillStyle = isTip ? "#ffffff" : "#4DA8FF";
+        ctx.fillStyle = isTip ? "#ffffff" : palette.brand;
         ctx.shadowBlur = isTip ? 18 : 10;
-        ctx.shadowColor = isTip ? "#ffffff" : "#4DA8FF";
+        ctx.shadowColor = isTip ? "#ffffff" : palette.brand;
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, isTip ? 6 : 4, 0, Math.PI * 2);
         ctx.fill();
@@ -288,7 +302,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
           ctx.save();
           ctx.translate(posX, height * 0.45);
           ctx.shadowBlur = idx === 0 ? 30 : 12;
-          ctx.shadowColor = "#4DA8FF";
+          ctx.shadowColor = palette.brand;
           ctx.fillStyle = "#070b19";
           ctx.beginPath();
           ctx.roundRect(-posterW / 2, -posterH / 2, posterW, posterH, 18);
@@ -298,7 +312,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             ctx.clip();
             ctx.drawImage(p.img, -posterW / 2, -posterH / 2, posterW, posterH);
           }
-          ctx.strokeStyle = idx === 0 ? "#4DA8FF" : "rgba(255,255,255,0.2)";
+          ctx.strokeStyle = idx === 0 ? palette.brand : "rgba(255,255,255,0.2)";
           ctx.lineWidth = idx === 0 ? 3 : 1;
           ctx.strokeRect(-posterW / 2, -posterH / 2, posterW, posterH);
           ctx.restore();
@@ -324,7 +338,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         ctx.save();
         ctx.translate(targetX, targetY);
         ctx.shadowBlur = 40;
-        ctx.shadowColor = "#4DA8FF";
+        ctx.shadowColor = palette.brand;
         ctx.fillStyle = "#050914";
         ctx.beginPath();
         ctx.roundRect(-posterW / 2, -posterH / 2, posterW, posterH, 20);
@@ -333,7 +347,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
           ctx.clip();
           ctx.drawImage(posters[0], -posterW / 2, -posterH / 2, posterW, posterH);
         }
-        ctx.strokeStyle = "#4DA8FF";
+        ctx.strokeStyle = palette.brand;
         ctx.lineWidth = 4;
         ctx.strokeRect(-posterW / 2, -posterH / 2, posterW, posterH);
         ctx.restore();
@@ -346,14 +360,14 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
         ctx.save();
         ctx.fillStyle = "rgba(10, 15, 30, 0.88)";
-        ctx.strokeStyle = "#4DA8FF";
+        ctx.strokeStyle = palette.brand;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.roundRect(panelX, panelY, panelW, panelH, 20);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = "#8B5CF6";
+        ctx.fillStyle = palette.accent;
         ctx.font = '800 12px "Space Grotesk"';
         ctx.fillText("FEATURED BLOCKBUSTERS • 4K IMAX 3D", panelX + 30, panelY + 40);
 
@@ -361,7 +375,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         ctx.font = '900 32px "Outfit"';
         ctx.fillText("CYBER GENESIS", panelX + 30, panelY + 80);
 
-        ctx.fillStyle = "#4DA8FF";
+        ctx.fillStyle = palette.brand;
         ctx.font = '700 13px "Space Grotesk"';
         ctx.fillText("IMAX 3D • DOLBY ATMOS • RATING: 9.8 / 10", panelX + 30, panelY + 120);
 
@@ -382,10 +396,10 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
         // Screen Bar
         ctx.save();
-        ctx.strokeStyle = "#4DA8FF";
+        ctx.strokeStyle = palette.brand;
         ctx.lineWidth = 4;
         ctx.shadowBlur = 20;
-        ctx.shadowColor = "#4DA8FF";
+        ctx.shadowColor = palette.brand;
         ctx.beginPath();
         ctx.arc(width * 0.5, height * -0.4, width * 0.45, Math.PI * 0.35, Math.PI * 0.65);
         ctx.stroke();
@@ -404,7 +418,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             const isSel = r === 3 && (c === 5 || c === 6) && isPinched;
 
             ctx.save();
-            ctx.fillStyle = isSel ? "#4DA8FF" : "rgba(0, 240, 255, 0.15)";
+            ctx.fillStyle = isSel ? palette.brand : "rgba(0, 240, 255, 0.15)";
             ctx.beginPath();
             ctx.roundRect(sx, sy, seatW, seatH, 6);
             ctx.fill();
@@ -434,13 +448,13 @@ const HeroTrailer = ({ onLaunchClick }) => {
         const btnY = height * 0.35;
 
         ctx.save();
-        ctx.fillStyle = isAct ? "#4DA8FF" : "rgba(10, 20, 40, 0.85)";
+        ctx.fillStyle = isAct ? palette.brand : "rgba(10, 20, 40, 0.85)";
         ctx.shadowBlur = isAct ? 50 : 20;
-        ctx.shadowColor = "#4DA8FF";
+        ctx.shadowColor = palette.brand;
         ctx.beginPath();
         ctx.roundRect(btnX, btnY, btnW, btnH, 25);
         ctx.fill();
-        ctx.strokeStyle = isAct ? "#ffffff" : "#4DA8FF";
+        ctx.strokeStyle = isAct ? "#ffffff" : palette.brand;
         ctx.lineWidth = 3;
         ctx.stroke();
 
@@ -469,16 +483,16 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
         ctx.fillStyle = "rgba(8, 15, 35, 0.92)";
         ctx.shadowBlur = 40;
-        ctx.shadowColor = "#4DA8FF";
+        ctx.shadowColor = palette.brand;
         ctx.beginPath();
         ctx.roundRect(-ticketW / 2, -ticketH / 2, ticketW, ticketH, 20);
         ctx.fill();
-        ctx.strokeStyle = "#4DA8FF";
+        ctx.strokeStyle = palette.brand;
         ctx.lineWidth = 3;
         ctx.stroke();
 
         if (Math.abs(Math.cos(angle)) > 0.25) {
-          ctx.fillStyle = "#8B5CF6";
+          ctx.fillStyle = palette.accent;
           ctx.font = '800 11px "Space Grotesk"';
           ctx.textAlign = "center";
           ctx.fillText("CINEBOOK DIGITAL TICKET", 0, -ticketH / 2 + 35);
@@ -499,14 +513,14 @@ const HeroTrailer = ({ onLaunchClick }) => {
         ctx.fillStyle = "#ffffff";
         ctx.font = '900 48px "Outfit"';
         ctx.shadowBlur = 30;
-        ctx.shadowColor = "#4DA8FF";
+        ctx.shadowColor = palette.brand;
         ctx.fillText("THE FUTURE OF MOVIE BOOKING", width * 0.5, height * 0.38);
 
-        ctx.fillStyle = "#4DA8FF";
+        ctx.fillStyle = palette.brand;
         ctx.font = '700 20px "Space Grotesk"';
         ctx.fillText("Book Movies Without Touching the Screen", width * 0.5, height * 0.48);
 
-        ctx.fillStyle = "#8B5CF6";
+        ctx.fillStyle = palette.accent;
         ctx.font = '800 24px "Space Grotesk"';
         ctx.fillText("AI Motion Controller v4.2", width * 0.5, height * 0.58);
         ctx.restore();
@@ -579,7 +593,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         {/* HUD Top Bar */}
         <div className="absolute top-4 left-6 right-6 z-20 flex items-center justify-between pointer-events-none">
           <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-brand-500/30">
-            <span className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-pulse shadow-[0_0_10px_#4DA8FF]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-pulse shadow-[0_0_10px_rgb(var(--brand-400))]" />
             <span className="text-xs font-mono font-bold text-white tracking-widest uppercase">
               CINEBOOK AI • GESTURE ENGINE
             </span>
@@ -609,7 +623,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             className="w-full h-1.5 bg-gray-800 rounded-full cursor-pointer overflow-hidden relative"
           >
             <div
-              className="h-full bg-gradient-to-r from-brand-400 to-accent-500 shadow-[0_0_12px_#4DA8FF]"
+              className="h-full bg-gradient-to-r from-brand-400 to-accent-500 shadow-[0_0_12px_rgb(var(--brand-400))]"
               style={{ width: `${(currentTime / duration) * 100}%` }}
             />
           </div>
@@ -638,7 +652,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
                 onClick={() => setIsInteractive(!isInteractive)}
                 className={`px-3.5 py-2 rounded-xl transition border ${
                   isInteractive
-                    ? "bg-brand-400 text-black border-brand-400 font-extrabold shadow-[0_0_15px_#4DA8FF]"
+                    ? "bg-brand-400 text-black border-brand-400 font-extrabold shadow-[0_0_15px_rgb(var(--brand-400))]"
                     : "bg-white/10 text-white border-white/15 hover:bg-brand-500/20"
                 }`}
               >
@@ -713,7 +727,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
               <button
                 onClick={() => setShowGuide(false)}
-                className="w-full py-2.5 bg-gradient-to-r from-brand-500 to-blue-600 text-black font-extrabold rounded-xl hover:opacity-90 transition text-xs"
+                className="w-full py-2.5 bg-brand-gradient text-on-brand font-extrabold rounded-xl hover:opacity-90 transition text-xs"
               >
                 GOT IT, LET'S CONTROL!
               </button>

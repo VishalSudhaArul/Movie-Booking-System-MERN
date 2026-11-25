@@ -363,7 +363,7 @@ function AddOns() {
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2 text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px]">2</span> Extras &amp; checkout
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] text-on-brand">2</span> Extras &amp; checkout
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
@@ -448,7 +448,7 @@ function AddOns() {
                         </span>
                         <span
                           className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                            active ? "border-brand-500 bg-brand-500 text-white" : "border-white/25"
+                            active ? "border-brand-500 bg-brand-500 text-on-brand" : "border-white/25"
                           }`}
                         >
                           {active && <Icon name="check" className="h-3 w-3" />}

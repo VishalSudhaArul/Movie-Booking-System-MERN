@@ -112,7 +112,7 @@ export default function AdminAnalytics() {
         <div className="card flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex gap-1 rounded-xl bg-white/[0.03] p-1" role="group" aria-label="Time period">
             {PERIODS.map((p) => (
-              <button key={p} onClick={() => choosePeriod(p)} aria-pressed={period === p} className={`btn-sm rounded-lg px-3 py-1.5 text-xs font-semibold transition ${period === p ? "bg-brand-gradient text-white" : "text-gray-400 hover:text-white"}`}>
+              <button key={p} onClick={() => choosePeriod(p)} aria-pressed={period === p} className={`btn-sm rounded-lg px-3 py-1.5 text-xs font-semibold transition ${period === p ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                 {p === "All" ? "All time" : p === "Week" ? "Last 7 days" : p === "Month" ? "Last 30 days" : p}
               </button>
             ))}

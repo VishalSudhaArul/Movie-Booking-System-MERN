@@ -268,7 +268,7 @@ export default function SnacksHub() {
             <div className="flex flex-wrap items-start gap-2">
               <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1 text-xs" role="group" aria-label="Delivery">
                 {[["Express Counter Pickup", "Counter pickup"], ["In-Seat Delivery", "To my seat"]].map(([value, label]) => (
-                  <button key={value} onClick={() => setDeliveryType(value)} aria-pressed={deliveryType === value} className={`rounded-lg px-3 py-1.5 font-semibold transition ${deliveryType === value ? "bg-brand-gradient text-white" : "text-gray-400 hover:text-white"}`}>
+                  <button key={value} onClick={() => setDeliveryType(value)} aria-pressed={deliveryType === value} className={`rounded-lg px-3 py-1.5 font-semibold transition ${deliveryType === value ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                     {label}
                   </button>
                 ))}

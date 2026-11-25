@@ -420,7 +420,7 @@ export default function Seats() {
         {/* Steps */}
         <ol className="mb-6 flex items-center gap-2 text-xs font-semibold text-gray-500" aria-label="Booking progress">
           <li className="flex items-center gap-2 text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px]">1</span> Seats
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] text-on-brand">1</span> Seats
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
@@ -448,7 +448,7 @@ export default function Seats() {
                 {webgl && (
                   <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Seat view">
                     {[["3d", "3D hall"], ["2d", "2D map"]].map(([v, label]) => (
-                      <button key={v} onClick={() => chooseView(v)} aria-pressed={view === v} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${view === v ? "bg-brand-gradient text-white" : "text-gray-400 hover:text-white"}`}>
+                      <button key={v} onClick={() => chooseView(v)} aria-pressed={view === v} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${view === v ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                         {label}
                       </button>
                     ))}
@@ -664,7 +664,7 @@ function SeatButton({ seat, selected, premium, recliner, onToggle }) {
   } else if (seat.isBooked) {
     style = "cursor-not-allowed border-transparent bg-white/[0.08] text-transparent";
   } else if (selected) {
-    style = "scale-105 border-brand-500 bg-brand-500 text-white shadow-glow";
+    style = "scale-105 border-brand-500 bg-brand-500 text-on-brand shadow-glow";
   } else if (premium) {
     style = "border-accent-400/60 bg-accent-500/[0.1] text-accent-200 hover:bg-accent-500/25";
   } else {

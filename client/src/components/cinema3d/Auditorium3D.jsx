@@ -425,7 +425,7 @@ export default function Auditorium3D({
   const hoverState = hover ? seatState(hover.seat, selected.includes(hover.seat.seatNumber), premiumCategory) : null;
   const rowOf = (n) => (n.match(/^[A-Z]+/) || [""])[0];
   const toolbarBtn = (active) =>
-    `rounded-lg px-3 py-1.5 text-xs font-semibold transition ${active ? "bg-brand-gradient text-white" : "text-gray-300 hover:bg-white/10 hover:text-white"}`;
+    `rounded-lg px-3 py-1.5 text-xs font-semibold transition ${active ? "bg-brand-gradient text-on-brand" : "text-gray-300 hover:bg-white/10 hover:text-white"}`;
   const iconBtn = "rounded-lg p-1.5 text-gray-300 hover:bg-white/10 hover:text-white disabled:opacity-40";
 
   return (

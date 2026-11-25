@@ -1,16 +1,19 @@
 import React, { useEffect } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import Icon from "./ui/Icon";
-import { getSession } from "../lib/session";
+import { ErrorState, PageLoader } from "./ui/Feedback";
+import useVerifiedSession from "../lib/useVerifiedSession";
 
 /**
  * AdminGate — wraps admin-only pages.
- * Only signed-in admins and theatre owners get through. This only controls
- * what the browser shows: every admin API call is also checked on the server.
+ * Only signed-in admins and theatre owners get through, and only after the
+ * server has confirmed the role from the database (GET /api/users/me), so
+ * editing localStorage doesn't open these pages. Every admin API call is also
+ * checked on the server.
  */
 function AdminGate({ children }) {
   const location = useLocation();
-  const { isLoggedIn, isAdmin } = getSession();
+  const { isLoggedIn, status, isStaff, retry } = useVerifiedSession();
 
   // Clear the flag left behind by the old password gate.
   useEffect(() => {
@@ -21,7 +24,23 @@ function AdminGate({ children }) {
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
-  if (isAdmin) return children;
+  if (status === "checking") return <PageLoader label="Checking your access…" />;
+
+  if (status === "error") {
+    return (
+      <main id="main" className="container-page flex min-h-[calc(100vh-4rem)] items-center justify-center py-16">
+        <div className="w-full max-w-md">
+          <ErrorState
+            title="We couldn't check your access"
+            message="The server didn't respond. Check your connection and try again."
+            onRetry={retry}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  if (isStaff) return children;
 
   return (
     <main id="main" className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">

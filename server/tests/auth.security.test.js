@@ -51,6 +51,20 @@ describe("JWT verification", () => {
     expect(res.status).toBe(401);
   });
 
+  test("/api/users/me reports the role stored in the database, not the one in the token", async () => {
+    // The browser uses this to decide whether to show the admin link.
+    const { user, auth } = await createUser("user");
+    expect((await request(app).get("/api/users/me").set("Authorization", auth)).body.role).toBe("user");
+
+    // A token that claims "admin" for a normal account still reports "user".
+    const claimsAdmin = jwt.sign({ id: String(user._id), role: "admin" }, process.env.JWT_SECRET, { algorithm: "HS256", expiresIn: "1h" });
+    expect((await request(app).get("/api/users/me").set("Authorization", `Bearer ${claimsAdmin}`)).body.role).toBe("user");
+
+    // Promoting the account in the database takes effect with the same old token.
+    await User.updateOne({ _id: user._id }, { $set: { role: "admin" } });
+    expect((await request(app).get("/api/users/me").set("Authorization", auth)).body.role).toBe("admin");
+  });
+
   test("a valid token works", async () => {
     const { auth, user } = await createUser("user");
     const res = await request(app).get("/api/users/me").set("Authorization", auth);

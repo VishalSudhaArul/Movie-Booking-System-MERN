@@ -2,9 +2,11 @@ import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { Color, Object3D } from "three";
 import { useThree } from "@react-three/fiber";
 import { buildChairGeometries } from "./geometry";
+import { useThemeColors } from "../../lib/theme";
 
 // Upholstery colour per seat state. The 2D legend and the 3D tooltip use the
-// same words, so state is never shown by colour alone.
+// same words, so state is never shown by colour alone. "selected" and
+// "premium" follow the colour theme (see useSeatColors); the others are fixed.
 export const SEAT_COLORS = {
   available: "#4a5570",
   premium: "#7b4fd6",
@@ -13,6 +15,15 @@ export const SEAT_COLORS = {
   reserved: "#2b5576",
 };
 const HOVER_LIFT = 0.35;
+
+/** Seat colours for the current colour theme. */
+function useSeatColors() {
+  const theme = useThemeColors(["brand-500", "accent-600"]);
+  return useMemo(
+    () => ({ ...SEAT_COLORS, selected: theme["brand-500"], premium: theme["accent-600"] }),
+    [theme]
+  );
+}
 
 export const seatState = (seat, selected, premiumCategory) => {
   if (selected) return "selected";
@@ -30,7 +41,7 @@ const white = new Color("#ffffff");
  * All seats of one chair type, drawn with two instanced meshes (upholstery and
  * frame). Hover and click resolve the seat from the instance id.
  */
-function ChairGroup({ seats, geo, selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows }) {
+function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows }) {
   const upholsteryRef = useRef();
   const frameRef = useRef();
   const invalidate = useThree((s) => s.invalidate);
@@ -54,13 +65,13 @@ function ChairGroup({ seats, geo, selectedSet, premiumCategory, hoveredSeat, onH
   useLayoutEffect(() => {
     seats.forEach((seat, i) => {
       const state = seatState(seat, selectedSet.has(seat.seatNumber), premiumCategory);
-      color.set(SEAT_COLORS[state]);
+      color.set(colors[state]);
       if (hoveredSeat === seat.seatNumber && state !== "booked" && state !== "reserved") color.lerp(white, HOVER_LIFT);
       upholsteryRef.current.setColorAt(i, color);
     });
     if (upholsteryRef.current.instanceColor) upholsteryRef.current.instanceColor.needsUpdate = true;
     invalidate();
-  }, [seats, selectedSet, premiumCategory, hoveredSeat, invalidate]);
+  }, [seats, colors, selectedSet, premiumCategory, hoveredSeat, invalidate]);
 
   if (seats.length === 0) return null;
 
@@ -108,7 +119,8 @@ export default function SeatInstances({ hall, selected, premiumCategory, hovered
     };
   }, [hall]);
 
-  const shared = { selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows };
+  const colors = useSeatColors();
+  const shared = { colors, selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows };
   return (
     <group>
       <ChairGroup seats={standard} geo={geos.standard} {...shared} />
