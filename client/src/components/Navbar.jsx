@@ -8,6 +8,7 @@ import { EmptyState } from "./ui/Feedback";
 import { useWatchlist } from "../context/WatchlistContext";
 import { clearSession } from "../lib/session";
 import useVerifiedSession from "../lib/useVerifiedSession";
+import useAdminSession from "../lib/adminSession";
 import ThemePicker, { ThemeOptions } from "./ThemePicker";
 import { splitGenres } from "../lib/format";
 
@@ -53,7 +54,9 @@ export default function Navbar() {
   const { items: watchlistItems, toggle: toggleWatchlist } = useWatchlist();
   // Staff links appear only after the server confirms the role from the
   // database; the role saved in the browser alone isn't enough.
-  const { isLoggedIn, isStaff, userName } = useVerifiedSession();
+  const { isLoggedIn, userName } = useVerifiedSession();
+  // Admin access is its own sign-in (password only), separate from customer accounts.
+  const { active: adminActive } = useAdminSession();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
@@ -136,9 +139,9 @@ export default function Navbar() {
 
   const initial = userName ? userName.charAt(0).toUpperCase() : "U";
 
-  // Admin is always listed. Verified staff go straight to the dashboard;
-  // everyone else gets the admin sign-in, where the server checks the role.
-  const adminHref = isStaff ? "/admin/dashboard" : "/admin/login";
+  // Admin is always listed. With an admin session it goes straight to the
+  // dashboard; otherwise to the Admin Access page (password checked on the server).
+  const adminHref = adminActive ? "/admin/dashboard" : "/admin/login";
   const onAdminPage = location.pathname.startsWith("/admin");
 
   const linkClass = ({ isActive }) =>
@@ -257,7 +260,7 @@ export default function Navbar() {
                       <MenuLink to="/watchlist" icon="heart" label="Watchlist" />
                       <MenuLink to="/loyalty" icon="crown" label="Rewards" />
                       <MenuLink to="/gift-cards" icon="gift" label="Gift cards" />
-                      {isStaff && <MenuLink to="/admin/dashboard" icon="shield" label="Admin dashboard" />}
+                      {adminActive && <MenuLink to="/admin/dashboard" icon="shield" label="Admin dashboard" />}
                     </div>
                     <div className="border-t border-white/[0.07] p-1.5">
                       <button
@@ -359,7 +362,7 @@ export default function Navbar() {
               <DrawerButton
                 icon="shield"
                 label="Admin"
-                trailing={isStaff ? "Dashboard" : null}
+                trailing={adminActive ? "Dashboard" : null}
                 onClick={() => navigate(adminHref)}
               />
 

@@ -5,7 +5,15 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { getJwtSecret } = require("../config/env");
 const { isEmail, cleanString } = require("../utils/validate");
-const { isStaff } = require("../middleware/adminMiddleware");
+const {
+  acceptedPasswords,
+  passwordMatches,
+  lockRemaining,
+  recordFailure,
+  clearFailures,
+  issueSession,
+  revokeSession,
+} = require("../utils/adminAccess");
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72; // bcrypt only uses the first 72 bytes
@@ -85,21 +93,55 @@ exports.login = async (req, res, next) => {
   }
 };
 
-// ✅ ADMIN LOGIN — the Admin entry in the navbar.
-// Same password check as LOGIN, then the role is read from the database: only
-// admins and theatre owners get a session. Anyone else is refused and no token
-// is issued, so this sign-in can never hand out a customer session either.
-exports.adminLogin = async (req, res, next) => {
-  try {
-    const user = await checkCredentials(req.body);
-    if (!user) return invalidCredentials(res);
-    if (!isStaff(user)) {
-      return res.status(403).json({ message: "This account doesn't have admin access." });
-    }
-    return res.json(sessionResponse(user));
-  } catch (err) {
-    return next(err);
+const tooManyAttempts = (res, ms) => {
+  const minutes = Math.max(1, Math.ceil(ms / 60000));
+  res.set("Retry-After", String(Math.ceil(ms / 1000)));
+  return res.status(429).json({
+    message: `Too many incorrect attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+  });
+};
+
+// ✅ ADMIN ACCESS — the Admin entry in the navbar. Password only, no account.
+// The password is checked here and nowhere else, against the server
+// environment. While a client is locked out, even the right password is
+// refused, so the lockout can't be used to test guesses. Nothing about the
+// attempt (and never the password) is logged or echoed back.
+exports.adminLogin = (req, res) => {
+  const ip = req.ip || "unknown";
+  const locked = lockRemaining(ip);
+  if (locked) return tooManyAttempts(res, locked);
+
+  const password = req.body && req.body.password;
+  if (typeof password !== "string" || !password.length) {
+    return res.status(400).json({ message: "Enter the admin password." });
   }
+  if (!acceptedPasswords().length) {
+    return res.status(503).json({ message: "Admin access isn't set up on this server yet." });
+  }
+
+  if (password.length > 256 || !passwordMatches(password)) {
+    recordFailure(ip);
+    const now = lockRemaining(ip);
+    if (now) return tooManyAttempts(res, now);
+    return res.status(401).json({ message: "Incorrect admin password" });
+  }
+
+  clearFailures(ip);
+  const session = issueSession();
+  res.set("Cache-Control", "no-store");
+  return res.json({ role: "admin", token: session.token, expiresAt: session.expiresAt });
+};
+
+// Is this admin session still valid? (Used by the admin pages on load.)
+exports.adminSession = (req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ role: "admin", expiresAt: req.user.sessionExpiresAt });
+};
+
+// Signs out: the session is revoked on the server at once.
+exports.adminLogout = (req, res) => {
+  revokeSession(req.user.sid);
+  return res.status(204).end();
 };
 
 // Google sign-in is disabled until real Google ID-token verification is set up.

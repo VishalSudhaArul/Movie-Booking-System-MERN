@@ -2,7 +2,7 @@
 
 const router = require("express").Router();
 const snackOrderController = require("../controllers/snackOrderController");
-const { authMiddleware } = require("../middleware/authMiddleware");
+const { authMiddleware, authOrAdminSession } = require("../middleware/authMiddleware");
 const { adminAccess, selfOrAdmin } = require("../middleware/adminMiddleware");
 const { bookingLimiter } = require("../middleware/security");
 
@@ -10,23 +10,23 @@ const { bookingLimiter } = require("../middleware/security");
 router.get("/meta/theatres-movies", snackOrderController.getTheatresAndMovies);
 
 // Staff: all orders
-router.get("/all", authMiddleware, adminAccess, snackOrderController.getAllSnackOrders);
+router.get("/all", authOrAdminSession, adminAccess, snackOrderController.getAllSnackOrders);
 
 // A user's own orders
 router.get(
   "/user/:userId",
-  authMiddleware,
+  authOrAdminSession,
   selfOrAdmin((req) => req.params.userId),
   snackOrderController.getUserSnackOrders
 );
 
 // Single order (owner or staff)
-router.get("/:orderId", authMiddleware, snackOrderController.getSnackOrderById);
+router.get("/:orderId", authOrAdminSession, snackOrderController.getSnackOrderById);
 
 // Create order (signed in)
 router.post("/", authMiddleware, bookingLimiter, snackOrderController.createSnackOrder);
 
 // Staff: update status
-router.put("/:orderId/status", authMiddleware, adminAccess, snackOrderController.updateSnackOrderStatus);
+router.put("/:orderId/status", authOrAdminSession, adminAccess, snackOrderController.updateSnackOrderStatus);
 
 module.exports = router;

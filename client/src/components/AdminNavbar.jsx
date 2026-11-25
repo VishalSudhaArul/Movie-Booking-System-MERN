@@ -1,6 +1,7 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import Icon from "./ui/Icon";
+import { signOutAdmin } from "../lib/adminSession";
 
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/admin/dashboard", icon: "grid" },
@@ -15,6 +16,14 @@ const NAV_ITEMS = [
 
 /** Section tabs shown at the top of every admin page. */
 export default function AdminNavbar() {
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+  const signOut = async () => {
+    setSigningOut(true);
+    await signOutAdmin();
+    navigate("/admin/login", { replace: true });
+  };
+
   return (
     <div className="sticky top-16 z-30 border-b border-white/[0.07] bg-ink-900/95 backdrop-blur-xl">
       <nav className="container-page flex items-center gap-4" aria-label="Admin sections">
@@ -39,6 +48,17 @@ export default function AdminNavbar() {
             </NavLink>
           ))}
         </div>
+        <button
+          type="button"
+          onClick={signOut}
+          disabled={signingOut}
+          className="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+          data-testid="admin-sign-out"
+          aria-label="Sign out of admin"
+        >
+          <Icon name="logout" className="h-4 w-4" />
+          <span className="hidden sm:inline">Sign out</span>
+        </button>
       </nav>
     </div>
   );

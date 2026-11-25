@@ -57,7 +57,104 @@ const CLASSIC_136 = {
   ],
 };
 
+/* ---------------- Multiplex halls (300–500 seats) ----------------
+   A large stadium-seated hall: 20–25 rows, three blocks per row (left,
+   centre, right) split by two straight aisles, side aisles along the walls,
+   and a progressive rake (front rows flat, each row higher, the back rows
+   rising most). Rows are labelled from the screen backwards, A nearest the
+   screen, skipping I (it reads like 1). Seat 1 is at the +x end of the row.
+   The centre block has the same width in every row, so the two aisles are
+   straight; the side blocks widen towards the back as the hall fans out. */
+
+const MULTIPLEX_CAPACITIES = [300, 350, 400, 450, 500];
+const ROW_LETTERS = "ABCDEFGHJKLMNOPQRSTUVWXYZ"; // 25 letters, no I
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
+const multiplexLayout = (capacity) => {
+  const rowCount = Math.round(20 + (capacity - 300) / 40); // 20 … 25
+  const centre = 2 * Math.round(capacity / 100); // 6 … 10, even so the total stays even
+  const sideTotal = (capacity - rowCount * centre) / 2; // seats in ONE side block, all rows
+  const mean = sideTotal / rowCount;
+  const front = Math.max(3, Math.round(mean - 1.5));
+  const back = 2 * mean - front;
+  const sides = Array.from({ length: rowCount }, (_, i) => Math.round(front + ((back - front) * i) / (rowCount - 1)));
+  // Hit the capacity exactly: adjust side blocks from the back row forwards.
+  let diff = sideTotal - sides.reduce((a, b) => a + b, 0);
+  for (let i = rowCount - 1; diff !== 0; i = (i - 1 + rowCount) % rowCount) {
+    const step = diff > 0 ? 1 : -1;
+    if (sides[i] + step >= 2) {
+      sides[i] += step;
+      diff -= step;
+    }
+  }
+
+  // Price categories: front ~30 % Second Class, middle First Class, back ~25 % Balcony (premium).
+  const secondRows = Math.round(rowCount * 0.3);
+  const balconyRows = Math.round(rowCount * 0.25);
+  const sectionFor = (i) => (i < secondRows ? "Second Class" : i >= rowCount - balconyRows ? "Balcony" : "First Class");
+
+  // Rake: two flat rows at the front, then risers growing from 0.16 m to 0.42 m.
+  const riserFor = (i) => (i < 2 ? 0 : round2(0.16 + (0.26 * (i - 2)) / Math.max(1, rowCount - 3)));
+
+  const seatWidth = 0.62;
+  const aisleWidth = 1.3;
+  const rowPitch = 1.15;
+  const widest = Math.max(...sides) * 2 + centre;
+  const seatingWidth = widest * seatWidth + 2 * aisleWidth;
+  // Bigger than the classic hall (22 × 13 × 30 m) and growing with capacity;
+  // never narrower than the seating plus a 2 m walkway along each wall.
+  const roomWidth = round2(Math.max(22 + (capacity - 300) / 50, seatingWidth + 2 * 2));
+  const sideAisleWidth = round2((roomWidth - seatingWidth) / 2);
+  const screenWidth = round2(roomWidth * 0.8);
+  const screenHeight = round2(screenWidth / 2.35); // scope ratio
+  const screenBottom = 1.9;
+  const firstRowDistance = round2(Math.max(6.5, screenWidth * 0.42));
+  const depth = round2(firstRowDistance + rowCount * rowPitch + 3.5);
+  const backFloor = Array.from({ length: rowCount }, (_, i) => riserFor(i)).reduce((a, b) => a + b, 0);
+  const height = round2(Math.max(14, screenBottom + screenHeight + 2.4, backFloor + 4.6));
+
+  const rows = sides.map((side, i) => ({
+    label: ROW_LETTERS[i],
+    section: sectionFor(i),
+    tier: "stalls",
+    seatType: "standard",
+    seats: side * 2 + centre,
+    aisleAfter: [side, side + centre],
+    blocks: [side, centre, side],
+    riser: riserFor(i),
+  }));
+  // Layouts list rows from the screen backwards (order 0 = nearest the screen).
+  return {
+    id: `multiplex-${capacity}`,
+    name: `Multiplex hall · ${capacity} seats`,
+    version: 1,
+    kind: "multiplex",
+    screen: { width: screenWidth, height: screenHeight, bottom: screenBottom, curve: 0.06 },
+    room: { width: roomWidth, height, depth },
+    geometry: {
+      seatWidth: { standard: seatWidth, recliner: 0.9 },
+      rowPitch: { standard: rowPitch, recliner: 1.7 },
+      aisleWidth,
+      sideAisleWidth,
+      eyeHeight: 1.15,
+      stalls: { firstRowDistance, riser: 0.16 },
+      balcony: { gapBeforeFirstRow: 0, floorElevation: 0, riser: 0 },
+    },
+    sections: [
+      { name: "Second Class", tier: "stalls" },
+      { name: "First Class", tier: "stalls" },
+      { name: "Balcony", tier: "stalls" },
+    ],
+    rows,
+  };
+};
+
 const LAYOUTS = { [CLASSIC_136.id]: CLASSIC_136 };
+MULTIPLEX_CAPACITIES.forEach((c) => {
+  const layout = multiplexLayout(c);
+  LAYOUTS[layout.id] = layout;
+});
 
 const withOrder = (layout) => ({
   ...layout,
@@ -68,7 +165,12 @@ const withOrder = (layout) => ({
 const getLayout = (id) => (LAYOUTS[id] ? withOrder(LAYOUTS[id]) : null);
 
 const listLayouts = () =>
-  Object.values(LAYOUTS).map((l) => ({ id: l.id, name: l.name, totalSeats: withOrder(l).totalSeats }));
+  Object.values(LAYOUTS).map((l) => ({
+    id: l.id,
+    name: l.name,
+    totalSeats: withOrder(l).totalSeats,
+    rows: l.rows.length,
+  }));
 
 // Creates the seat list for a new show from a layout and the three category prices.
 const generateSeatsFromLayout = (layout, prices) => {
@@ -143,6 +245,8 @@ module.exports = {
   listLayouts,
   generateSeatsFromLayout,
   seatsFitLayout,
+  multiplexLayout,
+  MULTIPLEX_CAPACITIES,
   deriveLayout,
   layoutForShow,
 };

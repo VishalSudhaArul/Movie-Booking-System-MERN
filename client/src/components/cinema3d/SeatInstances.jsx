@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Color, Object3D } from "three";
 import { useThree } from "@react-three/fiber";
 import { buildChairGeometries } from "./geometry";
@@ -11,13 +11,16 @@ export const SEAT_COLORS = {
   available: "#4a5570",
   premium: "#7b4fd6",
   selected: "#1e8cff",
-  booked: "#171b26",
-  reserved: "#2b5576",
+  // Unavailable: near-black, so it reads as "gone" in every theme.
+  booked: "#12151d",
+  // Held by someone else: a lighter sky blue, distinct from available (slate)
+  // in both hue and brightness, matching the dashed sky outline on the 2D map.
+  reserved: "#3d8fbd",
 };
 const HOVER_LIFT = 0.35;
 
 /** Seat colours for the current colour theme. */
-function useSeatColors() {
+export function useSeatColors() {
   const theme = useThemeColors(["brand-500", "accent-600"]);
   return useMemo(
     () => ({ ...SEAT_COLORS, selected: theme["brand-500"], premium: theme["accent-600"] }),
@@ -47,7 +50,10 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
   const invalidate = useThree((s) => s.invalidate);
 
   // Positions only change when the seat list changes.
+  // A hall may have no seats of this type (multiplex halls have no recliners):
+  // then nothing is rendered and there is nothing to update.
   useLayoutEffect(() => {
+    if (!upholsteryRef.current || !frameRef.current) return;
     seats.forEach((seat, i) => {
       tmp.position.set(seat.x, seat.floorY, seat.z);
       tmp.rotation.set(0, 0, 0);
@@ -63,6 +69,7 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
 
   // Colours follow seat state, selection and hover.
   useLayoutEffect(() => {
+    if (!upholsteryRef.current) return;
     seats.forEach((seat, i) => {
       const state = seatState(seat, selectedSet.has(seat.seatNumber), premiumCategory);
       color.set(colors[state]);
@@ -110,6 +117,16 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
 
 export default function SeatInstances({ hall, selected, premiumCategory, hoveredSeat, onHover, onPick, shadows }) {
   const geos = useMemo(() => buildChairGeometries(hall.geometry), [hall.geometry]);
+  // Released when the hall changes or the 3D view closes.
+  useEffect(
+    () => () => {
+      Object.values(geos).forEach((g) => {
+        g.upholstery.dispose();
+        g.frame.dispose();
+      });
+    },
+    [geos]
+  );
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const { standard, recliner } = useMemo(() => {
     const all = hall.rows.flatMap((r) => r.seats);

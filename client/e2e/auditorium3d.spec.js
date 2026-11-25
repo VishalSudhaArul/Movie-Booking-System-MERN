@@ -63,9 +63,17 @@ async function settled(page) {
 }
 
 async function clickSeat(page, seatNumber) {
+  // Bring the whole 3D view on screen (not under the sticky site header), so the
+  // click lands on the hall the way a person's would.
+  await page.getByTestId("auditorium-3d").evaluate((el) => el.scrollIntoView({ block: "center" }));
   await settled(page);
   const p = await page.evaluate((n) => window.__cinema3d.project(n), seatNumber);
   expect(p && p.visible, `${seatNumber} should be in view`).toBeTruthy();
+  const onCanvas = await page.evaluate(([x, y]) => {
+    const el = document.elementFromPoint(x, y);
+    return !!el && el.tagName === "CANVAS" && !!el.closest("[data-testid=auditorium-3d]");
+  }, [p.x, p.y]);
+  expect(onCanvas, `${seatNumber} should be on the 3D canvas, not under an overlay`).toBe(true);
   await page.mouse.click(p.x, p.y);
 }
 
@@ -107,7 +115,7 @@ test.describe("desktop and tablet", () => {
     expect(errors).toEqual([]);
   });
 
-  test("mouse: drag rotates all the way round; plain wheel scrolls the page, Ctrl+wheel zooms", async ({ page }) => {
+  test("mouse: drag rotates all the way round; the wheel zooms, and scrolls the page again at the zoom limit", async ({ page }) => {
     const { stage } = await open3D(page);
     await stage.scrollIntoViewIfNeeded();
     const box = await stage.boundingBox();
@@ -127,26 +135,29 @@ test.describe("desktop and tablet", () => {
     expect(total).toBeGreaterThan(2 * Math.PI);
     expect((await state(page)).mode).toBe("free");
 
-    await page.getByRole("button", { name: "Reset camera" }).click();
+    await page.getByRole("button", { name: "Reset view" }).click();
     await settled(page);
+    expect((await state(page)).mode).toBe("overview");
     const d0 = dist(await state(page));
-    const y0 = await page.evaluate(() => window.scrollY);
-    await page.mouse.move(cx, cy);
-    await page.mouse.wheel(0, 300);
-    await page.waitForTimeout(300);
-    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(y0);
-    expect(Math.abs(dist(await state(page)) - d0)).toBeLessThan(0.05);
 
-    await stage.scrollIntoViewIfNeeded();
-    const b2 = await stage.boundingBox();
-    await page.mouse.move(b2.x + b2.width * 0.35, b2.y + b2.height / 2);
-    const y1 = await page.evaluate(() => window.scrollY);
-    await page.keyboard.down("Control");
+    // Wheel up over the hall zooms in, and the page stays put.
+    await page.mouse.move(cx, cy);
+    const y0 = await page.evaluate(() => window.scrollY);
     await page.mouse.wheel(0, -300);
-    await page.keyboard.up("Control");
     await settled(page);
     expect(dist(await state(page))).toBeLessThan(d0 - 1);
-    expect(await page.evaluate(() => window.scrollY)).toBe(y1);
+    expect(await page.evaluate(() => window.scrollY)).toBe(y0);
+
+    // Zooming out stops at the limit; after that the wheel scrolls the page.
+    for (let i = 0; i < 40; i++) {
+      await page.mouse.wheel(0, 400);
+      await page.waitForTimeout(40);
+      if ((await page.evaluate(() => window.scrollY)) > y0) break;
+    }
+    await settled(page);
+    const out = await state(page);
+    expect(dist(out)).toBeLessThanOrEqual(out.maxDistance + 0.1);
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(y0);
   });
 
   test("keyboard: look around, zoom, views, pick a seat by number, leave the seat view", async ({ page }, testInfo) => {
@@ -165,8 +176,11 @@ test.describe("desktop and tablet", () => {
     await settled(page);
     expect(dist(await state(page))).toBeLessThan(d0 - 1);
 
-    await page.keyboard.press("2");
-    await expect.poll(async () => (await state(page)).mode).toBe("map");
+    // 1-5: Overview, Front, Centre, Rear, Seat map; 0 resets.
+    for (const [key, view] of [["2", "front"], ["3", "centre"], ["4", "rear"], ["5", "map"]]) {
+      await page.keyboard.press(key);
+      await expect.poll(async () => (await state(page)).mode).toBe(view);
+    }
     await page.keyboard.press("0");
     await expect.poll(async () => (await state(page)).mode).toBe("overview");
 
@@ -237,7 +251,7 @@ test.describe("desktop and tablet", () => {
     await settled(page);
     const p = await page.evaluate(() => window.__cinema3d.project("H5")); // booked in the fixture
     await page.mouse.move(p.x, p.y);
-    await expect(stage.getByText(/· Booked/)).toBeVisible();
+    await expect(stage.getByText(/Unavailable \(booked\)/)).toBeVisible();
     await page.mouse.click(p.x, p.y);
     await page.waitForTimeout(300);
     expect((await state(page)).mode).toBe("map");
@@ -407,7 +421,7 @@ test.describe("desktop and tablet", () => {
 test.describe("touch (tablet)", () => {
   test.skip(({ hasTouch, isMobile }) => !hasTouch || isMobile, "touch navigation is checked on the tablet project");
 
-  test("swipe scrolls the page until you choose to explore; then drag rotates and pinch zooms; tap selects", async ({ page }, testInfo) => {
+  test("sideways drag turns the hall, pinch zooms, an up/down swipe still scrolls the page; tap selects", async ({ page }, testInfo) => {
     const { stage } = await open3D(page);
     expect(await page.evaluate(() => window.matchMedia("(pointer: coarse)").matches), "tablet should report a coarse pointer").toBe(true);
     await stage.scrollIntoViewIfNeeded();
@@ -416,23 +430,14 @@ test.describe("touch (tablet)", () => {
     const y = box.y + box.height * 0.5;
     const cdp = await page.context().newCDPSession(page);
     const touch = (type, points) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(([px, py], id) => ({ x: px, y: py, id })) });
-    const drag = async (dx) => {
+    const drag = async (dx, dy = 0) => {
       await touch("touchStart", [[x, y]]);
-      for (let i = 1; i <= 10; i++) await touch("touchMove", [[x + (dx * i) / 10, y]]);
+      for (let i = 1; i <= 10; i++) await touch("touchMove", [[x + (dx * i) / 10, y + (dy * i) / 10]]);
       await touch("touchEnd", []);
     };
 
-    // Not exploring yet: a one-finger drag doesn't turn the camera.
+    // A sideways one-finger drag turns the hall straight away.
     const a0 = (await state(page)).azimuth;
-    await drag(200);
-    await page.waitForTimeout(300);
-    expect(Math.abs((await state(page)).azimuth - a0)).toBeLessThan(0.01);
-
-    // Browsers drop a tap that lands within a few ms of the end of a swipe (to avoid
-    // accidental taps); a person can't tap that fast, so pause like one would.
-    await page.waitForTimeout(400);
-    await page.getByRole("button", { name: "Explore in 3D" }).tap();
-    await expect(page.getByRole("button", { name: "Done exploring" })).toBeVisible();
     await drag(200);
     await settled(page);
     expect(Math.abs((await state(page)).azimuth - a0)).toBeGreaterThan(0.2);
@@ -445,13 +450,23 @@ test.describe("touch (tablet)", () => {
     await settled(page);
     expect(dist(await state(page))).toBeLessThan(d0 - 0.5);
 
-    // Back to normal: tapping a seat selects it.
+    // The hall hands vertical swipes to the browser, so the page can still scroll.
+    expect(await stage.locator("canvas").evaluate((c) => getComputedStyle(c).touchAction)).toBe("pan-y");
+
+    // Explore adds tilting; Done goes back.
+    await page.waitForTimeout(400);
+    await page.getByRole("button", { name: "Explore in 3D" }).tap();
+    await expect(page.getByRole("button", { name: "Done exploring" })).toBeVisible();
+    expect(await stage.locator("canvas").evaluate((c) => getComputedStyle(c).touchAction)).toBe("none");
     await page.waitForTimeout(400);
     await page.getByRole("button", { name: "Done exploring" }).tap();
+
+    // Tapping a seat selects it.
     await page.getByRole("button", { name: "Seat map", exact: true }).tap();
     await settled(page);
     const seat = "J9";
     const p = await page.evaluate((n) => window.__cinema3d.project(n), seat);
+    await page.waitForTimeout(400);
     await page.touchscreen.tap(p.x, p.y);
     await expect(panel(page)).toContainText(seat);
     await snap(page, testInfo, "3d-touch-selected");

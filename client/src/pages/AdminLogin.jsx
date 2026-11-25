@@ -1,145 +1,115 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import API from "../api";
-import AuthLayout, {
-  FormAlert,
-  PasswordField,
-  SubmitButton,
-  TextField,
-  isValidEmail,
-} from "../components/AuthLayout";
-import { PageLoader } from "../components/ui/Feedback";
+import { FormAlert, PasswordField, SubmitButton } from "../components/AuthLayout";
+import { Logo } from "../components/Navbar";
 import { useToast } from "../components/ui/Toast";
-import { safeRedirectPath, saveSession } from "../lib/session";
-import { getErrorMessage } from "../lib/format";
-import useVerifiedSession from "../lib/useVerifiedSession";
+import { safeRedirectPath } from "../lib/session";
+import useAdminSession, { isAdminArea, saveAdminSession, takeExpiredNotice } from "../lib/adminSession";
 
 const DASHBOARD = "/admin/dashboard";
 
-// After signing in, only go on to a staff page (never back to this one).
-const staffRedirect = (path) => {
+// After signing in, only go on to an admin page (never back to this one).
+const adminRedirect = (path) => {
   const safe = safeRedirectPath(path);
-  const isStaffPage = (safe.startsWith("/admin/") || safe === "/scanner") && !safe.startsWith("/admin/login");
-  return isStaffPage ? safe : DASHBOARD;
+  return isAdminArea(safe.split(/[?#]/)[0]) ? safe : DASHBOARD;
+};
+
+const messageFor = (err) => {
+  const code = err.response?.status;
+  if (code === 401) return "Incorrect admin password";
+  if (code === 400) return "Enter the admin password.";
+  if (code === 429 || code === 503) return err.response?.data?.message || "Admin sign-in isn't available right now.";
+  if (!err.response) return "We couldn't reach the server. Check your connection and try again.";
+  return "We couldn't sign you in. Please try again.";
 };
 
 /**
- * Admin sign-in, reached from the Admin entry in the navbar.
- * The server checks the password and reads the role from the database
- * (POST /api/auth/admin/login); a customer account is refused and no session
- * is saved. Nothing here decides access on its own: AdminGate checks the role
- * with the server again, and every admin API is protected on the server.
+ * Admin access, reached from the Admin entry in the navbar. Password only:
+ * no email, username or customer account. The password is checked on the
+ * server (POST /api/auth/admin/login), which returns a short-lived admin
+ * session; the password itself is never kept in the browser.
  */
 export default function AdminLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const redirectTo = staffRedirect(location.state?.from || new URLSearchParams(location.search).get("next"));
-  const { isLoggedIn, status, isStaff, userName } = useVerifiedSession();
+  const redirectTo = adminRedirect(location.state?.from || new URLSearchParams(location.search).get("next"));
+  const { active } = useAdminSession();
 
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState({});
+  const [password, setPassword] = useState("");
+  const [fieldError, setFieldError] = useState("");
   const [error, setError] = useState("");
+  const [expired] = useState(takeExpiredNotice);
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef(null);
 
-  if (!loading) {
-    if (isStaff) return <Navigate to={redirectTo} replace />;
-    if (status === "checking") return <PageLoader label="Checking your access…" />;
-  }
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: "" });
-  };
-
-  const validate = () => {
-    const next = {};
-    if (!form.email.trim()) next.email = "Enter your email address.";
-    else if (!isValidEmail(form.email)) next.email = "Enter a valid email address.";
-    if (!form.password) next.password = "Enter your password.";
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
+  if (active && !loading) return <Navigate to={redirectTo} replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!validate()) return;
+    if (!password) {
+      setFieldError("Enter the admin password.");
+      inputRef.current?.focus();
+      return;
+    }
     setLoading(true);
     try {
-      const { data } = await API.post("/api/auth/admin/login", {
-        email: form.email.trim(),
-        password: form.password,
-      });
-      saveSession(data);
-      toast.success(`Signed in to admin${data.name ? ` as ${data.name.split(" ")[0]}` : ""}`);
+      const { data } = await API.post("/api/auth/admin/login", { password });
+      setPassword("");
+      saveAdminSession(data);
+      toast.success("Signed in to admin");
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      const code = err.response?.status;
-      setError(
-        code === 403
-          ? "This account doesn't have admin access. Sign in with an administrator account."
-          : code === 400
-          ? "That email and password don't match. Please try again."
-          : getErrorMessage(err, "We couldn't sign you in. Please try again.")
-      );
-      setForm((f) => ({ ...f, password: "" }));
+      setError(messageFor(err));
+      setPassword("");
+      inputRef.current?.focus();
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AuthLayout
-      title="Admin sign in"
-      subtitle="For cinema staff. Sign in with your administrator account."
-      footer={
-        <>
-          Not staff?{" "}
-          <Link to="/login" className="font-semibold text-brand-400 hover:text-brand-300">
-            Customer sign in
-          </Link>
-        </>
-      }
-    >
-      {isLoggedIn && status === "verified" && !isStaff && (
-        <p className="mb-4 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-gray-300" data-testid="admin-login-notice">
-          You're signed in{userName ? ` as ${userName}` : ""}, but that account doesn't have admin access.
-          Sign in with an administrator account to continue.
-        </p>
-      )}
+    <main id="main" className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10 sm:py-16">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-64 max-w-xl rounded-full bg-brand-500/10 blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="card relative w-full max-w-sm p-6 sm:p-8" data-testid="admin-access">
+        <Link to="/" aria-label="CineBook home" className="mx-auto mb-7 flex w-fit">
+          <Logo />
+        </Link>
+        <h1 className="sr-only">Admin access</h1>
 
-      <FormAlert message={error} onDismiss={() => setError("")} />
+        {expired && !error && (
+          <p role="status" className="mb-5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-gray-300" data-testid="admin-expired-notice">
+            Your admin session has ended. Sign in again to continue.
+          </p>
+        )}
+        <FormAlert message={error} onDismiss={() => setError("")} />
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate aria-label="Admin sign in">
-        <TextField
-          id="admin-email"
-          name="email"
-          label="Email address"
-          icon="mail"
-          type="email"
-          autoComplete="username"
-          placeholder="admin@example.com"
-          value={form.email}
-          onChange={handleChange}
-          error={errors.email}
-        />
-        <PasswordField
-          id="admin-password"
-          name="password"
-          label="Password"
-          autoComplete="current-password"
-          placeholder="Your password"
-          value={form.password}
-          onChange={handleChange}
-          error={errors.password}
-        />
-        <div className="pt-2">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate aria-label="Admin access">
+          <PasswordField
+            id="admin-password"
+            name="password"
+            label="Admin password"
+            autoComplete="current-password"
+            autoFocus
+            ref={inputRef}
+            value={password}
+            maxLength={256}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (fieldError) setFieldError("");
+            }}
+            error={fieldError}
+          />
           <SubmitButton loading={loading} loadingLabel="Checking…">
-            Sign in to admin
+            Sign in
           </SubmitButton>
-        </div>
-      </form>
-    </AuthLayout>
+        </form>
+      </div>
+    </main>
   );
 }

@@ -15,6 +15,10 @@ const req = (m) => require(path.join(SERVER, "node_modules", m));
 process.env.NODE_ENV = "development";
 process.env.JWT_SECRET = "e2e-only-secret-0123456789-abcdefghijklmnopqrstuvwxyz";
 process.env.DISABLE_RATE_LIMIT = "true";
+// Test-only admin password for this throwaway stack (see helpers.js).
+process.env.ADMIN_ACCESS_PASSWORD = "E2e-Admin-Access-7Qx!";
+process.env.ADMIN_LOGIN_MAX_FAILURES = "50";
+delete process.env.ADMIN_DEMO_PASSWORD;
 const LOCAL_MONGOD = "C:/Program Files/MongoDB/Server/8.2/bin/mongod.exe";
 if (!process.env.MONGOMS_SYSTEM_BINARY && fs.existsSync(LOCAL_MONGOD)) process.env.MONGOMS_SYSTEM_BINARY = LOCAL_MONGOD;
 

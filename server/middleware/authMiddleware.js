@@ -1,22 +1,45 @@
 // authMiddleware.js
 // Accepts only "Authorization: Bearer <jwt>" with a valid signature.
 // There is no bypass header and no decode-without-verify fallback.
+//
+// Two kinds of token exist:
+// - customer (and staff account) tokens, signed with JWT_SECRET; the role is
+//   always read from the database;
+// - admin access tokens from the password-only Admin sign-in, signed with a
+//   separate derived key and tied to a revocable server-side session.
+// `authMiddleware` accepts only the first kind. `authOrAdminSession` also
+// accepts an admin session, for staff routes; it never turns a customer token
+// into an admin one.
 
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const { getJwtSecret } = require("../config/env");
+const { verifySession } = require("../utils/adminAccess");
 
 const unauthorized = (res, message = "Please sign in to continue") =>
   res.status(401).json({ message });
 
-const authMiddleware = async (req, res, next) => {
+const bearer = (req) => {
   const header = req.headers.authorization;
-  if (typeof header !== "string" || !header.startsWith("Bearer ")) {
-    return unauthorized(res);
-  }
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) return "";
+  return header.slice(7).trim();
+};
 
-  const token = header.slice(7).trim();
+// The signed-in identity for an admin access session (no customer account).
+const adminSessionUser = (session) => ({
+  id: null,
+  _id: null,
+  name: "Admin",
+  email: null,
+  role: "admin",
+  adminSession: true,
+  sid: session.sid,
+  sessionExpiresAt: session.expiresAt,
+});
+
+const authMiddleware = async (req, res, next) => {
+  const token = bearer(req);
   if (!token) return unauthorized(res);
 
   let payload;
@@ -69,6 +92,28 @@ const optionalAuth = async (req, res, next) => {
   return next();
 };
 
+// Staff routes: an admin access session, or an account token (role from the database).
+const authOrAdminSession = (req, res, next) => {
+  const token = bearer(req);
+  if (!token) return unauthorized(res);
+  const session = verifySession(token);
+  if (session) {
+    req.user = adminSessionUser(session);
+    return next();
+  }
+  return authMiddleware(req, res, next);
+};
+
+// Only an admin access session (sign-out, session check).
+const requireAdminSession = (req, res, next) => {
+  const session = verifySession(bearer(req));
+  if (!session) return unauthorized(res, "Your admin session has expired. Please sign in again.");
+  req.user = adminSessionUser(session);
+  return next();
+};
+
 module.exports = authMiddleware;
 module.exports.authMiddleware = authMiddleware;
 module.exports.optionalAuth = optionalAuth;
+module.exports.authOrAdminSession = authOrAdminSession;
+module.exports.requireAdminSession = requireAdminSession;

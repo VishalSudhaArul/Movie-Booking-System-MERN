@@ -22,7 +22,7 @@ const router = require("express").Router();
 
 const movieController = require("../controllers/movieController");
 
-const { authMiddleware } = require("../middleware/authMiddleware");
+const { authOrAdminSession } = require("../middleware/authMiddleware");
 const { adminAccess } = require("../middleware/adminMiddleware");
 
 
@@ -34,11 +34,11 @@ router.get("/:id", movieController.getMovie);
 
 // ADMIN / THEATER OWNER ROUTES
 
-router.post("/", authMiddleware, adminAccess, movieController.addMovie);
+router.post("/", authOrAdminSession, adminAccess, movieController.addMovie);
 
-router.put("/:id", authMiddleware, adminAccess, movieController.updateMovie);
+router.put("/:id", authOrAdminSession, adminAccess, movieController.updateMovie);
 
-router.delete("/:id", authMiddleware, adminAccess, movieController.deleteMovie);
+router.delete("/:id", authOrAdminSession, adminAccess, movieController.deleteMovie);
 
 
 module.exports = router;

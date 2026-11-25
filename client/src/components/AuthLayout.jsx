@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { forwardRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "./Navbar";
 import Icon from "./ui/Icon";
@@ -98,7 +98,7 @@ export function TextField({ id, label, icon, error, className = "", ...props }) 
   );
 }
 
-export function PasswordField({ id, label, error, hint, ...props }) {
+export const PasswordField = forwardRef(function PasswordField({ id, label, error, hint, ...props }, ref) {
   const [visible, setVisible] = useState(false);
   return (
     <div>
@@ -107,6 +107,7 @@ export function PasswordField({ id, label, error, hint, ...props }) {
         <Icon name="lock" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
         <input
           id={id}
+          ref={ref}
           type={visible ? "text" : "password"}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
@@ -130,7 +131,7 @@ export function PasswordField({ id, label, error, hint, ...props }) {
       )}
     </div>
   );
-}
+});
 
 export function SubmitButton({ loading, loadingLabel, children }) {
   return (
