@@ -151,6 +151,19 @@ exports.updateShow = async (req, res, next) => {
 
     const { values, error } = readShowInput(req.body, { partial: true });
     if (error) return res.status(400).json({ message: error });
+
+    // A show's auditorium is fixed once it exists: its seats (and any bookings
+    // and holds on them) were made from that layout. Schedule a new showtime
+    // for a different hall instead.
+    if (req.body.layoutId !== undefined) {
+      const current = await Show.findById(req.params.id).select("layoutId").lean();
+      if (!current) return res.status(404).json({ message: "Show not found" });
+      if ((current.layoutId || DEFAULT_LAYOUT_ID) !== req.body.layoutId) {
+        return res.status(409).json({
+          message: "The auditorium of an existing showtime can't be changed. Publish a new showtime for the other hall.",
+        });
+      }
+    }
     if (Object.keys(values).length === 0) return res.status(400).json({ message: "Nothing to update" });
 
     if (values.movieId && !(await Movie.exists({ _id: values.movieId }))) {

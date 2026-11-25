@@ -10,7 +10,8 @@ import { EmptyState, ErrorState, Spinner } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/Toast";
 import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../../lib/format";
 
-const EMPTY_FORM = { movieId: "", theatre: "", date: "", time: "", balconyPrice: "", firstClassPrice: "", secondClassPrice: "" };
+const DEFAULT_LAYOUT = "classic-136";
+const EMPTY_FORM = { movieId: "", theatre: "", date: "", time: "", balconyPrice: "", firstClassPrice: "", secondClassPrice: "", layoutId: DEFAULT_LAYOUT };
 
 const PRICE_FIELDS = [
   { key: "balconyPrice", label: "Balcony price (₹)" },
@@ -22,6 +23,7 @@ function AdminShows() {
   const toast = useToast();
   const [movies, setMovies] = useState([]);
   const [shows, setShows] = useState([]);
+  const [layouts, setLayouts] = useState([]);
   const [status, setStatus] = useState("loading");
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -35,9 +37,14 @@ function AdminShows() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [movieRes, showRes] = await Promise.all([API.get("/api/movies"), API.get("/api/shows")]);
+      const [movieRes, showRes, layoutRes] = await Promise.all([
+        API.get("/api/movies"),
+        API.get("/api/shows"),
+        API.get("/api/shows/layouts").catch(() => ({ data: [] })),
+      ]);
       setMovies(Array.isArray(movieRes.data) ? movieRes.data : []);
       setShows(Array.isArray(showRes.data) ? showRes.data : []);
+      setLayouts(Array.isArray(layoutRes.data) ? layoutRes.data : []);
       setStatus("ready");
     } catch (err) {
       setStatus("error");
@@ -87,10 +94,11 @@ function AdminShows() {
         secondClassPrice: Number(form.secondClassPrice),
       };
       if (editId) {
+        // The hall of an existing showtime is fixed (its seats and bookings come from it).
         await API.put(`/api/shows/${editId}`, payload);
         toast.success("Showtime updated.");
       } else {
-        await API.post("/api/shows", payload);
+        await API.post("/api/shows", { ...payload, layoutId: form.layoutId || DEFAULT_LAYOUT });
         toast.success("Showtime published.");
       }
       resetForm();
@@ -113,6 +121,7 @@ function AdminShows() {
       balconyPrice: String(s.balconyPrice ?? ""),
       firstClassPrice: String(s.firstClassPrice ?? ""),
       secondClassPrice: String(s.secondClassPrice ?? ""),
+      layoutId: s.layoutId || DEFAULT_LAYOUT,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -179,6 +188,26 @@ function AdminShows() {
             <Field id="s-theatre" label="Theatre / screen" required error={errors.theatre}>
               <input id="s-theatre" className={`input ${errors.theatre ? "input-error" : ""}`} placeholder="e.g. IMAX Screen 1" value={form.theatre} onChange={update("theatre")} />
             </Field>
+            <Field
+              id="s-layout"
+              label="Auditorium"
+              hint={editId ? "Fixed for an existing showtime: its seats and bookings come from it." : "Seats are created from this layout."}
+            >
+              <select
+                id="s-layout"
+                className="input"
+                value={form.layoutId}
+                onChange={update("layoutId")}
+                disabled={!!editId}
+                data-testid="show-layout"
+              >
+                {(layouts.length ? layouts : [{ id: DEFAULT_LAYOUT, name: "Classic hall with balcony", totalSeats: 136 }]).map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name.replace(/ · \d+ seats$/, "")} · {l.totalSeats} seats{l.rows ? `, ${l.rows} rows` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field id="s-date" label="Date" required error={errors.date}>
               <input id="s-date" type="date" className={`input ${errors.date ? "input-error" : ""}`} value={form.date} onChange={update("date")} />
             </Field>
@@ -243,6 +272,7 @@ function AdminShows() {
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="badge-brand">{s.theatre}</span>
+                      <span className="badge" data-testid="show-capacity">{total} seats</span>
                       {upcoming ? <span className="badge-green">Upcoming</span> : <span className="badge">Past</span>}
                     </div>
                     <h3 className="mt-2 truncate font-semibold text-white">{movie.title || "Unknown movie"}</h3>

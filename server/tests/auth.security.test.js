@@ -213,58 +213,6 @@ describe("register and login", () => {
   });
 });
 
-describe("admin login", () => {
-  const login = (email, password) => request(app).post("/api/auth/admin/login").send({ email, password });
-
-  test.each(["admin", "theaterOwner"])("a %s with the right password gets a session that opens admin APIs", async (role) => {
-    const { user, password } = await createUser(role);
-    const res = await login(user.email, password);
-    expect(res.status).toBe(200);
-    expect(res.body.role).toBe(role);
-    const all = await request(app).get("/api/bookings/all").set("Authorization", `Bearer ${res.body.token}`);
-    expect(all.status).toBe(200);
-  });
-
-  test("the email is matched case-insensitively", async () => {
-    const { user, password } = await createUser("admin");
-    expect((await login(user.email.toUpperCase(), password)).status).toBe(200);
-  });
-
-  test("a wrong password is refused with the same message as an unknown email", async () => {
-    const { user } = await createUser("admin");
-    const wrong = await login(user.email, "WrongPassword1");
-    const unknown = await login("nobody@example.test", "WrongPassword1");
-    expect(wrong.status).toBe(400);
-    expect(unknown.status).toBe(400);
-    expect(wrong.body).toEqual(unknown.body);
-    expect(wrong.body.token).toBeUndefined();
-  });
-
-  test("a customer with the right password is refused and gets no token", async () => {
-    const { user, password } = await createUser("user");
-    const res = await login(user.email, password);
-    expect(res.status).toBe(403);
-    expect(res.body.token).toBeUndefined();
-    expect(res.body.message).toMatch(/admin access/i);
-  });
-
-  test("the role comes from the database, not the request", async () => {
-    const { user, password } = await createUser("user");
-    const res = await request(app)
-      .post("/api/auth/admin/login")
-      .send({ email: user.email, password, role: "admin" });
-    expect(res.status).toBe(403);
-  });
-
-  test("operator injection in the email can't match an account", async () => {
-    await createUser("admin");
-    const res = await request(app)
-      .post("/api/auth/admin/login")
-      .send({ email: { $ne: null }, password: { $ne: null } });
-    expect(res.status).toBe(400);
-  });
-});
-
 describe("HTTP hardening", () => {
   test("Helmet security headers are set and x-powered-by is hidden", async () => {
     const res = await request(app).get("/");

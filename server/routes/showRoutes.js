@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const showController = require("../controllers/showController");
-const { authMiddleware, optionalAuth } = require("../middleware/authMiddleware");
+const { authMiddleware, authOrAdminSession, optionalAuth } = require("../middleware/authMiddleware");
 const holdController = require("../controllers/holdController");
 const { holdLimiter } = require("../middleware/security");
 const { adminAccess } = require("../middleware/adminMiddleware");
@@ -17,8 +17,8 @@ router.post("/:showId/holds", authMiddleware, holdLimiter, holdController.holdSe
 router.delete("/:showId/holds", authMiddleware, holdLimiter, holdController.releaseSeats);
 
 // Staff-only writes
-router.post("/", authMiddleware, adminAccess, showController.addShow);
-router.put("/:id", authMiddleware, adminAccess, showController.updateShow);
-router.delete("/:id", authMiddleware, adminAccess, showController.deleteShow);
+router.post("/", authOrAdminSession, adminAccess, showController.addShow);
+router.put("/:id", authOrAdminSession, adminAccess, showController.updateShow);
+router.delete("/:id", authOrAdminSession, adminAccess, showController.deleteShow);
 
 module.exports = router;

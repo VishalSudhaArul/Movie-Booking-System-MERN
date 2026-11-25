@@ -15,6 +15,7 @@ import useSeatHold, { inBookingFlow, releaseHoldNow } from "../lib/useSeatHold";
 // The 3D auditorium (three.js) is loaded only when someone opens it.
 const Auditorium3D = lazy(() => import("../components/cinema3d/Auditorium3D"));
 const VIEW_KEY = "cinebook:seatView";
+const QUALITY_KEY = "cinebook:3dQuality";
 
 const initialView = () => {
   if (!hasWebGL()) return "2d";
@@ -66,7 +67,16 @@ export default function Seats() {
   const webgl = useMemo(() => hasWebGL(), []);
   const show3d = view === "3d" && webgl && !view3dFailed;
   const reducedMotion = useMemo(() => prefersReducedMotion(), []);
-  const lowPower = useMemo(() => isLowPowerDevice(), []);
+  // Lite mode for the 3D hall: detected for weak devices, or chosen on the
+  // 3D toolbar (remembered on this device).
+  const detectedLowPower = useMemo(() => isLowPowerDevice(), []);
+  const [quality, setQuality] = useState(() => localStorage.getItem(QUALITY_KEY));
+  const lowPower = quality ? quality === "lite" : detectedLowPower;
+  const toggleLite = useCallback(() => {
+    const next = lowPower ? "full" : "lite";
+    localStorage.setItem(QUALITY_KEY, next);
+    setQuality(next);
+  }, [lowPower]);
   const chooseView = (v) => {
     setView(v);
     localStorage.setItem(VIEW_KEY, v);
@@ -495,6 +505,9 @@ export default function Seats() {
                 >
                   <div className="p-2 sm:p-3">
                     <Auditorium3D
+                      // A new renderer when the quality changes (antialiasing is fixed at creation).
+                      key={lowPower ? "lite" : "full"}
+                      onToggleLite={toggleLite}
                       layout={show.layout}
                       seats={show.seats}
                       selected={selectedSeats}

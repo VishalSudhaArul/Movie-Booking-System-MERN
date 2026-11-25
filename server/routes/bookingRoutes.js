@@ -3,13 +3,13 @@
 const router = require("express").Router();
 const bookingController = require("../controllers/bookingController");
 const Booking = require("../models/Booking");
-const { authMiddleware } = require("../middleware/authMiddleware");
+const { authMiddleware, authOrAdminSession } = require("../middleware/authMiddleware");
 const { adminAccess, selfOrAdmin, isStaff } = require("../middleware/adminMiddleware");
 const { bookingLimiter } = require("../middleware/security");
 const { isObjectId } = require("../utils/validate");
 
 /* ── VERIFY BOOKING (QR scan) ── owner or staff ── must be BEFORE /:id ── */
-router.get("/verify/:id", authMiddleware, async (req, res, next) => {
+router.get("/verify/:id", authOrAdminSession, async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!isObjectId(id)) return res.status(400).json({ message: "Invalid booking ID" });
@@ -30,21 +30,21 @@ router.post("/", authMiddleware, bookingLimiter, bookingController.bookSeats);
 /* ── USER BOOKING HISTORY ── only your own, unless staff ── */
 router.get(
   "/user/:userId",
-  authMiddleware,
+  authOrAdminSession,
   selfOrAdmin((req) => req.params.userId),
   bookingController.getUserBookings
 );
 
 /* ── PARKING REVENUE (staff) ── */
-router.get("/parking-revenue", authMiddleware, adminAccess, bookingController.getParkingRevenue);
+router.get("/parking-revenue", authOrAdminSession, adminAccess, bookingController.getParkingRevenue);
 
 /* ── ALL BOOKINGS (staff) ── must be BEFORE /:id ── */
-router.get("/all", authMiddleware, adminAccess, bookingController.getAllBookings);
+router.get("/all", authOrAdminSession, adminAccess, bookingController.getAllBookings);
 
 /* ── GET SINGLE BOOKING ── owner or staff ── */
-router.get("/:id", authMiddleware, bookingController.getBookingById);
+router.get("/:id", authOrAdminSession, bookingController.getBookingById);
 
 /* ── MARK TICKET AS USED (staff at the entrance) ── */
-router.put("/use/:id", authMiddleware, adminAccess, bookingController.markAsUsed);
+router.put("/use/:id", authOrAdminSession, adminAccess, bookingController.markAsUsed);
 
 module.exports = router;

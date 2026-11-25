@@ -1,7 +1,7 @@
 // Colour themes (picker, persistence, every page), the server-verified admin
 // link, and the cinematic homepage sections.
 const { test, expect } = require("@playwright/test");
-const { API, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
+const { API, ADMIN_PASSWORD, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
 
 const THEMES = {
   blue: { name: "Electric Blue", brand500: "30 140 255" },
@@ -129,16 +129,20 @@ async function openAdminEntry(page, testInfo) {
   }
 }
 
-const adminSignIn = async (page, email, password) => {
-  await page.getByLabel("Email address").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Sign in to admin" }).click();
+const passwordField = (page) => page.getByLabel("Admin password", { exact: true });
+const enterAdminPassword = async (page, password) => {
+  await passwordField(page).fill(password);
+  await page.getByTestId("admin-access").getByRole("button", { name: "Sign in", exact: true }).click();
 };
+// Everything the browser keeps for this site, to prove no password is stored.
+const storedEverywhere = (page) =>
+  page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }) + document.cookie);
+const adminToken = (page) => page.evaluate(() => sessionStorage.getItem("cinebook:adminToken"));
 
-test.describe("admin entry", () => {
-  test("visible to visitors; leads to the admin sign-in; an admin reaches the dashboard", async ({ page }, testInfo) => {
+test.describe("admin access", () => {
+  test("Admin opens a password-only page; wrong and empty passwords are refused; the right one opens the dashboard", async ({ page }, testInfo) => {
     // The refused sign-ins below log the browser's usual "failed to load" lines.
-    const errors = watchErrors(page, [/status of 40[03]/]);
+    const errors = watchErrors(page, [/status of 40[01]/]);
     if (testInfo.project.name === "desktop") {
       // The narrowest width with the full desktop navbar still fits.
       await page.setViewportSize({ width: 1024, height: 768 });
@@ -149,30 +153,56 @@ test.describe("admin entry", () => {
     }
     await page.goto("/");
     await expect(page.getByTestId("home-hero")).toBeVisible();
+    // No customer account is signed in at any point in this test.
+    expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
     await openAdminEntry(page, testInfo);
     await expect(page).toHaveURL(/\/admin\/login$/);
-    await expect(page.getByRole("heading", { name: "Admin sign in" })).toBeVisible();
+
+    // Only branding, the password field (with show/hide) and Sign in.
+    const card = page.getByTestId("admin-access");
+    await expect(card.getByRole("link", { name: "CineBook home" })).toBeVisible();
+    await expect(passwordField(page)).toBeVisible();
+    await expect(passwordField(page)).toBeFocused();
+    // Exactly one input, and it's the password: no email or username field.
+    await expect(card.locator("input")).toHaveCount(1);
+    await expect(card.locator("input")).toHaveAttribute("type", "password");
+    await expect(card.getByRole("button")).toHaveCount(2); // show/hide, Sign in
+    await expect(card.getByRole("button", { name: "Show password" })).toBeVisible();
+    await expect(card).not.toContainText(/email|customer|account/i);
     expect(await horizontalOverflow(page)).toEqual([]);
-    await snap(page, testInfo, "admin-login");
+    await snap(page, testInfo, "admin-access");
 
-    // Wrong password: refused, nothing saved.
-    await adminSignIn(page, "admin@e2e.test", "WrongPass123");
-    await expect(page.getByText("That email and password don't match")).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
+    // Show / hide the password.
+    await passwordField(page).fill("peek-a-boo");
+    await card.getByRole("button", { name: "Show password" }).click();
+    await expect(passwordField(page)).toHaveAttribute("type", "text");
+    await card.getByRole("button", { name: "Hide password" }).click();
+    await expect(passwordField(page)).toHaveAttribute("type", "password");
+
+    // Empty: stopped in the browser, nothing sent.
+    await passwordField(page).fill("");
+    let sent = 0;
+    page.on("request", (r) => r.url().endsWith("/api/auth/admin/login") && (sent += 1));
+    await card.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByText("Enter the admin password.")).toBeVisible();
+    expect(sent).toBe(0);
+
+    // Wrong password: refused, field cleared, nothing saved.
+    await enterAdminPassword(page, "Not-The-Password-1");
+    await expect(page.getByRole("alert")).toHaveText("Incorrect admin password");
+    await expect(passwordField(page)).toHaveValue("");
+    expect(await adminToken(page)).toBeNull();
     await expect(page).toHaveURL(/\/admin\/login$/);
+    await snap(page, testInfo, "admin-access-wrong");
 
-    // Right password on a customer account: refused, nothing saved.
-    await adminSignIn(page, "user@e2e.test", "UserPass123");
-    await expect(page.getByText("This account doesn't have admin access")).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
-    await expect(page).toHaveURL(/\/admin\/login$/);
-
-    // The administrator: into the existing dashboard.
-    await adminSignIn(page, "admin@e2e.test", "AdminPass123");
+    // The right password: into the existing dashboard.
+    await enterAdminPassword(page, ADMIN_PASSWORD);
     await expect(page).toHaveURL(/\/admin\/dashboard$/);
-    await expect(page.getByRole("heading", { name: "Staff only" })).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem("role"))).toBe("admin");
+    expect(await adminToken(page)).toBeTruthy();
+    // The password is kept nowhere in the browser, and no customer session appeared.
+    expect(await storedEverywhere(page)).not.toContain(ADMIN_PASSWORD);
+    expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
 
     // Now the entry goes straight to the dashboard.
     await page.goto("/");
@@ -181,52 +211,81 @@ test.describe("admin entry", () => {
     expect(errors).toEqual([]);
   });
 
-  test("protected admin URLs send visitors to the admin sign-in and back afterwards", async ({ page }) => {
+  test("protected admin URLs send visitors to Admin access and back afterwards", async ({ page }) => {
+    for (const path of ["/admin/dashboard", "/admin/movies", "/admin/scan", "/scanner"]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/admin\/login$/);
+      await expect(passwordField(page)).toBeVisible();
+    }
     await page.goto("/admin/shows");
-    await expect(page).toHaveURL(/\/admin\/login$/);
-    await expect(page.getByRole("heading", { name: "Admin sign in" })).toBeVisible();
-    await adminSignIn(page, "admin@e2e.test", "AdminPass123");
+    await enterAdminPassword(page, ADMIN_PASSWORD);
     await expect(page).toHaveURL(/\/admin\/shows$/);
   });
 
-  test("a customer can't get in, even by editing the saved role", async ({ page }) => {
+  test("a signed-in customer still gets Admin access, never the dashboard; customer tokens can't use admin APIs", async ({ page }) => {
     await signIn(page, "user");
     // Pretend to be an admin by editing the browser's saved role.
     await page.addInitScript(() => localStorage.setItem("role", "admin"));
-    await page.goto("/");
-    await expect(page.getByTestId("home-hero")).toBeVisible();
-    await page.waitForLoadState("networkidle");
-    // The entry is still offered, but leads to the sign-in, not the dashboard.
-    expect(await page.evaluate(() => localStorage.getItem("role"))).toBe("user");
     await page.goto("/admin/dashboard");
-    await expect(page.getByRole("heading", { name: "Staff only" })).toBeVisible();
-    await page.getByRole("link", { name: "Sign in with an admin account" }).click();
     await expect(page).toHaveURL(/\/admin\/login$/);
-    await expect(page.getByTestId("admin-login-notice")).toBeVisible();
+    await expect(passwordField(page)).toBeVisible();
 
-    // Every staff API refuses this customer's token.
     const token = await page.evaluate(() => localStorage.getItem("token"));
     const auth = { Authorization: `Bearer ${token}` };
     for (const path of ["/api/bookings/all", "/api/analytics", "/api/snack-orders/all", "/api/parking/all"]) {
       expect((await page.request.get(`${API}${path}`, { headers: auth })).status()).toBe(403);
     }
     expect((await page.request.post(`${API}/api/movies`, { headers: auth, data: {} })).status()).toBe(403);
-    // And with no token at all, 401.
+    expect((await page.request.get(`${API}/api/auth/admin/session`, { headers: auth })).status()).toBe(401);
     expect((await page.request.get(`${API}/api/bookings/all`)).status()).toBe(401);
+
+    // Signing in to admin leaves the customer session as it was.
+    await enterAdminPassword(page, ADMIN_PASSWORD);
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+    expect(await page.evaluate(() => localStorage.getItem("token"))).toBe(token);
   });
 
-  test("a verified admin's entry opens the dashboard directly", async ({ page }, testInfo) => {
-    await signIn(page, "admin");
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    if (testInfo.project.name === "desktop") {
-      await page.getByTestId("admin-nav-link").click();
-    } else {
-      await page.getByRole("button", { name: "Open menu" }).click();
-      await page.getByRole("dialog", { name: "Menu" }).getByRole("button", { name: /^Admin/ }).click();
-    }
+  test("signing out ends the admin session on the server", async ({ page }, testInfo) => {
+    await page.goto("/admin/login");
+    await enterAdminPassword(page, ADMIN_PASSWORD);
     await expect(page).toHaveURL(/\/admin\/dashboard$/);
-    await expect(page.getByRole("heading", { name: "Staff only" })).toHaveCount(0);
+    const token = await adminToken(page);
+    await page.getByTestId("admin-sign-out").click();
+    await expect(page).toHaveURL(/\/admin\/login$/);
+    expect(await adminToken(page)).toBeNull();
+    expect((await page.request.get(`${API}/api/analytics`, { headers: { Authorization: `Bearer ${token}` } })).status()).toBe(401);
+    await page.goto("/admin/dashboard");
+    await expect(page).toHaveURL(/\/admin\/login$/);
+    if (testInfo.project.name === "desktop") {
+      await page.goto("/");
+      await expect(page.getByTestId("admin-nav-link")).toHaveAttribute("href", "/admin/login");
+    }
+  });
+
+  test("an expired or revoked session goes back to Admin access with a notice", async ({ page }) => {
+    const errors = watchErrors(page, [/status of 401/]);
+    await page.goto("/admin/login");
+    await enterAdminPassword(page, ADMIN_PASSWORD);
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+
+    // Revoked on the server (e.g. signed out in another tab): the next check notices.
+    const token = await adminToken(page);
+    await page.request.post(`${API}/api/auth/admin/logout`, { headers: { Authorization: `Bearer ${token}` } });
+    await page.goto("/admin/movies");
+    await expect(page).toHaveURL(/\/admin\/login/);
+    await expect(page.getByTestId("admin-expired-notice")).toBeVisible();
+
+    // Expired in the browser: dropped the moment it runs out, even while on a page.
+    await enterAdminPassword(page, ADMIN_PASSWORD);
+    await expect(page).toHaveURL(/\/admin\/movies$/);
+    await page.evaluate(() => {
+      sessionStorage.setItem("cinebook:adminExpiresAt", new Date(Date.now() + 1500).toISOString());
+      window.dispatchEvent(new Event("cinebook:admin-session"));
+    });
+    await expect(page).toHaveURL(/\/admin\/login$/, { timeout: 8000 });
+    await expect(page.getByTestId("admin-expired-notice")).toBeVisible();
+    expect(await adminToken(page)).toBeNull();
+    expect(errors).toEqual([]);
   });
 });
 

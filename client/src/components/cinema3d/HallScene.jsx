@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { useThemeColors } from "../../lib/theme";
 import MovieScreen from "./MovieScreen";
+import { Instances, RowLetters } from "./HallInstances";
 import { AdditiveBlending, CanvasTexture, DoubleSide, PlaneGeometry, RepeatWrapping, SRGBColorSpace } from "three";
 
 // Surfaces
@@ -80,21 +81,70 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
   const screenCenterY = screen.bottom + screen.height / 2;
 
   const screenGeo = useCurvedScreen(screen.width, screen.height, screen.curve || 0);
+  useEffect(() => () => screenGeo.dispose(), [screenGeo]);
+  const maxFloor = rows.reduce((m, r) => Math.max(m, r.floorY), 0);
+  // Floor height at a depth (the raked floor under the seats; 0 in front of them).
+  const floorAt = (z) => rows.reduce((y, r) => (r.z - pitchOf(r) / 2 <= z ? r.floorY : y), 0);
+  const sideAisle = g.sideAisleWidth || 0.9;
+
+  // Everything repeated per row, as instance lists (one draw call each).
+  const parts = useMemo(() => {
+    const risers = [];
+    const aisles = [];
+    const stepLights = [];
+    const nosings = [];
+    const plaques = [];
+    rows.forEach((r) => {
+      const pitch = pitchOf(r);
+      const front = r.z - pitch / 2;
+      if (r.floorY > 0) risers.push({ p: [0, r.floorY / 2, r.z + 0.05], s: [room.width, r.floorY, pitch] });
+      const walkways = [halfW - sideAisle / 2, -(halfW - sideAisle / 2)];
+      [...r.aisleXs, ...walkways].forEach((x, k) => {
+        const isWall = k >= r.aisleXs.length;
+        const w = isWall ? sideAisle * 0.85 : g.aisleWidth * 0.8;
+        aisles.push({ p: [x, r.floorY + 0.006, r.z + 0.05], s: [w, pitch, 1], r: [-Math.PI / 2, 0, 0] });
+        [-1, 1].forEach((side) => stepLights.push({ p: [x + side * w * 0.52, r.floorY + 0.03, front + 0.06], s: [0.18, 0.03, 0.03] }));
+        if (r.floorY > 0) nosings.push({ p: [x, r.floorY - 0.01, front + 0.05], s: [w, 0.025, 0.04] });
+      });
+      // Row letter on the aisle-side end of each block, at armrest height.
+      r.aisleXs.forEach((x) => {
+        [-1, 1].forEach((side) => plaques.push({ label: r.label, x: x + side * (g.aisleWidth / 2 - 0.02), y: r.floorY + 0.78, z: r.z + 0.34 }));
+      });
+      if (!r.aisleXs.length && r.seats.length) {
+        const ends = [r.seats[0].x + r.seatWidth / 2 + 0.2, r.seats[r.seats.length - 1].x - r.seatWidth / 2 - 0.2];
+        ends.forEach((x) => plaques.push({ label: r.label, x, y: r.floorY + 0.78, z: r.z + 0.34 }));
+      }
+    });
+    return { risers, aisles, stepLights, nosings, plaques };
+  }, [hall]);
 
   // Acoustic wall panels, alternating shades, along both side walls.
   const panels = useMemo(() => {
     const list = [];
-    for (let z = 1, i = 0; z < backZ - 1; z += 1.7, i++) list.push({ z, shade: i % 2 ? PANEL_A : PANEL_B });
+    for (let z = 1, i = 0; z < backZ - 1; z += 1.7, i++) {
+      [-1, 1].forEach((side) =>
+        list.push({ p: [side * (halfW - 0.06), room.height * 0.42, z], s: [0.1, room.height * 0.62, 1.45], color: i % 2 ? PANEL_A : PANEL_B })
+      );
+    }
     return list;
-  }, [backZ]);
+  }, [backZ, halfW, room.height]);
 
   const carpet = useCarpetTexture();
   const sconces = useMemo(() => {
-    const list = [];
-    for (let z = 3; z < backZ - 2; z += 4.2) list.push(z);
-    return list;
-  }, [backZ]);
-  const projectorY = Math.min(room.height - 1.6, (balcony[balcony.length - 1]?.floorY || 4) + 3.2);
+    const glow = [];
+    const flare = [];
+    let i = 0;
+    for (let z = 3; z < backZ - 2; z += 4.2, i++) {
+      [-1, 1].forEach((side) => {
+        const color = i % 2 ? COVE_VIOLET : COVE;
+        const y = floorAt(z) + 3.2;
+        glow.push({ p: [side * (halfW - 0.12), y, z], s: [0.08, 0.9, 0.22], color });
+        flare.push({ p: [side * (halfW - 0.18), y, z], s: [0.01, 2.4, 1], color });
+      });
+    }
+    return { glow, flare };
+  }, [backZ, halfW, hall, COVE, COVE_VIOLET]);
+  const projectorY = Math.min(room.height - 1.6, Math.max(maxFloor, 4) + 3.2);
 
   return (
     <group>
@@ -129,20 +179,14 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
       {[-1, 1].map((side) => (
         <pointLight key={side} position={[side * (halfW - 1), 3.6, stallsEndZ * 0.6]} intensity={14} distance={18} decay={1.4} color={COVE} />
       ))}
-      {[-1, 1].map((side) =>
-        sconces.map((z, i) => (
-          <group key={`sconce-${side}-${i}`} position={[side * (halfW - 0.12), 3.2, z]}>
-            <mesh>
-              <boxGeometry args={[0.08, 0.9, 0.22]} />
-              <meshBasicMaterial color={i % 2 ? COVE_VIOLET : COVE} toneMapped={false} />
-            </mesh>
-            <mesh position={[-side * 0.06, 0, 0]}>
-              <planeGeometry args={[0.01, 2.4]} />
-              <meshBasicMaterial color={i % 2 ? COVE_VIOLET : COVE} transparent opacity={0.25} blending={AdditiveBlending} depthWrite={false} />
-            </mesh>
-          </group>
-        ))
-      )}
+      <Instances items={sconces.glow}>
+        <boxGeometry />
+        <meshBasicMaterial toneMapped={false} />
+      </Instances>
+      <Instances items={sconces.flare}>
+        <planeGeometry />
+        <meshBasicMaterial transparent opacity={0.25} blending={AdditiveBlending} depthWrite={false} side={DoubleSide} toneMapped={false} />
+      </Instances>
 
       {/* Screen, black masking, and the stage in front of it */}
       <MovieScreen
@@ -172,40 +216,28 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         <planeGeometry args={[room.width, backZ + 2]} />
         <meshStandardMaterial map={carpet} roughness={1} />
       </mesh>
-      {stalls.map((r) =>
-        r.floorY > 0 ? (
-          <mesh key={r.label} position={[0, r.floorY / 2, r.z + 0.05]} receiveShadow={shadows}>
-            <boxGeometry args={[room.width, r.floorY, pitchOf(r)]} />
-            <meshStandardMaterial map={carpet} color="#c8d0ee" roughness={1} />
-          </mesh>
-        ) : null
-      )}
+      {/* Every raised row (stalls and balcony) is one box; one draw call in all. */}
+      <Instances items={parts.risers} receiveShadow={shadows}>
+        <boxGeometry />
+        <meshStandardMaterial color="#171e3a" roughness={1} />
+      </Instances>
 
-      {/* Centre aisle with step lights on each row */}
-      {rows.map((r) => (
-        <group key={`aisle-${r.label}`}>
-          <mesh position={[0, r.floorY + 0.006, r.z + 0.05]} rotation-x={-Math.PI / 2} receiveShadow={shadows}>
-            <planeGeometry args={[g.aisleWidth * 0.8, pitchOf(r)]} />
-            <meshStandardMaterial color={AISLE} roughness={1} />
-          </mesh>
-          {[-1, 1].map((side) => (
-            <mesh key={side} position={[side * g.aisleWidth * 0.42, r.floorY + 0.03, r.z - pitchOf(r) / 2 + 0.06]}>
-              <boxGeometry args={[0.18, 0.03, 0.03]} />
-              <meshBasicMaterial color={STEP_LIGHT} toneMapped={false} />
-            </mesh>
-          ))}
-        </group>
-      ))}
+      {/* Aisles (between the blocks and along the walls) with step lights */}
+      <Instances items={parts.aisles} receiveShadow={shadows}>
+        <planeGeometry />
+        <meshStandardMaterial color={AISLE} roughness={1} />
+      </Instances>
+      <Instances items={parts.stepLights}>
+        <boxGeometry />
+        <meshBasicMaterial color={STEP_LIGHT} toneMapped={false} />
+      </Instances>
+
+      {/* Row letters on the aisle ends of the seats */}
+      <RowLetters plaques={parts.plaques} text={STEP_LIGHT} />
 
       {/* Balcony: raised tiers, the slab underneath, a lit parapet and columns */}
       {balcony.length > 0 && (
         <group>
-          {balcony.map((r) => (
-            <mesh key={r.label} position={[0, r.floorY / 2, r.z + 0.05]} receiveShadow={shadows}>
-              <boxGeometry args={[room.width, r.floorY, pitchOf(r)]} />
-              <meshStandardMaterial map={carpet} color="#c8d0ee" roughness={1} />
-            </mesh>
-          ))}
           <mesh position={[0, balcony[0].floorY - 0.2, balconyFrontZ + 0.5]}>
             <boxGeometry args={[room.width, 0.4, 1.2]} />
             <meshStandardMaterial color={RISER_EDGE} roughness={0.8} />
@@ -234,14 +266,13 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
             <planeGeometry args={[backZ + 2, room.height]} />
             <meshStandardMaterial color={WALL} roughness={0.95} side={DoubleSide} />
           </mesh>
-          {panels.map((p) => (
-            <mesh key={p.z} position={[side * (halfW - 0.06), room.height * 0.42, p.z]}>
-              <boxGeometry args={[0.1, room.height * 0.62, 1.45]} />
-              <meshStandardMaterial color={p.shade} roughness={0.9} />
-            </mesh>
-          ))}
         </group>
       ))}
+
+      <Instances items={panels}>
+        <boxGeometry />
+        <meshStandardMaterial roughness={0.9} />
+      </Instances>
 
       {/* Speaker panels either side of the screen */}
       {[-1, 1].map((side) => (
@@ -251,30 +282,18 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         </mesh>
       ))}
 
-      {/* Aisle stair nosings: a lit edge on the front of every raised step */}
-      {rows.map((r) =>
-        r.floorY > 0 ? (
-          <mesh key={`nose-${r.label}`} position={[0, r.floorY - 0.01, r.z - pitchOf(r) / 2 + 0.05]}>
-            <boxGeometry args={[g.aisleWidth * 0.8, 0.025, 0.04]} />
-            <meshBasicMaterial color={STEP_LIGHT} toneMapped={false} />
-          </mesh>
-        ) : null
-      )}
-
-      {/* Side aisles along both walls */}
-      {[-1, 1].map((side) => (
-        <mesh key={`side-aisle-${side}`} rotation-x={-Math.PI / 2} position={[side * (halfW - 0.55), 0.004, stallsEndZ / 2 + 1.5]}>
-          <planeGeometry args={[0.9, stallsEndZ - 3]} />
-          <meshStandardMaterial color={AISLE} roughness={1} />
-        </mesh>
-      ))}
+      {/* Stair nosings: a lit edge on the front of every raised step */}
+      <Instances items={parts.nosings}>
+        <boxGeometry />
+        <meshBasicMaterial color={STEP_LIGHT} toneMapped={false} />
+      </Instances>
 
       {/* Exit signs over the doors */}
       {[
         [-(halfW - 0.6), 3.1, 3.2],
         [halfW - 0.6, 3.1, 3.2],
-        [-(halfW - 0.6), 3.1, stallsEndZ - 0.5],
-        [halfW - 0.6, 3.1, stallsEndZ - 0.5],
+        [-(halfW - 0.6), floorAt(stallsEndZ - 0.5) + 3.1, stallsEndZ - 0.5],
+        [halfW - 0.6, floorAt(stallsEndZ - 0.5) + 3.1, stallsEndZ - 0.5],
       ].map((p, i) => (
         <mesh key={`exit-${i}`} position={p} rotation-y={p[0] < 0 ? Math.PI / 2 : -Math.PI / 2}>
           <planeGeometry args={[0.6, 0.22]} />

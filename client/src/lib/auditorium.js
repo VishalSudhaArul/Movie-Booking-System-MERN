@@ -21,6 +21,7 @@ const placeRows = (layout) => {
   let z = g.stalls.firstRowDistance;
   let stallsCount = 0;
   let balconyCount = 0;
+  let stallsFloor = 0;
   let enteredBalcony = false;
 
   [...layout.rows]
@@ -34,6 +35,11 @@ const placeRows = (layout) => {
         }
         floorY = g.balcony.floorElevation + balconyCount * g.balcony.riser;
         balconyCount += 1;
+      } else if (typeof row.riser === "number") {
+        // Stadium rake: each row states how much higher it is than the one in front.
+        stallsFloor += row.riser;
+        floorY = stallsFloor;
+        stallsCount += 1;
       } else {
         floorY = stallsCount * g.stalls.riser;
         stallsCount += 1;
@@ -52,6 +58,17 @@ const seatX = (row, index, g) => {
   const rowWidth = row.seats * width + aisles.length * g.aisleWidth;
   const aislesBefore = aisles.filter((a) => index > a).length;
   return rowWidth / 2 - (index - 0.5) * width - aislesBefore * g.aisleWidth;
+};
+
+// Which block of the row a seat is in, as the audience sees it facing the
+// screen ("house" left/right). Facing the screen (-z), +x is on your right, and
+// seat 1 is at +x, so the low numbers are the right-hand block.
+const BLOCK_NAMES = { 1: ["centre"], 2: ["right", "left"], 3: ["right", "centre", "left"] };
+const blockOf = (row, index) => {
+  const aisles = row.aisleAfter || [];
+  const names = BLOCK_NAMES[aisles.length + 1];
+  if (!names) return "centre";
+  return names[aisles.filter((a) => index > a).length];
 };
 
 /**
@@ -77,6 +94,7 @@ export function buildAuditorium(layout, seats) {
       .map((seat) => {
         const index = seatIndexOf(seat.seatNumber);
         return {
+          block: blockOf(row, index),
           ...seat,
           index,
           seatType: row.seatType,
@@ -96,7 +114,28 @@ export function buildAuditorium(layout, seats) {
   const seatIndex = new Map();
   rows.forEach((r) => r.seats.forEach((s) => seatIndex.set(s.seatNumber, s)));
 
-  return { id: layout.id, name: layout.name, screen: layout.screen, room: layout.room, geometry: g, rows, seatIndex };
+  // Where the aisles run, per row: midway between the seats either side.
+  rows.forEach((row) => {
+    row.aisleXs = (row.aisleAfter || [])
+      .map((a) => {
+        const before = row.seats.find((x) => x.index === a);
+        const after = row.seats.find((x) => x.index === a + 1);
+        if (before && after) return (before.x + after.x) / 2;
+        return seatX(row, a, g) - (seatWidthFor(g, row.seatType) + g.aisleWidth) / 2;
+      });
+  });
+
+  return {
+    id: layout.id,
+    name: layout.name,
+    kind: layout.kind || "classic",
+    screen: layout.screen,
+    room: layout.room,
+    geometry: g,
+    rows,
+    seatIndex,
+    seatCount: seatIndex.size,
+  };
 }
 
 const deg = (rad) => (rad * 180) / Math.PI;

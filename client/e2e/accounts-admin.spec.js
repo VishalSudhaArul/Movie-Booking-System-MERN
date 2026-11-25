@@ -2,7 +2,7 @@
 // workflows (catalogue, showtimes, snacks, parking, ticket scanning), all
 // against the real API and the throwaway test database.
 const { test, expect } = require("@playwright/test");
-const { API, signIn, watchErrors } = require("./helpers");
+const { API, adminSignIn, watchErrors } = require("./helpers");
 
 const dayFromNow = (n) => {
   const d = new Date();
@@ -56,7 +56,7 @@ test.describe("admin workflows", () => {
   });
 
   test("add a movie, schedule it, add a snack and parking for a new theatre", async ({ page, request }) => {
-    await signIn(page, "admin");
+    await adminSignIn(page);
     const stamp = Date.now().toString().slice(-6);
     const title = `Test Premiere ${stamp}`;
     const theatre = `Aurora Screen ${stamp}`;
@@ -127,7 +127,7 @@ test.describe("admin workflows", () => {
     ).json();
     expect(booking._id).toBeTruthy();
 
-    await signIn(page, "admin");
+    await adminSignIn(page);
     await page.goto("/admin/scan");
     // Pasting the full QR link works as well as the bare ID.
     await page.getByLabel("Booking ID or ticket link").fill(`http://localhost:3000/verify/${booking._id}`);

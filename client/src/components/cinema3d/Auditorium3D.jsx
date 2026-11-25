@@ -4,7 +4,7 @@ import { CameraControls, CameraControlsImpl } from "@react-three/drei";
 import { Box3, MathUtils, Vector3 } from "three";
 import HallScene from "./HallScene";
 import { TrailerControls, useScreenTrailer } from "./ScreenTrailer";
-import SeatInstances, { seatState } from "./SeatInstances";
+import SeatInstances, { seatState, useSeatColors } from "./SeatInstances";
 import Icon from "../ui/Icon";
 import HoldCountdown from "../HoldCountdown";
 import { Spinner } from "../ui/Feedback";
@@ -14,29 +14,78 @@ import { getRendererName } from "../../lib/webgl";
 
 const { ACTION } = CameraControlsImpl;
 const INTRO_SCROLL = 420; // px of page scroll that fly the camera from the stage to the seats
-const STATE_LABEL = { available: "Available", premium: "Available", selected: "Selected", booked: "Booked", reserved: "Reserved" };
+const LEGEND = [
+  ["available", "Available"],
+  ["selected", "Selected"],
+  ["reserved", "Reserved"],
+  ["booked", "Unavailable"],
+];
+const STATE_LABEL = { available: "Available", premium: "Available", selected: "Selected", booked: "Unavailable (booked)", reserved: "Reserved by another customer" };
 
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+
+// Vertical field of view of the camera (see <Canvas camera>), in degrees.
+const FOV = 52;
+// Width of the floating booking panel on tablets and desktops, plus its margins.
+const PANEL_PX = 302;
+
+/** Top-down framing: front row at 22 % from the top, back row at 90 %. */
+function mapFraming(front, back, topFloor) {
+  const top = 0.22;
+  const bottom = 0.9;
+  const visibleDepth = (back - front + 1.2) / (bottom - top);
+  const height = visibleDepth / 2 / Math.tan(MathUtils.degToRad(FOV / 2));
+  const centreZ = front - 0.6 + (0.5 - top) * visibleDepth;
+  const baseY = topFloor * 0.5;
+  return { pos: [0, baseY + height, centreZ + 0.02 * height], target: [0, baseY, centreZ] };
+}
 
 /** Camera positions derived from the hall's real dimensions. */
 function usePresets(hall) {
   return useMemo(() => {
     const rows = hall.rows;
-    const front = rows[0].z;
-    const back = rows[rows.length - 1].z;
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    const front = first.z;
+    const back = last.z;
     const mid = (front + back) / 2;
-    const { room, screen } = hall;
+    const midRow = rows[Math.floor(rows.length / 2)];
+    const { room, screen, geometry: g } = hall;
+    const eye = g.eyeHeight || 1.15;
     const screenCenter = [0, screen.bottom + screen.height / 2, 0];
+    const topFloor = Math.max(...rows.map((r) => r.floorY));
+    // From a seat block, a little above eye height so the rows in front show too.
+    const fromRow = (row, dz, lift) => ({ pos: [0, row.floorY + eye + lift, row.z + dz], target: screenCenter });
     return {
       screenCenter,
-      overview: { pos: [room.width * 0.22, room.height * 0.95, Math.min(room.depth - 0.5, back + 5)], target: [0, 1.4, mid * 0.75] },
-      map: { pos: [0, room.height + 13, mid + 3.5], target: [0, 1.2, mid + 1.5] },
-      screen: { pos: [0, 3.2, mid], target: screenCenter },
+      overview: {
+        pos: [room.width * 0.22, Math.min(room.height - 0.6, Math.max(room.height * 0.95, topFloor + 6)), Math.min(room.depth - 0.5, back + 5)],
+        target: [0, 1.4 + topFloor * 0.3, mid * 0.75],
+      },
+      front: fromRow(first, 1.6, 0.9),
+      centre: fromRow(midRow, 0.6, 1.0),
+      rear: { pos: [0, last.floorY + eye + 1.6, Math.min(room.depth - 0.4, back + 1.6)], target: screenCenter },
+      // Looking down on the seats, framed so the front row sits below the camera
+      // toolbar and trailer controls (top ~20 % of the view) and the back row
+      // stays above the bottom edge.
+      map: mapFraming(front, back, topFloor),
+      screen: { pos: [0, 3.2 + midRow.floorY * 0.5, mid], target: screenCenter },
       stage: { pos: [0, screen.bottom + 0.9, 2.6], target: [0, 2.6, mid + 4] },
       bounds: new Box3(new Vector3(-room.width / 2, 0, -1), new Vector3(room.width / 2, room.height, room.depth)),
+      maxDistance: Math.max(42, room.depth * 1.25),
     };
   }, [hall]);
 }
+
+// The camera views on the toolbar, in order (keys 1-5; 0 resets).
+const VIEWS = [
+  ["overview", "Overview"],
+  ["front", "Front"],
+  ["centre", "Centre"],
+  ["rear", "Rear"],
+  ["map", "Seat map"],
+];
+const BLOCK_LABEL = { left: "Left block", centre: "Centre block", right: "Right block" };
 
 /** Records when the first frame was actually drawn (startup diagnostics). */
 function FirstFrame({ onFirstFrame }) {
@@ -130,6 +179,7 @@ export default function Auditorium3D({
   trailerUrl,
   reducedMotion = false,
   lowPower = false,
+  onToggleLite,
 }) {
   // The movie's trailer on the big screen (poster when there's none).
   const trailer = useScreenTrailer(trailerUrl, { reducedMotion, lowPower });
@@ -151,6 +201,7 @@ export default function Auditorium3D({
   }, []);
   const hall = useMemo(() => buildAuditorium(layout, seats), [layout, seats]);
   const presets = usePresets(hall);
+  const colors = useSeatColors();
   const controlsRef = useRef(null);
   const sceneRef = useRef(null);
   const outerRef = useRef(null);
@@ -186,19 +237,28 @@ export default function Auditorium3D({
     const c = controls();
     if (!c) return;
     c.minDistance = 2.5;
-    c.maxDistance = 42;
-    c.minPolarAngle = 0.12;
+    c.maxDistance = presets.maxDistance;
+    c.minPolarAngle = 0.15;
     c.maxPolarAngle = Math.PI / 2 - 0.03;
     c.minAzimuthAngle = -Infinity; // full 360° rotation
     c.maxAzimuthAngle = Infinity;
     c.setBoundary(presets.bounds);
   }, [presets]);
 
-  // The booking panel covers the right of the view on wider screens: shift the
-  // framing left so the hall stays centred in the visible area.
-  const panelOffset = useCallback(() => {
-    const w = stageRef.current?.clientWidth || 0;
-    return w >= 768 ? Math.min(3.2, (290 / w) * 9) : 0;
+  // The booking panel (290 px plus margins) covers the right of the view on
+  // wider screens: shift the framing left so the hall is centred in the part
+  // that stays visible. The shift is half the panel's share of the view, in
+  // metres at the distance the camera looks from, so it scales with the hall.
+  const panelOffset = useCallback((preset) => {
+    const el = stageRef.current;
+    const w = el?.clientWidth || 0;
+    const h = el?.clientHeight || 1;
+    // The panel docks to the side at the page's `md` breakpoint (the window is
+    // ≥ 768 px wide), even when the 3D view itself is a little narrower.
+    if (!w || !window.matchMedia("(min-width: 768px)").matches) return 0;
+    const d = preset ? Math.hypot(...preset.pos.map((v, i) => v - preset.target[i])) : 20;
+    const visibleWidth = 2 * d * Math.tan(MathUtils.degToRad(FOV / 2)) * (w / h);
+    return ((PANEL_PX / 2) / w) * visibleWidth;
   }, []);
 
   const goTo = useCallback(
@@ -206,7 +266,7 @@ export default function Auditorium3D({
       const c = controls();
       if (!c) return;
       freeLimits();
-      c.setFocalOffset(panelOffset(), 0, 0, transition);
+      c.setFocalOffset(panelOffset(preset), 0, 0, transition);
       setMode(nextMode);
       setViewSeat(null);
       c.setLookAt(...preset.pos, ...preset.target, transition);
@@ -253,7 +313,7 @@ export default function Auditorium3D({
     (c) => {
       if (!c || controlsRef.current === c) return;
       controlsRef.current = c;
-      c.mouseButtons.wheel = ACTION.NONE; // plain wheel scrolls the page
+      c.mouseButtons.wheel = ACTION.NONE; // the wheel is handled below, so the page can still scroll at the zoom limits
       c.mouseButtons.right = ACTION.TRUCK;
       c.mouseButtons.middle = ACTION.DOLLY;
       c.smoothTime = animate ? 0.45 : 0;
@@ -262,7 +322,7 @@ export default function Auditorium3D({
       c.polarRotateSpeed = 0.6;
       freeLimits();
       const start = introDone ? presets.overview : presets.stage;
-      c.setFocalOffset(panelOffset(), 0, 0, false);
+      c.setFocalOffset(panelOffset(start), 0, 0, false);
       c.setLookAt(...start.pos, ...start.target, false);
       // Any drag ends the scroll intro: the user is driving now.
       // "control" fires only while the user actually drags (not on a plain click).
@@ -275,15 +335,25 @@ export default function Auditorium3D({
     [animate, freeLimits, presets, introDone, finishIntro, panelOffset]
   );
 
-  // Ctrl/⌘ + wheel zooms (plain wheel keeps scrolling the page).
+  // The wheel zooms once the intro has finished (during it, scrolling flies the
+  // camera in). At the zoom limits the wheel scrolls the page again, so the
+  // view never traps it. Ctrl/⌘ + wheel always zooms.
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return undefined;
     const onWheel = (e) => {
-      if (!(e.ctrlKey || e.metaKey) || mode === "seat") return;
+      const c = controls();
+      if (!c || mode === "seat") return;
+      const forced = e.ctrlKey || e.metaKey;
+      if (!introDoneRef.current && !forced) return;
+      const zoomIn = e.deltaY < 0;
+      const atLimit = zoomIn ? c.distance <= c.minDistance + 0.05 : c.distance >= c.maxDistance - 0.05;
+      if (atLimit && !forced) return;
       e.preventDefault();
       finishIntro();
-      controls()?.dolly(-e.deltaY * 0.02, animate);
+      const step = MathUtils.clamp(-e.deltaY * 0.02, -4, 4);
+      c.dolly(step * Math.max(1, c.distance / 18), animate);
+      setMode((m) => (m === "seat" ? m : "free"));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -391,12 +461,18 @@ export default function Auditorium3D({
           position: p && p.toArray(),
           target: t && t.toArray(),
           azimuth: c?.azimuthAngle,
+          polar: c?.polarAngle,
+          maxDistance: c?.maxDistance,
           drawCalls: info?.calls,
           timings: { ...timingsRef.current },
           renderer: getRendererName(),
           lowPower,
           programs: sceneRef.current?.gl.info.programs?.length,
           triangles: info?.triangles,
+          memory: sceneRef.current ? { ...sceneRef.current.gl.info.memory } : null,
+          seats: hall.seatCount,
+          rows: hall.rows.length,
+          layout: hall.id,
           trailer: trailer.status,
         };
       },
@@ -419,6 +495,16 @@ export default function Auditorium3D({
         return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height, visible: v.z < 1 };
       },
       rotate: (deg) => controls()?.rotate(MathUtils.degToRad(deg), 0, false),
+      // Seat numbers by depth and block, so tests can pick front/middle/rear x left/centre/right.
+      seatsWhere: ({ block, depth } = {}) => {
+        const n = hall.rows.length;
+        const bands = {
+          front: hall.rows.slice(0, Math.ceil(n / 4)),
+          middle: hall.rows.slice(Math.floor(n * 0.4), Math.ceil(n * 0.6)),
+          rear: hall.rows.slice(Math.floor(n * 0.75)),
+        };
+        return (bands[depth] || hall.rows).flatMap((r) => r.seats).filter((x) => !block || x.block === block).map((x) => x.seatNumber);
+      },
       goTo: (name) => (name === "seat" ? null : goTo(presets[name], name, false)),
     };
     return () => {
@@ -433,7 +519,7 @@ export default function Auditorium3D({
     if (e.target !== e.currentTarget) return; // typing in the seat finder, a button, etc.
     const c = controls();
     if (!c) return;
-    const presetKeys = { 1: ["overview", presets.overview], 2: ["map", presets.map], 3: ["screen", presets.screen] };
+    const presetKeys = Object.fromEntries(VIEWS.map(([name], i) => [String(i + 1), [name, presets[name]]]));
     let handled = true;
     if (e.key === "ArrowLeft") c.rotate(-KEY_STEP, 0, animate);
     else if (e.key === "ArrowRight") c.rotate(KEY_STEP, 0, animate);
@@ -479,9 +565,11 @@ export default function Auditorium3D({
   useLayoutEffect(() => {
     const c = controls();
     if (!c || !coarse) return;
-    // Locked: one finger scrolls the page and taps still select seats.
-    c.touches.one = touchExplore ? ACTION.TOUCH_ROTATE : ACTION.NONE;
-    c.touches.two = touchExplore ? ACTION.TOUCH_DOLLY_TRUCK : ACTION.NONE;
+    // By default a sideways drag turns the hall, a pinch zooms, and an up/down
+    // swipe still scrolls the page (touch-action: pan-y hands vertical swipes to
+    // the browser). "Explore" also lets a drag tilt the view and two fingers pan.
+    c.touches.one = ACTION.TOUCH_ROTATE;
+    c.touches.two = touchExplore ? ACTION.TOUCH_DOLLY_TRUCK : ACTION.TOUCH_DOLLY;
     c.touches.three = touchExplore ? ACTION.TOUCH_TRUCK : ACTION.NONE;
     const els = [c._domElement, sceneRef.current?.gl.domElement].filter(Boolean);
     els.forEach((el) => {
@@ -515,14 +603,14 @@ export default function Auditorium3D({
         data-testid="auditorium-3d"
         tabIndex={0}
         role="region"
-        aria-label="3D auditorium. Use the arrow keys to look around, plus and minus to zoom, 0 to reset, 1 2 3 for views. Use the seat finder to pick seats by number."
+        aria-label="3D auditorium. Use the arrow keys to look around, plus and minus to zoom, 1 to 5 for the Overview, Front, Centre, Rear and Seat map views, 0 to reset. Use the seat finder to pick seats by number."
         onKeyDown={onKeyDown}
       >
         <Canvas
           frameloop={shadersReady ? "demand" : "never"}
           shadows={shadows ? "percentage" : false}
           dpr={lowPower ? 1 : [1, 1.75]}
-          camera={{ fov: 52, near: 0.05, far: 120, position: presets.stage.pos }}
+          camera={{ fov: FOV, near: 0.05, far: 120, position: presets.stage.pos }}
           gl={{ antialias: !lowPower, powerPreference: "high-performance" }}
           // Its own stacking context: a YouTube trailer raises the canvas's
           // z-index (see MovieScreen), which must never cover our overlays.
@@ -532,7 +620,7 @@ export default function Auditorium3D({
           aria-hidden="true"
         >
           <color attach="background" args={["#04060d"]} />
-          <fog attach="fog" args={["#04060d", 40, 95]} />
+          <fog attach="fog" args={["#04060d", Math.max(40, hall.room.depth * 1.4), Math.max(95, hall.room.depth * 3)]} />
           <SceneBridge onReady={handleSceneReady} />
           <FirstFrame onFirstFrame={onFirstFrame} />
           <HallScene
@@ -566,21 +654,43 @@ export default function Auditorium3D({
           </div>
         )}
 
-        {/* Camera toolbar */}
-        <div className="glass absolute left-3 top-3 flex flex-wrap items-center gap-1 rounded-xl p-1" role="toolbar" aria-label="Camera">
-          <button className={toolbarBtn(mode === "overview")} onClick={() => goTo(presets.overview, "overview")} aria-keyshortcuts="1">Overview</button>
-          <button className={toolbarBtn(mode === "map")} onClick={() => goTo(presets.map, "map")} aria-keyshortcuts="2">Seat map</button>
-          <button className={toolbarBtn(mode === "screen")} onClick={() => goTo(presets.screen, "screen")} aria-keyshortcuts="3">Screen</button>
-          <span className="mx-1 h-5 w-px bg-white/10" aria-hidden="true" />
-          <button className={iconBtn} onClick={() => controls()?.dolly(3, animate)} disabled={mode === "seat"} aria-label="Zoom in" aria-keyshortcuts="+">
+        {/* Camera toolbar: one scrollable row, clear of the booking panel */}
+        <div
+          className="glass scroll-row absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-xl p-1 md:max-w-[calc(100%-320px)]"
+          role="toolbar"
+          aria-label="Camera views"
+        >
+          {VIEWS.map(([name, label], i) => (
+            <button
+              key={name}
+              className={`${toolbarBtn(mode === name)} shrink-0`}
+              onClick={() => { finishIntro(); goTo(presets[name], name); }}
+              aria-pressed={mode === name}
+              aria-keyshortcuts={String(i + 1)}
+            >
+              {label}
+            </button>
+          ))}
+          <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
+          <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(3, animate); }} disabled={mode === "seat"} aria-label="Zoom in" title="Zoom in" aria-keyshortcuts="+">
             <Icon name="plus" className="h-4 w-4" />
           </button>
-          <button className={iconBtn} onClick={() => controls()?.dolly(-3, animate)} disabled={mode === "seat"} aria-label="Zoom out" aria-keyshortcuts="-">
+          <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(-3, animate); }} disabled={mode === "seat"} aria-label="Zoom out" title="Zoom out" aria-keyshortcuts="-">
             <Icon name="minus" className="h-4 w-4" />
           </button>
-          <button className={iconBtn} onClick={() => { finishIntro(); goTo(presets.overview, "overview"); }} aria-label="Reset camera" aria-keyshortcuts="0">
-            <Icon name="refresh" className="h-4 w-4" />
+          <button className={`${toolbarBtn(false)} flex shrink-0 items-center gap-1`} onClick={() => { finishIntro(); goTo(presets.overview, "overview"); }} aria-label="Reset view" title="Reset view" aria-keyshortcuts="0">
+            <Icon name="refresh" className="h-3.5 w-3.5" /> Reset
           </button>
+          {onToggleLite && (
+            <button
+              className={`${toolbarBtn(lowPower)} shrink-0`}
+              onClick={onToggleLite}
+              aria-pressed={lowPower}
+              title="Lite mode: lower resolution, no shadows. For slower devices."
+            >
+              Lite
+            </button>
+          )}
         </div>
 
         {/* Trailer controls: outside the scene, never over the screen. On phones
@@ -600,7 +710,7 @@ export default function Auditorium3D({
         ) : (
           mode !== "seat" && !coarse && (
             <p className="pointer-events-none absolute bottom-3 left-3 hidden rounded-lg bg-ink-950/70 px-2.5 py-1.5 text-[11px] text-gray-400 lg:block">
-              Drag or arrow keys to look around · Ctrl/⌘ + scroll or +/− to zoom · Click a seat to select it
+              Drag or arrow keys to look around · Scroll or +/− to zoom · 1–5 views, 0 resets · Click seats to select them
             </p>
           )
         )}
@@ -616,7 +726,7 @@ export default function Auditorium3D({
               <Icon name={touchExplore ? "check" : "eye"} className="h-4 w-4" />
               {touchExplore ? "Done exploring" : "Explore in 3D"}
             </button>
-            {!touchExplore && <p className="mt-1.5 hidden max-w-[220px] rounded-lg bg-ink-950/70 px-2 py-1 text-[11px] text-gray-400 md:block">Tap a seat to select it. Explore to rotate and pinch-zoom.</p>}
+            {!touchExplore && <p className="mt-1.5 hidden max-w-[220px] rounded-lg bg-ink-950/70 px-2 py-1 text-[11px] text-gray-400 md:block">Tap seats to select. Drag sideways to turn, pinch to zoom. Explore to tilt and pan.</p>}
           </div>
         )}
 
@@ -628,10 +738,11 @@ export default function Auditorium3D({
             role="status"
           >
             <p className="font-semibold text-white">
-              Row {rowOf(hover.seat.seatNumber)} · Seat {hover.seat.index}
+              {hover.seat.seatNumber} · Row {rowOf(hover.seat.seatNumber)} · Seat {hover.seat.index}
               {hover.seat.seatType === "recliner" && <span className="ml-1.5 badge-accent">Recliner</span>}
             </p>
             <p className="text-gray-400">
+              {BLOCK_LABEL[hover.seat.block] ? `${BLOCK_LABEL[hover.seat.block]} · ` : ""}
               {hover.seat.category} · {formatPrice(hover.seat.price)} · <span className="text-gray-200">{STATE_LABEL[hoverState]}</span>
             </p>
           </div>
@@ -648,7 +759,15 @@ export default function Auditorium3D({
               <h3 className="font-semibold text-white">Your seats</h3>
               <span className="text-xs text-gray-400">{selected.length} of {maxSeats}</span>
             </div>
-            <p className="mt-0.5 text-xs text-gray-500">{availableCount} seats still available</p>
+            <p className="mt-0.5 text-xs text-gray-500">{availableCount} of {hall.seatCount} seats still available</p>
+            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400" aria-label="Seat colours" data-testid="seat-legend-3d">
+              {LEGEND.map(([state, label]) => (
+                <li key={state} className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm ring-1 ring-white/20" style={{ background: colors[state] }} aria-hidden="true" />
+                  {label}
+                </li>
+              ))}
+            </ul>
             <form onSubmit={submitFinder} className="mt-3 flex gap-1.5">
               <label htmlFor="seat-finder" className="sr-only">Seat number</label>
               <input
@@ -730,6 +849,7 @@ export default function Auditorium3D({
                   Row {rowOf(viewSeat.seatNumber)} · Seat {viewSeat.index}
                 </p>
                 <p className="text-xs text-gray-400">
+                  {BLOCK_LABEL[viewSeat.block] ? `${BLOCK_LABEL[viewSeat.block]} · ` : ""}
                   {viewSeat.category}
                   {viewSeat.seatType === "recliner" ? " · Recliner" : ""} · {formatPrice(viewSeat.price)}
                 </p>

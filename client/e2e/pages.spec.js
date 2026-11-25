@@ -1,7 +1,7 @@
 // Every major page at desktop, tablet and mobile widths: it renders its main
 // content, nothing overflows sideways, no console errors, and a screenshot is saved.
 const { test, expect } = require("@playwright/test");
-const { API, useSeatView, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
+const { API, adminSignIn, useSeatView, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap } = require("./helpers");
 
 // Pages and the element that proves each one rendered real content.
 const PUBLIC_PAGES = [
@@ -112,13 +112,14 @@ test.describe("signed-in user pages", () => {
     await expect(footer.getByRole("link", { name: "Ticket scanner" })).toHaveCount(0);
     await expect(footer.getByRole("link", { name: "Admin console" })).toHaveCount(0);
     await page.goto("/admin/dashboard");
-    await expect(page.getByRole("heading", { name: "Staff only" })).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/login$/);
+    await expect(page.getByLabel("Admin password", { exact: true })).toBeVisible();
   });
 });
 
 test.describe("admin pages", () => {
   test.beforeEach(async ({ page }) => {
-    await signIn(page, "admin");
+    await adminSignIn(page);
   });
 
   for (const pg of ADMIN_PAGES) {

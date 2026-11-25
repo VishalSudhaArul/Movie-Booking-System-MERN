@@ -9,6 +9,22 @@ const ACCOUNTS = {
   admin: { email: "admin@e2e.test", password: "AdminPass123" },
 };
 
+// Matches e2e/stack.js. Test-only; the real one lives in the server environment.
+const ADMIN_PASSWORD = "E2e-Admin-Access-7Qx!";
+
+// Opens an admin session through the real API (password only) and stores it
+// the way the Admin Access page does, in this tab's sessionStorage.
+async function adminSignIn(page) {
+  const res = await page.request.post(`${API}/api/auth/admin/login`, { data: { password: ADMIN_PASSWORD } });
+  expect(res.ok()).toBeTruthy();
+  const data = await res.json();
+  await page.addInitScript((d) => {
+    sessionStorage.setItem("cinebook:adminToken", d.token);
+    sessionStorage.setItem("cinebook:adminExpiresAt", d.expiresAt);
+  }, data);
+  return data;
+}
+
 // Picks the seat map view before the page loads ("2d" or "3d").
 async function useSeatView(page, view) {
   await page.addInitScript((v) => localStorage.setItem("cinebook:seatView", v), view);
@@ -98,4 +114,4 @@ async function snap(page, testInfo, name) {
   });
 }
 
-module.exports = { API, ACCOUNTS, useSeatView, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap };
+module.exports = { API, ACCOUNTS, ADMIN_PASSWORD, adminSignIn, useSeatView, signIn, firstShowId, watchErrors, horizontalOverflow, settle, snap };
