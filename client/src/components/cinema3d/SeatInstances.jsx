@@ -18,6 +18,7 @@ export const SEAT_COLORS = {
   reserved: "#3d8fbd",
 };
 const HOVER_LIFT = 0.35;
+const MAX_TURN = (25 * Math.PI) / 180;
 
 /** Seat colours for the current colour theme. */
 export function useSeatColors() {
@@ -56,7 +57,9 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
     if (!upholsteryRef.current || !frameRef.current) return;
     seats.forEach((seat, i) => {
       tmp.position.set(seat.x, seat.floorY, seat.z);
-      tmp.rotation.set(0, 0, 0);
+      // Turn each chair towards the middle of the screen (as cinemas angle
+      // their side seats), at most 25°.
+      tmp.rotation.set(0, Math.max(-MAX_TURN, Math.min(MAX_TURN, Math.atan2(seat.x, seat.z))), 0);
       tmp.updateMatrix();
       upholsteryRef.current.setMatrixAt(i, tmp.matrix);
       frameRef.current.setMatrixAt(i, tmp.matrix);
@@ -92,6 +95,7 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
     <group>
       <instancedMesh
         ref={upholsteryRef}
+        userData={{ seats }}
         args={[geo.upholstery, undefined, seats.length]}
         castShadow={shadows}
         receiveShadow={shadows}
@@ -119,8 +123,8 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
   );
 }
 
-export default function SeatInstances({ hall, selected, premiumCategory, hoveredSeat, onHover, onPick, shadows, overrideColors = null, highlight = null }) {
-  const geos = useMemo(() => buildChairGeometries(hall.geometry), [hall.geometry]);
+export default function SeatInstances({ hall, selected, premiumCategory, hoveredSeat, onHover, onPick, shadows, overrideColors = null, highlight = null, lite = false }) {
+  const geos = useMemo(() => buildChairGeometries(hall.geometry, { lite }), [hall.geometry, lite]);
   // Released when the hall changes or the 3D view closes.
   useEffect(
     () => () => {

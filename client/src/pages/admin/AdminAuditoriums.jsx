@@ -8,7 +8,7 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import HallPreview from "../../components/HallPreview";
 import { EmptyState, ErrorState, Spinner } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/Toast";
-import { getErrorMessage } from "../../lib/format";
+import { categoryLabel, getErrorMessage } from "../../lib/format";
 
 const SECTIONS = ["Second Class", "First Class", "Balcony"];
 const MAX_ROWS = 25;
@@ -42,6 +42,8 @@ export default function AdminAuditoriums() {
   // Editor
   const [name, setName] = useState("");
   const [wheelchair, setWheelchair] = useState(true);
+  // Index of the row with a level cross-aisle in front of it, or "" for none.
+  const [crossAisle, setCrossAisle] = useState("");
   const [rows, setRows] = useState(starterRows);
   const [preview, setPreview] = useState(null);
   const [previewError, setPreviewError] = useState("");
@@ -63,7 +65,15 @@ export default function AdminAuditoriums() {
   }, [fetchLayouts]);
 
   // Build the preview on the server (the same code that saves it), shortly after each edit.
-  const spec = useMemo(() => ({ name: name.trim() || "Untitled hall", wheelchairSpaces: wheelchair, rows }), [name, wheelchair, rows]);
+  const spec = useMemo(
+    () => ({
+      name: name.trim() || "Untitled hall",
+      wheelchairSpaces: wheelchair,
+      rows,
+      ...(crossAisle !== "" && Number(crossAisle) < rows.length - 1 ? { crossAisleBefore: Number(crossAisle) } : {}),
+    }),
+    [name, wheelchair, rows, crossAisle]
+  );
   useEffect(() => {
     const seq = ++previewSeq.current;
     setPreviewing(true);
@@ -104,6 +114,8 @@ export default function AdminAuditoriums() {
     try {
       const { data } = await API.get(`/api/layouts/${id}`);
       setRows(rowsFromLayout(data).slice(0, MAX_ROWS));
+      const cross = data.rows.findIndex((r) => r.crossAisleBefore);
+      setCrossAisle(cross > 0 ? String(cross) : "");
       setName(`${data.name.replace(/ · \d+ seats$/, "")} (copy)`.slice(0, 60));
       toast.info("Loaded into the editor. Saving creates a new hall; the original is unchanged.");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -185,6 +197,14 @@ export default function AdminAuditoriums() {
             <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={wheelchair} onChange={(e) => setWheelchair(e.target.checked)} />
             Wheelchair spaces at both ends of row A (flat floor by the step-free front doors), with companion seats
           </label>
+          <Field id="hall-cross" label="Cross-aisle" hint="A level walkway across the hall, with an exit at each end. Recommended for halls over 12 rows.">
+            <select id="hall-cross" className="select" value={crossAisle} onChange={(e) => setCrossAisle(e.target.value)}>
+              <option value="">None</option>
+              {rows.slice(2, -1).map((_, k) => (
+                <option key={k + 2} value={k + 2}>In front of row {ROW_LETTERS[k + 2]}</option>
+              ))}
+            </select>
+          </Field>
         </div>
 
         <div className="mt-5 overflow-x-auto">
@@ -221,7 +241,7 @@ export default function AdminAuditoriums() {
                   ))}
                   <td className="py-1.5 pr-2">
                     <select className="select py-1.5" aria-label={`Row ${ROW_LETTERS[i]} price category`} value={r.section} onChange={(e) => setRow(i, { section: e.target.value })}>
-                      {SECTIONS.map((sct) => <option key={sct}>{sct}</option>)}
+                      {SECTIONS.map((sct) => <option key={sct} value={sct}>{categoryLabel(sct)}</option>)}
                     </select>
                   </td>
                   <td className="py-1.5 pr-2">
@@ -243,7 +263,7 @@ export default function AdminAuditoriums() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-2xs text-gray-500">Row A is nearest the screen. Letters skip I. Rows rise progressively towards the back, like a stadium hall. Up to 25 rows and 600 seats.</p>
+        <p className="mt-2 text-2xs text-gray-500">Row A is nearest the screen. Letters skip I. The whole hall is one level: rows rise progressively towards the back, like a stadium hall. Up to 25 rows and 900 seats.</p>
 
         <div className="mt-5">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
@@ -265,7 +285,7 @@ export default function AdminAuditoriums() {
           <button type="button" className="btn-primary" onClick={save} disabled={saving || !!previewError || !preview}>
             {saving ? <><Spinner className="h-4 w-4" /> Saving…</> : <><Icon name="check" className="h-4 w-4" /> Save hall</>}
           </button>
-          <button type="button" className="btn-ghost" onClick={() => { setRows(starterRows()); setName(""); }}>Start over</button>
+          <button type="button" className="btn-ghost" onClick={() => { setRows(starterRows()); setName(""); setCrossAisle(""); }}>Start over</button>
         </div>
       </section>
 

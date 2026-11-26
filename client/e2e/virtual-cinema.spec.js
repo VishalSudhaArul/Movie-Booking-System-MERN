@@ -188,7 +188,7 @@ test.describe("3D hall: walk-through, sound layout, quality", () => {
     await toolbar.getByRole("button", { name: "Sound" }).click();
     await expect(page.getByTestId("sound-panel")).toContainText("Approximate layout");
     await expect.poll(async () => (await state(page)).sound).toBe(true);
-    expect((await state(page)).doors).toBe(4);
+    expect((await state(page)).doors).toBe(6); // front, middle cross-aisle and rear exits
     await snap(page, testInfo, "sound-layout-3d");
     await page.getByTestId("sound-panel").getByRole("button", { name: "Hide the speaker layout" }).click();
 

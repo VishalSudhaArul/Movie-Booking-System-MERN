@@ -15,36 +15,30 @@ const seatWidthFor = (g, type) => g.seatWidth[type] || g.seatWidth.standard;
 const rowPitchFor = (g, type) => g.rowPitch[type] || g.rowPitch.standard;
 
 // Depth and floor height of every row, front to back.
+// Every hall is a single raked floor. A row with `crossAisleBefore` has a level
+// walkway in front of it (geometry.crossAisleWidth deep) at the floor height of
+// the row in front.
 const placeRows = (layout) => {
   const g = layout.geometry;
   const placed = [];
   let z = g.stalls.firstRowDistance;
-  let stallsCount = 0;
-  let balconyCount = 0;
-  let stallsFloor = 0;
-  let enteredBalcony = false;
+  let count = 0;
+  let floor = 0;
 
   [...layout.rows]
     .sort((a, b) => a.order - b.order)
     .forEach((row) => {
+      if (row.crossAisleBefore && placed.length) z += g.crossAisleWidth || 1.5;
       let floorY;
-      if (row.tier === "balcony") {
-        if (!enteredBalcony) {
-          z += g.balcony.gapBeforeFirstRow;
-          enteredBalcony = true;
-        }
-        floorY = g.balcony.floorElevation + balconyCount * g.balcony.riser;
-        balconyCount += 1;
-      } else if (typeof row.riser === "number") {
+      if (typeof row.riser === "number") {
         // Stadium rake: each row states how much higher it is than the one in front.
-        stallsFloor += row.riser;
-        floorY = stallsFloor;
-        stallsCount += 1;
+        floor += row.riser;
+        floorY = floor;
       } else {
-        floorY = stallsCount * g.stalls.riser;
-        stallsCount += 1;
+        floorY = count * g.stalls.riser;
       }
-      placed.push({ ...row, z, floorY });
+      count += 1;
+      placed.push({ ...row, tier: "stalls", z, floorY });
       z += rowPitchFor(g, row.seatType);
     });
 
@@ -135,8 +129,21 @@ export function buildAuditorium(layout, seats) {
       });
   });
 
+  // Level cross-aisles between rows (walkable, with exits at their ends).
+  const crossAisles = [];
+  rows.forEach((r, i) => {
+    if (!r.crossAisleBefore || i === 0) return;
+    const prev = rows[i - 1];
+    crossAisles.push({
+      zMin: prev.z + rowPitchFor(g, prev.seatType) / 2,
+      zMax: r.z - rowPitchFor(g, r.seatType) / 2,
+      floorY: prev.floorY,
+      beforeRow: r.label,
+    });
+  });
+
   // Doors on the side walls, placed in hall coordinates.
-  const floorAt = (z) => rows.reduce((y, r) => (r.z - rowPitchFor(g, r.seatType) / 2 <= z && r.tier !== "balcony" ? r.floorY : y), 0);
+  const floorAt = (z) => rows.reduce((y, r) => (r.z - rowPitchFor(g, r.seatType) / 2 <= z ? r.floorY : y), 0);
   const doors = (layout.doors || []).map((d) => ({
     ...d,
     // Facing the screen (-z), house right is +x.
@@ -149,6 +156,7 @@ export function buildAuditorium(layout, seats) {
     name: layout.name,
     kind: layout.kind || "classic",
     doors,
+    crossAisles,
     accessibility: {
       wheelchair: [...wheelchair],
       companion: [...companion],

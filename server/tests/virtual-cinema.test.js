@@ -26,7 +26,7 @@ const SPEC = {
 };
 
 describe("hall accessibility and doors", () => {
-  test.each(["classic-136", ...MULTIPLEX_CAPACITIES.map((c) => `multiplex-${c}`)])("%s: every configured space is a real seat on a flat row", (id) => {
+  test.each(["classic-136", ...MULTIPLEX_CAPACITIES.map((c) => `multiplex-${c}`), "grand-600", "grand-700", "grand-800"])("%s: every configured space is a real seat on a flat row", (id) => {
     const layout = getLayout(id);
     const seats = new Set(generateSeatsFromLayout(layout, PRICES).map((s) => s.seatNumber));
     const { wheelchair, companion } = layout.accessibility;
@@ -76,7 +76,7 @@ describe("custom layout builder", () => {
     [{ ...SPEC, rows: [{ blocks: [0], section: "First Class" }] }, /1 to 24/],
     [{ ...SPEC, rows: [{ blocks: [5], section: "VIP" }] }, /category/],
     [{ ...SPEC, rows: Array.from({ length: 26 }, () => ({ blocks: [2], section: "First Class" })) }, /25 rows/],
-    [{ ...SPEC, rows: Array.from({ length: 25 }, () => ({ blocks: [24, 24], section: "First Class" })) }, /600 seats/],
+    [{ ...SPEC, rows: Array.from({ length: 25 }, () => ({ blocks: [24, 24], section: "First Class" })) }, /900 seats/],
   ])("rejects invalid specs (%#)", (spec, msg) => {
     expect(customLayoutError(spec)).toMatch(msg);
   });

@@ -14,7 +14,7 @@
 ### 🎥 1. Customer Cinema Web Portal
 * **Ultra-Dark Glassmorphic UI/UX**: Designed with modern dark mode aesthetic, vibrant neon highlights, and smooth micro-animations.
 * **Spotlight Global Search (`⌘K`)**: Instant search overlay to find movies, shows, and refreshments from anywhere on the platform.
-* **Interactive Floorplan Seating Grid**: Auditorium seat layout featuring category pricing (Balcony, First Class, Second Class), center aisle walkways, and quick auto-seat pick chips (1, 2, 3, 4, 6 seats).
+* **Interactive Floorplan Seating Grid**: Auditorium seat layout featuring category pricing (Premium, First Class, Second Class), center aisle walkways, and quick auto-seat pick chips (1, 2, 3, 4, 6 seats).
 * **🤝 Group Seat Booking Links**: 1-click shareable booking link generator allowing friends to reserve adjacent seats in the same auditorium row.
 * **🗺️ Multiplex GPS Navigation**: Direct Google Maps route integration for all multiplex cinema locations.
 * **🍿 In-Seat Pantry Delivery Mode**: Order refreshments to be delivered straight to your specific auditorium seat cushion (`F12`).
@@ -128,7 +128,7 @@ npm start
 
 ## 🎞 Virtual Cinema 2.0
 
-Immersive booking built on the real seat data: a 3D stadium hall (136–500
+Immersive booking built on the real seat data: a single-level 3D stadium hall (136–800
 seats), five camera views, a first-person seat view, a collision-limited
 walk-through mode (keyboard or touch joystick), geometry-based seat
 recommendations with reasons, seat heatmaps and a three-seat comparison,

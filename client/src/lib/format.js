@@ -86,3 +86,9 @@ export const isVerifiedPayment = (booking) =>
   booking?.paymentMode === "LIVE" && booking?.paymentStatus === "Success";
 
 export const amountLabel = (booking) => (isVerifiedPayment(booking) ? "Amount paid" : "Total (demo, not charged)");
+
+// Seat categories are stored as "Second Class", "First Class" and "Balcony".
+// "Balcony" is the premium back-of-hall category (there is no balcony: every
+// hall is a single level), so people see it as "Premium".
+const CATEGORY_LABELS = { Balcony: "Premium" };
+export const categoryLabel = (category) => CATEGORY_LABELS[category] || category || "Standard";

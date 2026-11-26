@@ -10,7 +10,7 @@ import { formatPrice } from "../lib/format";
 const PLANNED_PERKS = [
   { icon: "popcorn", title: "Free popcorn", text: "Turn points into snacks at any theatre." },
   { icon: "ticket", title: "Ticket discounts", text: "Use points to take money off a booking." },
-  { icon: "crown", title: "Recliner upgrades", text: "Move up to the balcony recliners." },
+  { icon: "crown", title: "Recliner upgrades", text: "Move up to the premium recliners at the back of the hall." },
 ];
 
 /**

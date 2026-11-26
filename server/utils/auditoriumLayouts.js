@@ -9,7 +9,13 @@
 // - Seat 1 of a row is at +x. In the 2D map (screen at the bottom) that is the
 //   left-hand seat, matching the current seat map.
 // - Prices are NOT part of a layout: each row's `section` names the existing
-//   seat category (Balcony / First Class / Second Class) that sets its price.
+//   seat category that sets its price. The stored category keys are
+//   "Second Class", "First Class" and "Balcony"; "Balcony" is the premium
+//   (back-of-hall) category and is shown to people as "Premium". The key keeps
+//   its old name so existing shows, bookings and price fields stay valid.
+// - Every hall is a single level: one raked (stadium) floor, no upper tier.
+//   A row may have `crossAisleBefore`, a level walkway across the hall in
+//   front of it (geometry.crossAisleWidth wide).
 
 const SECTION_PRICE_FIELDS = {
   Balcony: "balconyPrice",
@@ -20,26 +26,27 @@ const SECTION_PRICE_FIELDS = {
 const DEFAULT_LAYOUT_ID = "classic-136";
 
 // The hall every show has used so far: 136 seats, rows A–L, aisle in the middle.
-// Rows A–B are balcony recliners (a display and comfort detail; they keep the
-// Balcony price).
+// It used to have a 40-seat balcony (rows A–D); those rows now continue the
+// ground-floor rake behind a cross-aisle, so every seat number, category and
+// price is unchanged and existing bookings stay valid. Rows A–B are recliners.
 const CLASSIC_136 = {
   id: "classic-136",
-  name: "Classic hall with balcony",
-  version: 1,
-  screen: { width: 14, height: 6, bottom: 1.4, curve: 0.08 },
-  room: { width: 22, height: 13, depth: 30 },
+  name: "Classic hall",
+  version: 2,
+  screen: { width: 14, height: 6, bottom: 1.9, curve: 0.08 },
+  room: { width: 22, height: 12, depth: 24 },
   geometry: {
     seatWidth: { standard: 0.62, recliner: 0.9 },
     rowPitch: { standard: 1.1, recliner: 1.7 },
     aisleWidth: 1.3,
+    crossAisleWidth: 1.5,
     eyeHeight: 1.15, // seated eye height above the row's floor
     stalls: { firstRowDistance: 5.5, riser: 0.17 },
-    balcony: { gapBeforeFirstRow: 1.6, floorElevation: 4.2, riser: 0.32 },
   },
   sections: [
     { name: "Second Class", tier: "stalls" },
     { name: "First Class", tier: "stalls" },
-    { name: "Balcony", tier: "balcony" },
+    { name: "Balcony", tier: "stalls" },
   ],
   rows: [
     { label: "L", section: "Second Class", tier: "stalls", seatType: "standard", seats: 12, aisleAfter: [6] },
@@ -50,19 +57,26 @@ const CLASSIC_136 = {
     { label: "G", section: "First Class", tier: "stalls", seatType: "standard", seats: 12, aisleAfter: [6] },
     { label: "F", section: "First Class", tier: "stalls", seatType: "standard", seats: 12, aisleAfter: [6] },
     { label: "E", section: "First Class", tier: "stalls", seatType: "standard", seats: 12, aisleAfter: [6] },
-    { label: "D", section: "Balcony", tier: "balcony", seatType: "standard", seats: 10, aisleAfter: [5] },
-    { label: "C", section: "Balcony", tier: "balcony", seatType: "standard", seats: 10, aisleAfter: [5] },
-    { label: "B", section: "Balcony", tier: "balcony", seatType: "recliner", seats: 10, aisleAfter: [5] },
-    { label: "A", section: "Balcony", tier: "balcony", seatType: "recliner", seats: 10, aisleAfter: [5] },
-  ],
+    { label: "D", section: "Balcony", tier: "stalls", seatType: "standard", seats: 10, aisleAfter: [5], crossAisleBefore: true },
+    { label: "C", section: "Balcony", tier: "stalls", seatType: "standard", seats: 10, aisleAfter: [5] },
+    { label: "B", section: "Balcony", tier: "stalls", seatType: "recliner", seats: 10, aisleAfter: [5] },
+    { label: "A", section: "Balcony", tier: "stalls", seatType: "recliner", seats: 10, aisleAfter: [5] },
+  ].map((row, i) => ({
+    ...row,
+    // Progressive rake: row L flat (step-free), then each row higher, rising
+    // more towards the back so every seat clears the head in front.
+    riser: i === 0 ? 0 : Math.round((0.2 + (0.2 * (i - 1)) / 10) * 100) / 100,
+  })),
   // Doors along the side walls (z in metres from the screen). "left"/"right"
   // are as the audience sees them facing the screen. The front doors open onto
   // the flat floor in front of row L, so they are step-free.
   doors: [
     { id: "front-left", label: "Front left door", side: "left", z: 3.2, kind: "both", accessible: true },
     { id: "front-right", label: "Front right door", side: "right", z: 3.2, kind: "both", accessible: true },
-    { id: "rear-left", label: "Rear left exit", side: "left", z: 13.85, kind: "exit", accessible: false },
-    { id: "rear-right", label: "Rear right exit", side: "right", z: 13.85, kind: "exit", accessible: false },
+    { id: "mid-left", label: "Middle left exit", side: "left", z: 14.5, kind: "exit", accessible: false },
+    { id: "mid-right", label: "Middle right exit", side: "right", z: 14.5, kind: "exit", accessible: false },
+    { id: "rear-left", label: "Rear left exit", side: "left", z: 21.4, kind: "exit", accessible: false },
+    { id: "rear-right", label: "Rear right exit", side: "right", z: 21.4, kind: "exit", accessible: false },
   ],
   // Row L is on the flat floor by the step-free front doors.
   accessibility: {
@@ -104,13 +118,15 @@ const multiplexLayout = (capacity) => {
     }
   }
 
-  // Price categories: front ~30 % Second Class, middle First Class, back ~25 % Balcony (premium).
+  // Price categories: front ~30 % Second Class, middle First Class, back ~25 % premium ("Balcony" key).
   const secondRows = Math.round(rowCount * 0.3);
   const balconyRows = Math.round(rowCount * 0.25);
   const sectionFor = (i) => (i < secondRows ? "Second Class" : i >= rowCount - balconyRows ? "Balcony" : "First Class");
 
   // Rake: two flat rows at the front, then risers growing from 0.16 m to 0.42 m.
-  const riserFor = (i) => (i < 2 ? 0 : round2(0.16 + (0.26 * (i - 2)) / Math.max(1, rowCount - 3)));
+  // Rake from row B (row A stays flat for step-free wheelchair spaces); the
+  // risers grow towards the back so heads in front clear the screen.
+  const riserFor = (i) => (i < 1 ? 0 : round2(0.16 + (0.26 * (i - 1)) / Math.max(1, rowCount - 2)));
 
   const seatWidth = 0.62;
   const aisleWidth = 1.3;
@@ -123,7 +139,7 @@ const multiplexLayout = (capacity) => {
   const sideAisleWidth = round2((roomWidth - seatingWidth) / 2);
   const screenWidth = round2(roomWidth * 0.8);
   const screenHeight = round2(screenWidth / 2.35); // scope ratio
-  const screenBottom = 1.9;
+  const screenBottom = 2.1;
   const firstRowDistance = round2(Math.max(6.5, screenWidth * 0.42));
   const depth = round2(firstRowDistance + rowCount * rowPitch + 3.5);
   const backFloor = Array.from({ length: rowCount }, (_, i) => riserFor(i)).reduce((a, b) => a + b, 0);
@@ -156,7 +172,6 @@ const multiplexLayout = (capacity) => {
       sideAisleWidth,
       eyeHeight: 1.15,
       stalls: { firstRowDistance, riser: 0.16 },
-      balcony: { gapBeforeFirstRow: 0, floorElevation: 0, riser: 0 },
     },
     sections: [
       { name: "Second Class", tier: "stalls" },
@@ -185,11 +200,146 @@ function standardDoors(rearZ) {
   ];
 }
 
+/* ---------------- Grand halls (600–800 seats) ----------------
+   The flagship single-level auditoriums: 25 rows on one raked floor, three
+   blocks per row with straight aisles, a level cross-aisle across the middle
+   of the hall (with exits at both ends), and two rows of premium recliners at
+   the back. Comfort is the same as the multiplex halls (0.62 m seats, 1.15 m
+   rows) and recliners get 0.90 m and 1.70 m. The room is sized from the widest
+   row plus a 2.2 m walkway along each wall; the screen is 84 % of the room width. */
+
+const GRAND_CAPACITIES = [600, 700, 800];
+const GRAND = { rows: 25, reclinerRows: 2, crossBefore: 13, seatWidth: 0.62, reclinerWidth: 0.9, pitch: 1.15, reclinerPitch: 1.7, aisle: 1.3, cross: 1.6 };
+
+const grandLayout = (capacity) => {
+  const g = GRAND;
+  const stdRows = g.rows - g.reclinerRows;
+  const centre = 2 * Math.round(capacity / 100) + 2; // 14, 16, 18
+  const reclinerCentre = Math.floor((centre * g.seatWidth) / g.reclinerWidth);
+  // Side blocks of the standard rows widen towards the back; the recliner rows
+  // fill the same width as the last standard row, so the aisles run straight.
+  let sides = [];
+  let reclinerSide = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    const reclinerSeats = g.reclinerRows * (reclinerCentre + 2 * reclinerSide);
+    const sideTotal = (capacity - reclinerSeats - stdRows * centre) / 2;
+    const mean = sideTotal / stdRows;
+    const front = Math.max(4, Math.round(mean - 2));
+    const back = 2 * mean - front;
+    sides = Array.from({ length: stdRows }, (_, i) => Math.round(front + ((back - front) * i) / (stdRows - 1)));
+    let diff = Math.round(sideTotal) - sides.reduce((x, y) => x + y, 0);
+    for (let i = stdRows - 1; diff !== 0; i = (i - 1 + stdRows) % stdRows) {
+      const step = diff > 0 ? 1 : -1;
+      if (sides[i] + step >= 3) {
+        sides[i] += step;
+        diff -= step;
+      }
+    }
+    reclinerSide = Math.floor((sides[stdRows - 1] * g.seatWidth) / g.reclinerWidth);
+  }
+  // Hit the capacity exactly (an odd remainder goes to the centre of the front row).
+  const total = () => sides.reduce((x, y) => x + 2 * y + centre, 0) + g.reclinerRows * (reclinerCentre + 2 * reclinerSide);
+  let extraCentre = 0;
+  let diff = capacity - total();
+  for (let i = 0; diff !== 0 && i < 400; i++) {
+    const k = stdRows - 1 - (i % stdRows);
+    if (Math.abs(diff) >= 2) {
+      const step = diff > 0 ? 1 : -1;
+      if (sides[k] + step >= 3) {
+        sides[k] += step;
+        diff -= 2 * step;
+      }
+    } else {
+      extraCentre += diff;
+      diff = 0;
+    }
+  }
+  const secondRows = Math.round(g.rows * 0.32);
+  const riserFor = (i) => (i < 1 ? 0 : round2(0.17 + (0.24 * (i - 1)) / (g.rows - 2)));
+  const rows = [];
+  for (let i = 0; i < g.rows; i++) {
+    const recliner = i >= stdRows;
+    const side = recliner ? reclinerSide : sides[i];
+    const mid = recliner ? reclinerCentre : centre + (i === 0 ? extraCentre : 0);
+    rows.push({
+      label: ROW_LETTERS[i],
+      section: recliner ? "Balcony" : i < secondRows ? "Second Class" : "First Class",
+      tier: "stalls",
+      seatType: recliner ? "recliner" : "standard",
+      seats: side * 2 + mid,
+      aisleAfter: [side, side + mid],
+      blocks: [side, mid, side],
+      riser: recliner && i === stdRows ? 0.3 : riserFor(i),
+      ...(i === g.crossBefore ? { crossAisleBefore: true } : {}),
+    });
+  }
+  const rowWidth = (r) => r.seats * (r.seatType === "recliner" ? g.reclinerWidth : g.seatWidth) + 2 * g.aisle;
+  const seatingWidth = Math.max(...rows.map(rowWidth));
+  const roomWidth = round2(seatingWidth + 2 * 2.2);
+  // A wall-to-wall screen (84 % of the room) so even the back row sees at
+  // least SMPTE's 30°, mounted high enough to clear heads in front.
+  // It also grows with the hall's depth: with the first row ~0.46 screen-widths
+  // back, a screen of 0.76 × the seating depth gives the last row ≥ 30°.
+  const seatingSpan = stdRows * g.pitch + g.reclinerRows * g.reclinerPitch + g.cross;
+  const screenWidth = round2(Math.min(roomWidth * 0.92, Math.max(roomWidth * 0.84, seatingSpan * 0.76)));
+  const screenHeight = round2(screenWidth / 2.35);
+  const screenBottom = 2.3;
+  // About half a screen-width back, so even the front row takes in the whole screen.
+  const firstRowDistance = round2(Math.max(9, screenWidth * 0.46));
+  const seatingDepth = stdRows * g.pitch + g.reclinerRows * g.reclinerPitch + g.cross;
+  const crossZ = round2(firstRowDistance + g.crossBefore * g.pitch - g.pitch / 2 + g.cross / 2);
+  const rearDoorZ = round2(firstRowDistance + seatingDepth + 1.0);
+  const backFloor = rows.reduce((x, r) => x + r.riser, 0);
+  const rowA = rows[0];
+  return {
+    id: `grand-${capacity}`,
+    name: `Grand hall · ${capacity} seats`,
+    version: 1,
+    kind: "grand",
+    screen: { width: screenWidth, height: screenHeight, bottom: screenBottom, curve: 0.07 },
+    room: { width: roomWidth, height: round2(Math.max(15, screenBottom + screenHeight + 2.6, backFloor + 4.8)), depth: round2(firstRowDistance + seatingDepth + 3.2) },
+    geometry: {
+      seatWidth: { standard: g.seatWidth, recliner: g.reclinerWidth },
+      rowPitch: { standard: g.pitch, recliner: g.reclinerPitch },
+      aisleWidth: g.aisle,
+      crossAisleWidth: g.cross,
+      sideAisleWidth: round2((roomWidth - seatingWidth) / 2),
+      eyeHeight: 1.15,
+      stalls: { firstRowDistance, riser: 0.16 },
+    },
+    sections: [
+      { name: "Second Class", tier: "stalls" },
+      { name: "First Class", tier: "stalls" },
+      { name: "Balcony", tier: "stalls" },
+    ],
+    rows,
+    doors: [
+      ...standardDoors(rearDoorZ).slice(0, 2),
+      { id: "mid-left", label: "Middle left exit", side: "left", z: crossZ, kind: "exit", accessible: false },
+      { id: "mid-right", label: "Middle right exit", side: "right", z: crossZ, kind: "exit", accessible: false },
+      ...standardDoors(rearDoorZ).slice(2),
+    ],
+    accessibility: {
+      wheelchair: ["A1", `A${rowA.seats}`],
+      companion: ["A2", `A${rowA.seats - 1}`],
+      note: "Wheelchair spaces are at the outer ends of row A, on the flat floor by the step-free front doors.",
+    },
+  };
+};
+
 const LAYOUTS = { [CLASSIC_136.id]: CLASSIC_136 };
 MULTIPLEX_CAPACITIES.forEach((c) => {
   const layout = multiplexLayout(c);
   LAYOUTS[layout.id] = layout;
 });
+GRAND_CAPACITIES.forEach((c) => {
+  const layout = grandLayout(c);
+  LAYOUTS[layout.id] = layout;
+});
+
+// The hall new showtimes get when none is chosen: the 800-seat flagship.
+// (Shows stored before layouts existed keep DEFAULT_LAYOUT_ID, the classic hall.)
+const NEW_SHOW_LAYOUT_ID = "grand-800";
 
 /* ---------------- Custom halls (admin layout editor) ----------------
    An admin describes a hall row by row: the seats in each block (1–3 blocks
@@ -202,7 +352,7 @@ MULTIPLEX_CAPACITIES.forEach((c) => {
 const SECTIONS = Object.keys(SECTION_PRICE_FIELDS);
 const MAX_CUSTOM_ROWS = ROW_LETTERS.length; // 25
 const MAX_BLOCK_SEATS = 24;
-const MAX_CUSTOM_SEATS = 600;
+const MAX_CUSTOM_SEATS = 900;
 
 const customLayoutError = (spec) => {
   if (!spec || typeof spec !== "object") return "Describe the hall's rows";
@@ -226,6 +376,11 @@ const customLayoutError = (spec) => {
   if (total > MAX_CUSTOM_SEATS) return `A hall can have up to ${MAX_CUSTOM_SEATS} seats (this one has ${total})`;
   if (spec.wheelchairSpaces !== undefined && typeof spec.wheelchairSpaces !== "boolean")
     return "Wheelchair spaces must be on or off";
+  if (spec.crossAisleBefore !== undefined && spec.crossAisleBefore !== null) {
+    const k = spec.crossAisleBefore;
+    if (!Number.isInteger(k) || k < 2 || k > spec.rows.length - 2)
+      return "The cross-aisle must have at least two rows in front of it and two behind it";
+  }
   return null;
 };
 
@@ -244,7 +399,7 @@ const buildCustomLayout = (spec, id = "custom-preview") => {
   const pitchRecliner = 1.7;
   const n = spec.rows.length;
   // Same rake as the multiplex halls: two flat rows, then risers growing towards the back.
-  const riserFor = (i) => (i < 2 ? 0 : round2(0.16 + (0.26 * (i - 2)) / Math.max(1, n - 3)));
+  const riserFor = (i) => (i < 1 ? 0 : round2(0.16 + (0.26 * (i - 1)) / Math.max(1, n - 2)));
   const rows = spec.rows.map((r, i) => {
     const blocks = r.blocks.map(Number);
     const aisleAfter = [];
@@ -261,16 +416,23 @@ const buildCustomLayout = (spec, id = "custom-preview") => {
       aisleAfter,
       blocks,
       riser: riserFor(i),
+      ...(spec.crossAisleBefore === i ? { crossAisleBefore: true } : {}),
     };
   });
+  const crossWidth = 1.5;
+  const hasCross = rows.some((r) => r.crossAisleBefore);
   const rowWidth = (r) => r.seats * (r.seatType === "recliner" ? reclinerWidth : seatWidth) + r.aisleAfter.length * aisleWidth;
   const seatingWidth = Math.max(...rows.map(rowWidth));
   const roomWidth = round2(Math.max(16, seatingWidth + 2 * 2));
   const screenWidth = round2(roomWidth * 0.8);
   const screenHeight = round2(screenWidth / 2.35);
-  const screenBottom = 1.9;
+  const screenBottom = 2.1;
   const firstRowDistance = round2(Math.max(6, screenWidth * 0.42));
-  const seatingDepth = rows.reduce((d, r) => d + (r.seatType === "recliner" ? pitchRecliner : pitchStd), 0);
+  const seatingDepth = rows.reduce((d, r) => d + (r.seatType === "recliner" ? pitchRecliner : pitchStd), 0) + (hasCross ? crossWidth : 0);
+  const crossIndex = rows.findIndex((r) => r.crossAisleBefore);
+  const crossZ = hasCross
+    ? round2(firstRowDistance + rows.slice(0, crossIndex).reduce((d, r) => d + (r.seatType === "recliner" ? pitchRecliner : pitchStd), 0) - pitchStd / 2 + crossWidth / 2)
+    : null;
   const depth = round2(firstRowDistance + seatingDepth + 3.5);
   const backFloor = rows.reduce((a, r) => a + r.riser, 0);
   const height = round2(Math.max(12, screenBottom + screenHeight + 2.4, backFloor + 4.6));
@@ -287,14 +449,22 @@ const buildCustomLayout = (spec, id = "custom-preview") => {
       seatWidth: { standard: seatWidth, recliner: reclinerWidth },
       rowPitch: { standard: pitchStd, recliner: pitchRecliner },
       aisleWidth,
+      crossAisleWidth: crossWidth,
       sideAisleWidth: round2((roomWidth - seatingWidth) / 2),
       eyeHeight: 1.15,
       stalls: { firstRowDistance, riser: 0.16 },
-      balcony: { gapBeforeFirstRow: 0, floorElevation: 0, riser: 0 },
     },
     sections: [...new Set(rows.map((r) => r.section))].map((name) => ({ name, tier: "stalls" })),
     rows,
-    doors: standardDoors(round2(firstRowDistance + seatingDepth + 1.2)),
+    doors: [
+      ...standardDoors(round2(firstRowDistance + seatingDepth + 1.2)),
+      ...(hasCross
+        ? [
+            { id: "mid-left", label: "Middle left exit", side: "left", z: crossZ, kind: "exit", accessible: false },
+            { id: "mid-right", label: "Middle right exit", side: "right", z: crossZ, kind: "exit", accessible: false },
+          ]
+        : []),
+    ],
     accessibility: wheelchair
       ? {
           wheelchair: ["A1", `A${rowA.seats}`],
@@ -414,6 +584,9 @@ module.exports = {
   seatsFitLayout,
   multiplexLayout,
   MULTIPLEX_CAPACITIES,
+  grandLayout,
+  GRAND_CAPACITIES,
+  NEW_SHOW_LAYOUT_ID,
   deriveLayout,
   layoutForShow,
   withOrder,

@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { categoryLabel } from "../lib/format";
 import { buildAuditorium } from "../lib/auditorium";
 
 // Okabe–Ito colours per price category (colour-blind safe), as in the seat heatmap.
@@ -32,14 +33,15 @@ export default function HallPreview({ layout, className = "" }) {
             blocks[blocks.length - 1].push(s);
           });
           return (
-            <div key={row.label} className="flex items-center justify-center gap-1.5">
+            <React.Fragment key={row.label}>
+            <div className="flex items-center justify-center gap-1.5">
               <span className="w-4 text-right font-mono text-[9px] text-gray-500">{row.label}</span>
               {blocks.map((b, i) => (
                 <div key={i} className="flex gap-[2px]" style={{ marginLeft: i ? cell : 0 }}>
                   {b.map((s) => (
                     <span
                       key={s.seatNumber}
-                      title={`${s.seatNumber} · ${s.category}${s.seatType === "recliner" ? " · recliner" : ""}${s.wheelchair ? " · wheelchair space" : s.companion ? " · companion seat" : ""}`}
+                      title={`${s.seatNumber} · ${categoryLabel(s.category)}${s.seatType === "recliner" ? " · recliner" : ""}${s.wheelchair ? " · wheelchair space" : s.companion ? " · companion seat" : ""}`}
                       className={`block rounded-[2px] ${s.wheelchair ? "ring-1 ring-white" : ""}`}
                       style={{ width: s.seatType === "recliner" ? cell * 1.4 : cell, height: cell, background: SECTION_COLORS[s.category] || "#8a93a8" }}
                     />
@@ -47,6 +49,8 @@ export default function HallPreview({ layout, className = "" }) {
                 </div>
               ))}
             </div>
+            {row.crossAisleBefore && <div className="mx-auto my-1 h-px w-full border-t border-dashed border-white/30" title="Cross-aisle" />}
+            </React.Fragment>
           );
         })}
         <div className="mx-auto mt-2 h-1.5 w-2/3 rounded-full bg-white/70" aria-hidden="true" />
@@ -55,7 +59,7 @@ export default function HallPreview({ layout, className = "" }) {
       <figcaption className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-2xs text-gray-400">
         {sections.map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SECTION_COLORS[s] }} aria-hidden="true" /> {s}
+            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SECTION_COLORS[s] }} aria-hidden="true" /> {categoryLabel(s)}
           </span>
         ))}
         {hall.accessibility.configured && (

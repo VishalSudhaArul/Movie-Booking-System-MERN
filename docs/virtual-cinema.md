@@ -10,7 +10,7 @@ uses mock data.
 | --- | --- | --- |
 | 0–1 | Inspection, security hardening, seat holds | earlier commits (`2014ee1`, `608d712`) |
 | 2 | Design tokens, five themes, UI components, accessibility | `docs/design-system.md` |
-| 3 | 300–500-seat stadium halls, doors, cup holders, wheelchair markings | `server/utils/auditoriumLayouts.js`, `components/cinema3d/` |
+| 3 | Single-level stadium halls up to 800 seats, cross-aisles, doors, cup holders, wheelchair markings | `server/utils/auditoriumLayouts.js`, `components/cinema3d/` |
 | 4 | Five camera views, first-person seat view, **walk-through mode** | `Auditorium3D.jsx`, `WalkMode.jsx`, `lib/walkway.js` |
 | 5 | **Recommendations, heatmaps, seat comparison** | `lib/seatInsights.js`, `components/SeatAdvisor.jsx` |
 | 6 | Trailer on the screen, **speaker layout** (silent) | `ScreenTrailer.jsx`, `SoundLayout.jsx`, `lib/speakers.js` |
@@ -42,16 +42,45 @@ Heatmaps colour free seats by score, angle, distance, price, category or
 distance from the estimated sound sweet spot. Booked and held seats keep the
 "unavailable" colour in every mode.
 
+## Halls and capacity
+
+Every hall is a **single level**: one raked (stadium) floor, no balcony or
+upper tier. Rows rise from row B onwards (row A stays flat for step-free
+wheelchair spaces) and risers grow towards the back so that, for every seat in
+every hall, the line to the bottom of the screen clears the head in front
+(checked in unit tests).
+
+| Hall | Seats | Rows | Room W × D (m) | Screen (m) | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Classic | 136 | 12 | 22 × 24 | 14 × 6 | Legacy shows; former balcony rows A–D now continue the floor behind a cross-aisle |
+| Multiplex 300–500 | 300–500 | 20–25 | 22–26 × 34–41 | 17.6–20.8 wide | Three blocks, straight aisles |
+| Grand 600 | 600 | 25 | 25.6 × 45.5 | 23.6 × 10.0 | Mid cross-aisle, 2 recliner rows |
+| Grand 700 | 700 | 25 | 28.1 × 45.6 | 23.9 × 10.2 | Mid cross-aisle, 2 recliner rows |
+| **Grand 800** (default for new showtimes) | **800** | 25 | 31.8 × 46.9 | 26.7 × 11.4 | Mid cross-aisle, 2 recliner rows |
+
+Grand halls keep the multiplex comfort standard (0.62 m seats, 1.15 m rows),
+give recliners 0.90 m and 1.70 m, keep 1.3 m aisles and a ≥ 2.2 m walkway on
+each wall, place the first row about half a screen-width from the screen, and
+size the screen (84–92 % of the room width) so even the last row sees at least
+30°. Seats are angled up to 25° towards the screen centre.
+
+The stored price category keys are unchanged ("Second Class", "First Class",
+"Balcony") so existing shows, bookings and the `balconyPrice` field stay valid;
+"Balcony" is the premium back-of-hall category and is displayed as **Premium**.
+Classic-hall seat numbers, categories and prices are identical to before, so
+existing bookings and tickets are unaffected (a unit test compares them with
+the original generator).
+
 ## Walk-through mode
 
 `lib/walkway.js` derives the walkable floor from the layout: the open area in
-front of the first row, the rear cross-aisle, the aisles between seat blocks
-and the walkways along the walls. Seats, walls, the stage and the balcony
-structure are blocked; movement slides along edges instead of passing through.
-Balcony seats are reached by their own stairs, which walk mode doesn't model:
-"Walk to seat" says so and offers the seat view instead. Keyboard: W A S D or
-arrows, Q/E to turn, Shift to hurry, Esc to leave. Touch: joystick plus drag to
-look. The orbit camera is unmounted while walking so the two can't conflict.
+front of the first row, every level cross-aisle (mid-hall and behind the last
+row), the aisles between seat blocks and the walkways along the walls. Seats,
+walls and the stage are blocked; movement slides along edges instead of passing
+through. Every seat in every hall has a walkable route to its aisle (unit
+tested). Keyboard: W A S D or arrows, Q/E to turn, Shift to hurry, Esc to leave.
+Touch: joystick plus drag to look. The orbit camera is unmounted while walking
+so the two can't conflict.
 
 ## Sound layout
 
@@ -108,7 +137,7 @@ Shows accept an optional `screenName` (e.g. "Audi 3") shown on tickets.
 
 - Checkout is a demo: no payment provider is connected.
 - The sound layout is a typical placement, not venue-measured data.
-- Walk mode covers the stalls; balcony stairs aren't modelled.
+- Row letters run A–Z without I, so a hall has at most 25 rows.
 - Performance figures in tests are from one laptop with headless Chrome and
   are not guarantees for other devices.
 - Credentials exposed in old public Git history must be rotated by the owner

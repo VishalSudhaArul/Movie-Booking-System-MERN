@@ -14,11 +14,14 @@ import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomin
 
 const PAGE_SIZE = 12;
 
-const DEFAULT_LAYOUT = "classic-136";
+// New showtimes default to the 800-seat single-level flagship hall. Shows
+// stored before halls existed (no layoutId) are the classic hall.
+const DEFAULT_LAYOUT = "grand-800";
+const LEGACY_LAYOUT = "classic-136";
 const EMPTY_FORM = { movieId: "", theatre: "", date: "", time: "", balconyPrice: "", firstClassPrice: "", secondClassPrice: "", layoutId: DEFAULT_LAYOUT, screenName: "" };
 
 const PRICE_FIELDS = [
-  { key: "balconyPrice", label: "Balcony price (₹)" },
+  { key: "balconyPrice", label: "Premium price (₹, back rows)" },
   { key: "firstClassPrice", label: "First Class price (₹)" },
   { key: "secondClassPrice", label: "Second Class price (₹)" },
 ];
@@ -131,7 +134,7 @@ function AdminShows() {
       balconyPrice: String(s.balconyPrice ?? ""),
       firstClassPrice: String(s.firstClassPrice ?? ""),
       secondClassPrice: String(s.secondClassPrice ?? ""),
-      layoutId: s.layoutId || DEFAULT_LAYOUT,
+      layoutId: s.layoutId || LEGACY_LAYOUT,
       screenName: s.screenName || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -227,7 +230,7 @@ function AdminShows() {
                 disabled={!!editId}
                 data-testid="show-layout"
               >
-                {(layouts.length ? layouts : [{ id: DEFAULT_LAYOUT, name: "Classic hall with balcony", totalSeats: 136 }]).map((l) => (
+                {(layouts.length ? layouts : [{ id: DEFAULT_LAYOUT, name: "Grand hall · 800 seats", totalSeats: 800 }]).map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name.replace(/ · \d+ seats$/, "")} · {l.totalSeats} seats{l.rows ? `, ${l.rows} rows` : ""}
                   </option>
@@ -265,7 +268,7 @@ function AdminShows() {
             </div>
           )}
           {!editId && (
-            <p className="text-xs text-gray-500">New showtimes use the 136-seat classic hall: balcony (with recliners), First Class and Second Class.</p>
+            <p className="text-xs text-gray-500">New showtimes use the 800-seat Grand hall by default: one level, Premium recliners at the back, First Class and Second Class. Pick another hall above.</p>
           )}
         </form>
 

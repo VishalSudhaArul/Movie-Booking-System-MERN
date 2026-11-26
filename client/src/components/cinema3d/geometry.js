@@ -8,7 +8,13 @@ import { BoxGeometry, CylinderGeometry } from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-const rounded = (w, h, d, r = 0.04) => new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2));
+// Detail level: "full" rounds every edge with 2 segments and uses smooth
+// cylinders; "lite" (Lite graphics) uses 1 segment and coarser cylinders.
+// Same shapes and sizes, so seat positions and clicks are identical.
+let SEGMENTS = 2;
+let SIDES = 1;
+const rounded = (w, h, d, r = 0.04) => new RoundedBoxGeometry(w, h, d, SEGMENTS, Math.min(r, w / 2, h / 2, d / 2));
+const cyl = (top, bottom, height, sides, open = false) => new CylinderGeometry(top, bottom, height, Math.max(6, Math.round(sides * SIDES)), 1, open);
 
 const place = (geo, { x = 0, y = 0, z = 0, rx = 0 } = {}) => {
   if (rx) geo.rotateX(rx);
@@ -43,10 +49,10 @@ function standardChair(seatWidth) {
     place(new BoxGeometry(0.05, 0.62, 0.08), { x: armX, y: 0.31, z: 0.12 }),
     place(new BoxGeometry(0.05, 0.62, 0.08), { x: -armX, y: 0.31, z: 0.12 }),
     place(new BoxGeometry(w * 0.5, 0.05, 0.36), { y: 0.025, z: 0.08 }),
-    place(new CylinderGeometry(0.035, 0.05, 0.38, 10), { y: 0.21, z: 0.06 }),
+    place(cyl(0.035, 0.05, 0.38, 10), { y: 0.21, z: 0.06 }),
     // Cup holders set into the front of both armrests.
-    place(new CylinderGeometry(0.04, 0.034, 0.06, 12, 1, true), { x: armX, y: 0.68, z: -0.17 }),
-    place(new CylinderGeometry(0.04, 0.034, 0.06, 12, 1, true), { x: -armX, y: 0.68, z: -0.17 }),
+    place(cyl(0.04, 0.034, 0.06, 12, true), { x: armX, y: 0.68, z: -0.17 }),
+    place(cyl(0.04, 0.034, 0.06, 12, true), { x: -armX, y: 0.68, z: -0.17 }),
   ]);
   return { upholstery, frame };
 }
@@ -67,13 +73,15 @@ function reclinerChair(seatWidth) {
   const frame = merge([
     place(new BoxGeometry(w * 0.96, 0.1, 0.8), { y: 0.05, z: 0.08 }),
     // Cup holders in both padded arms.
-    place(new CylinderGeometry(0.045, 0.038, 0.06, 12, 1, true), { x: w / 2 - armW / 2, y: 0.69, z: -0.18 }),
-    place(new CylinderGeometry(0.045, 0.038, 0.06, 12, 1, true), { x: -(w / 2 - armW / 2), y: 0.69, z: -0.18 }),
+    place(cyl(0.045, 0.038, 0.06, 12, true), { x: w / 2 - armW / 2, y: 0.69, z: -0.18 }),
+    place(cyl(0.045, 0.038, 0.06, 12, true), { x: -(w / 2 - armW / 2), y: 0.69, z: -0.18 }),
   ]);
   return { upholstery, frame };
 }
 
-export function buildChairGeometries(geometry) {
+export function buildChairGeometries(geometry, { lite = false } = {}) {
+  SEGMENTS = lite ? 1 : 2;
+  SIDES = lite ? 0.6 : 1;
   return {
     standard: standardChair(geometry.seatWidth.standard),
     recliner: reclinerChair(geometry.seatWidth.recliner || geometry.seatWidth.standard),

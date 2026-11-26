@@ -70,13 +70,11 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
   const COVE_VIOLET = theme["accent-400"];
   const halfW = room.width / 2;
   const rows = hall.rows;
-  const stalls = rows.filter((r) => r.tier !== "balcony");
-  const balcony = rows.filter((r) => r.tier === "balcony");
   const pitchOf = (r) => g.rowPitch[r.seatType] || g.rowPitch.standard;
 
-  const lastStall = stalls[stalls.length - 1];
-  const stallsEndZ = lastStall ? lastStall.z + pitchOf(lastStall) / 2 + 0.6 : 10;
-  const balconyFrontZ = balcony.length ? balcony[0].z - pitchOf(balcony[0]) / 2 - 0.4 : stallsEndZ;
+  // Every hall is a single raked floor ending behind the last row.
+  const lastRow = rows[rows.length - 1];
+  const stallsEndZ = lastRow ? lastRow.z + pitchOf(lastRow) / 2 + 0.6 : 10;
   const backZ = Math.max(room.depth, (rows[rows.length - 1]?.z || 0) + 3);
   const screenCenterY = screen.bottom + screen.height / 2;
 
@@ -114,6 +112,22 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         const ends = [r.seats[0].x + r.seatWidth / 2 + 0.2, r.seats[r.seats.length - 1].x - r.seatWidth / 2 - 0.2];
         ends.forEach((x) => plaques.push({ label: r.label, x, y: r.floorY + 0.78, z: r.z + 0.34 }));
       }
+    });
+    // Rear cross-aisle: a level landing behind the last row, up to the back wall.
+    const last = rows[rows.length - 1];
+    if (last && last.floorY > 0) {
+      const zBack = last.z + pitchOf(last) / 2;
+      const end = Math.max(room.depth, last.z + 3);
+      if (end > zBack) risers.push({ p: [0, last.floorY / 2, (zBack + end) / 2], s: [room.width, last.floorY, end - zBack] });
+    }
+    // Cross-aisles: a level landing (solid under it, at the height of the row in
+    // front), a carpet runner across the hall, and lit edges on both sides.
+    (hall.crossAisles || []).forEach((c) => {
+      const depth = c.zMax - c.zMin;
+      const zc = (c.zMin + c.zMax) / 2;
+      if (c.floorY > 0) risers.push({ p: [0, c.floorY / 2, zc], s: [room.width, c.floorY, depth + 0.02] });
+      aisles.push({ p: [0, c.floorY + 0.006, zc], s: [room.width - 0.4, depth * 0.85, 1], r: [-Math.PI / 2, 0, 0] });
+      [c.zMin + 0.05, c.zMax - 0.05].forEach((z) => nosings.push({ p: [0, c.floorY + 0.015, z], s: [room.width - 0.6, 0.02, 0.035] }));
     });
     return { risers, aisles, stepLights, nosings, plaques };
   }, [hall]);
@@ -241,7 +255,7 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         <planeGeometry args={[room.width, backZ + 2]} />
         <meshStandardMaterial map={carpet} roughness={1} />
       </mesh>
-      {/* Every raised row (stalls and balcony) is one box; one draw call in all. */}
+      {/* Every raised row and cross-aisle landing is one box; one draw call in all. */}
       <Instances items={parts.risers} receiveShadow={shadows}>
         <boxGeometry />
         <meshStandardMaterial color="#171e3a" roughness={1} />
@@ -259,30 +273,6 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
 
       {/* Row letters on the aisle ends of the seats */}
       <RowLetters plaques={parts.plaques} text={STEP_LIGHT} />
-
-      {/* Balcony: raised tiers, the slab underneath, a lit parapet and columns */}
-      {balcony.length > 0 && (
-        <group>
-          <mesh position={[0, balcony[0].floorY - 0.2, balconyFrontZ + 0.5]}>
-            <boxGeometry args={[room.width, 0.4, 1.2]} />
-            <meshStandardMaterial color={RISER_EDGE} roughness={0.8} />
-          </mesh>
-          <mesh position={[0, balcony[0].floorY + 0.45, balconyFrontZ]} castShadow={shadows}>
-            <boxGeometry args={[room.width - 0.2, 0.9, 0.12]} />
-            <meshStandardMaterial color="#10172c" roughness={0.6} metalness={0.2} />
-          </mesh>
-          <mesh position={[0, balcony[0].floorY + 0.92, balconyFrontZ]}>
-            <boxGeometry args={[room.width - 0.2, 0.04, 0.16]} />
-            <meshBasicMaterial color={COVE_VIOLET} toneMapped={false} />
-          </mesh>
-          {[-halfW * 0.55, halfW * 0.55].map((x) => (
-            <mesh key={x} position={[x, balcony[0].floorY / 2, balconyFrontZ + 0.3]}>
-              <cylinderGeometry args={[0.18, 0.18, balcony[0].floorY, 16]} />
-              <meshStandardMaterial color="#111830" roughness={0.5} metalness={0.3} />
-            </mesh>
-          ))}
-        </group>
-      )}
 
       {/* Side walls with acoustic panels */}
       {[-1, 1].map((side) => (

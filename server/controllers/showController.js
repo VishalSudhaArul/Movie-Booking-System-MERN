@@ -6,6 +6,7 @@ const { showForUser } = require("../utils/seatHolds");
 const { ensureLayout } = require("./layoutController");
 const {
   DEFAULT_LAYOUT_ID,
+  NEW_SHOW_LAYOUT_ID,
   getLayout,
   listLayouts,
   generateSeatsFromLayout,
@@ -80,7 +81,8 @@ exports.addShow = async (req, res, next) => {
       return res.status(400).json({ message: "That movie doesn't exist" });
     }
 
-    const layoutId = req.body.layoutId === undefined ? DEFAULT_LAYOUT_ID : req.body.layoutId;
+    // New showtimes get the single-level flagship hall unless one is chosen.
+    const layoutId = req.body.layoutId === undefined ? NEW_SHOW_LAYOUT_ID : req.body.layoutId;
     const layout = typeof layoutId === "string" ? await ensureLayout(layoutId) : null;
     if (!layout) return res.status(400).json({ message: "Unknown auditorium layout" });
 

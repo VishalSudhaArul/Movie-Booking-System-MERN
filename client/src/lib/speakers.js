@@ -22,7 +22,7 @@ export const SPEAKER_KINDS = {
 export function speakerLayout(hall) {
   const { screen, room } = hall;
   const halfW = room.width / 2;
-  const stalls = hall.rows.filter((r) => r.tier !== "balcony");
+  const stalls = hall.rows;
   const first = hall.rows[0];
   const last = hall.rows[hall.rows.length - 1];
   const floorAt = (z) => stalls.reduce((y, r) => (r.z <= z ? r.floorY : y), 0);

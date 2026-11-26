@@ -242,7 +242,10 @@ test.describe("trailer on the 3D screen", () => {
         if (p && p.visible) {
           const r = await page.getByTestId("auditorium-3d").boundingBox();
           // Not under an overlay (toolbars at the top, booking panel on the right).
-          if (p.x > r.x + 40 && p.x < r.x + r.width - 330 && p.y > r.y + 120 && p.y < r.y + r.height - 40) {
+          // And actually visible there: a real raycast at that pixel hits this seat
+          // (a backrest in the row behind can hide a cushion from this angle).
+          const inArea = p.x > r.x + 40 && p.x < r.x + r.width - 330 && p.y > r.y + 120 && p.y < r.y + r.height - 40;
+          if (inArea && (await page.evaluate(([x, y]) => window.__cinema3d.hitAt(x, y), [p.x, p.y])) === s.seatNumber) {
             await page.mouse.click(p.x, p.y);
             picked = s.seatNumber;
             break;

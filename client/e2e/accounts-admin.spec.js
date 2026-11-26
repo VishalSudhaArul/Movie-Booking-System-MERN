@@ -86,7 +86,7 @@ test.describe("admin workflows", () => {
     await page.locator("#s-secondClassPrice").fill("190");
     await page.getByRole("button", { name: "Publish showtime" }).click();
     await expect(page.getByText("Showtime published.")).toBeVisible();
-    await expect(page.getByText(`0 of 136 seats booked`).first()).toBeVisible();
+    await expect(page.getByText(`0 of 800 seats booked`).first()).toBeVisible();
 
     // The public site sees it, with server-generated seats at the new prices.
     const movies = await (await request.get(`${API}/api/movies`)).json();
@@ -94,7 +94,10 @@ test.describe("admin workflows", () => {
     const shows = await (await request.get(`${API}/api/shows/movie/${movie._id}`)).json();
     expect(shows).toHaveLength(1);
     expect(shows[0].theatre).toBe(theatre);
-    expect(shows[0].seats.find((s) => s.seatNumber === "A1").price).toBe(400);
+    // The default Grand hall: row A at the front (Second Class), premium recliners at the back (row Z).
+    expect(shows[0].seats).toHaveLength(800);
+    expect(shows[0].seats.find((s) => s.seatNumber === "A1").price).toBe(190);
+    expect(shows[0].seats.find((s) => s.seatNumber === "Z1").price).toBe(400);
 
     // Snack for the new theatre (it has shows but no menu yet).
     await page.goto("/admin/snacks");

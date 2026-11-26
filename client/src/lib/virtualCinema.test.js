@@ -5,7 +5,7 @@ import { seatMetrics, recommendSeats, heatmap, compareSeats, describeView, IDEAL
 import { walkArea, isWalkable, step, startPoint, routeToSeat, describePosition, floorAt } from "./walkway";
 import { speakerLayout } from "./speakers";
 
-const { getLayout, generateSeatsFromLayout, MULTIPLEX_CAPACITIES } = require("../../../server/utils/auditoriumLayouts");
+const { getLayout, generateSeatsFromLayout, MULTIPLEX_CAPACITIES, GRAND_CAPACITIES } = require("../../../server/utils/auditoriumLayouts");
 
 const PRICES = { balconyPrice: 420, firstClassPrice: 300, secondClassPrice: 180 };
 const hallFor = (id, booked = []) => {
@@ -13,7 +13,7 @@ const hallFor = (id, booked = []) => {
   const seats = generateSeatsFromLayout(layout, PRICES).map((s) => ({ ...s, isBooked: booked.includes(s.seatNumber) }));
   return buildAuditorium(layout, seats);
 };
-const IDS = ["classic-136", ...MULTIPLEX_CAPACITIES.map((c) => `multiplex-${c}`)];
+const IDS = ["classic-136", ...MULTIPLEX_CAPACITIES.map((c) => `multiplex-${c}`), ...GRAND_CAPACITIES.map((c) => `grand-${c}`)];
 
 describe.each(IDS)("%s", (id) => {
   const hall = hallFor(id);
@@ -26,6 +26,11 @@ describe.each(IDS)("%s", (id) => {
       expect(m.score).toBeLessThanOrEqual(100);
       expect(m.distance).toBeGreaterThan(0);
     });
+  });
+
+  test("the rake clears the head in front for every seat (no blocked sightlines)", () => {
+    const blocked = [...metrics.entries()].filter(([, m]) => m.clearance < 0).map(([n]) => n);
+    expect(blocked).toEqual([]);
   });
 
   test("a central seat scores better than the corner seat of the same row", () => {
@@ -60,17 +65,23 @@ describe.each(IDS)("%s", (id) => {
     const moved = step(area, aisle.x, (band.zMin + band.zMax) / 2, 3, 0);
     expect(Math.abs(moved.x - aisle.x)).toBeLessThan(aisle.half + 0.01);
     // Every waypoint of a route to a far seat is walkable.
-    const stalls = hall.rows.filter((r) => r.tier !== "balcony");
-    const target = stalls[stalls.length - 1].seats[0];
+    // The back row (behind any cross-aisle) is reachable on the single floor.
+    const target = hall.rows[hall.rows.length - 1].seats[0];
     const route = routeToSeat(area, start, target);
     expect(route.length).toBeGreaterThan(0);
     route.forEach((p) => expect(isWalkable(area, p.x, p.z)).toBe(true));
     expect(Math.abs(route[route.length - 1].z - target.z)).toBeLessThan(0.01);
     expect(describePosition(area, route[route.length - 1].x, target.z)).toMatch(/^Row /);
     expect(floorAt(area, target.z)).toBeCloseTo(target.floorY);
-    // Balcony seats are reached by their own stair, which walk mode doesn't cover.
-    const balcony = hall.rows.find((r) => r.tier === "balcony");
-    if (balcony) expect(routeToSeat(area, start, balcony.seats[0])).toEqual([]);
+    // Every seat in the hall has a walkable route to its aisle.
+    hall.rows.forEach((r) => expect(routeToSeat(area, start, r.seats[Math.floor(r.seats.length / 2)]).length).toBeGreaterThan(0));
+    // Cross-aisles are walkable from wall to wall, at the floor height of the row in front.
+    (hall.crossAisles || []).forEach((c) => {
+      const z = (c.zMin + c.zMax) / 2;
+      expect(isWalkable(area, area.xLimit - 0.1, z)).toBe(true);
+      expect(isWalkable(area, 0, z)).toBe(true);
+      expect(floorAt(area, z)).toBeCloseTo(c.floorY);
+    });
   });
 
   test("speaker layout stays inside the room", () => {
@@ -82,6 +93,27 @@ describe.each(IDS)("%s", (id) => {
       expect(z).toBeLessThanOrEqual(Math.max(hall.room.depth, hall.rows[hall.rows.length - 1].z + 3));
     });
     expect(sweetSpot.z).toBeGreaterThan(hall.rows[0].z);
+  });
+});
+
+describe.each(GRAND_CAPACITIES)("grand-%i viewing geometry", (capacity) => {
+  const hall = hallFor(`grand-${capacity}`);
+  const m = [...seatMetrics(hall).values()];
+  test("every seat can see the screen comfortably", () => {
+    const report = {
+      distance: [Math.min(...m.map((x) => x.distance)), Math.max(...m.map((x) => x.distance))],
+      maxOffCentre: Math.max(...m.map((x) => x.offCentre)),
+      screenFills: [Math.min(...m.map((x) => x.screenWidthAngle)), Math.max(...m.map((x) => x.screenWidthAngle))],
+      maxLookUp: Math.max(...m.map((x) => x.verticalAngle)),
+      blockedSightlines: m.filter((x) => x.clearance < 0).length,
+      goodSeats: m.filter((x) => x.score >= 60).length,
+    };
+    console.log(`grand-${capacity} ${JSON.stringify(report)}`);
+    expect(report.maxOffCentre).toBeLessThanOrEqual(45);
+    expect(report.screenFills[0]).toBeGreaterThanOrEqual(30); // SMPTE minimum, even from the back
+    expect(report.maxLookUp).toBeLessThanOrEqual(35);
+    expect(report.blockedSightlines).toBe(0); // the rake clears the head in front everywhere
+    expect(report.goodSeats / m.length).toBeGreaterThan(0.6);
   });
 });
 

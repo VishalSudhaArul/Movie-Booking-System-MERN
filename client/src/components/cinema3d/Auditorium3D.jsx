@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, CameraControlsImpl } from "@react-three/drei";
-import { Box3, MathUtils, Vector3 } from "three";
+import { Box3, MathUtils, Raycaster, Vector2, Vector3 } from "three";
 import HallScene from "./HallScene";
 import { TrailerControls, useScreenTrailer } from "./ScreenTrailer";
 import SeatInstances, { seatState, useSeatColors } from "./SeatInstances";
@@ -13,7 +13,7 @@ import { Spinner } from "../ui/Feedback";
 import { buildAuditorium, nearestDoor, viewingInfo } from "../../lib/auditorium";
 import { routeToSeat, walkArea } from "../../lib/walkway";
 import { SPEAKER_KINDS, SPEAKER_NOTE } from "../../lib/speakers";
-import { formatPrice } from "../../lib/format";
+import { categoryLabel, formatPrice } from "../../lib/format";
 import { getRendererName } from "../../lib/webgl";
 
 const { ACTION } = CameraControlsImpl;
@@ -172,10 +172,10 @@ function ShaderWarmup({ ready, onDone }) {
 
 /** Inside the canvas: exposes the camera to the overlay (tests, projection). */
 function SceneBridge({ onReady }) {
-  const { camera, gl, invalidate } = useThree();
+  const { camera, gl, invalidate, scene } = useThree();
   useEffect(() => {
-    onReady({ camera, gl, invalidate });
-  }, [camera, gl, invalidate, onReady]);
+    onReady({ camera, gl, invalidate, scene });
+  }, [camera, gl, invalidate, scene, onReady]);
   return null;
 }
 
@@ -424,7 +424,7 @@ export default function Auditorium3D({
     if (!seat || !api) return;
     const route = routeToSeat(area, api.getPose(), seat);
     if (!route.length) {
-      setWalkMsg(`${seat.seatNumber} is in the balcony, which has its own stairs. Walk mode covers the stalls; preview the view from the seat instead.`);
+      setWalkMsg(`There's no walkable route to ${seat.seatNumber}. Preview the view from the seat instead.`);
       return;
     }
     setWalkMsg(`Walking to ${seat.seatNumber}...`);
@@ -620,6 +620,23 @@ export default function Auditorium3D({
         return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height, visible: v.z < 1 };
       },
       rotate: (deg) => controls()?.rotate(MathUtils.degToRad(deg), 0, false),
+      // The seat a click at screen point (x, y) would pick: the nearest object a
+      // ray hits, if it's a seat (the same rule pointer events use).
+      hitAt: (x, y) => {
+        const sc = sceneRef.current;
+        if (!sc) return null;
+        const r = sc.gl.domElement.getBoundingClientRect();
+        const ndc = new Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+        const ray = new Raycaster();
+        ray.setFromCamera(ndc, sc.camera);
+        // Like react-three-fiber's pointer events: only objects with handlers
+        // (the seat meshes) are tested, and the nearest hit wins.
+        const targets = [];
+        sc.scene.traverse((o) => o.userData.seats && targets.push(o));
+        const hit = ray.intersectObjects(targets, false)[0];
+        const seats = hit?.object.userData.seats;
+        return seats && hit.instanceId !== undefined ? seats[hit.instanceId].seatNumber : null;
+      },
       // Seat numbers by depth and block, so tests can pick front/middle/rear x left/centre/right.
       seatsWhere: ({ block, depth } = {}) => {
         const n = hall.rows.length;
@@ -770,6 +787,7 @@ export default function Auditorium3D({
             shadows={shadows}
             overrideColors={heatmapColors}
             highlight={highlight}
+            lite={lowPower}
           />
           {/* After the hall and seats, so everything it compiles is already in the scene. */}
           <ShaderWarmup ready={shadersReady} onDone={onShadersDone} />
@@ -899,7 +917,7 @@ export default function Auditorium3D({
             </p>
             <p className="text-gray-400">
               {BLOCK_LABEL[hover.seat.block] ? `${BLOCK_LABEL[hover.seat.block]} · ` : ""}
-              {hover.seat.category} · {formatPrice(hover.seat.price)} · <span className="text-gray-200">{STATE_LABEL[hoverState]}</span>
+              {categoryLabel(hover.seat.category)} · {formatPrice(hover.seat.price)} · <span className="text-gray-200">{STATE_LABEL[hoverState]}</span>
             </p>
             {seatAccess(hover.seat).length > 0 && <p className="text-brand-200">{seatAccess(hover.seat).join(" · ")}</p>}
             {compareMode && hoverState !== "booked" && hoverState !== "reserved" && <p className="text-gray-400">Click to add it to the comparison</p>}
@@ -956,7 +974,7 @@ export default function Auditorium3D({
                     <span className="flex h-8 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/20 font-mono text-xs font-bold text-brand-200">{s.seatNumber}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-medium text-white">
-                        {s.category}{s.seatType === "recliner" ? " · Recliner" : ""}
+                        {categoryLabel(s.category)}{s.seatType === "recliner" ? " · Recliner" : ""}
                       </span>
                       <span className="text-xs text-gray-400">{formatPrice(s.price)}</span>
                     </span>
@@ -1060,7 +1078,7 @@ export default function Auditorium3D({
                 </p>
                 <p className="text-xs text-gray-400">
                   {BLOCK_LABEL[viewSeat.block] ? `${BLOCK_LABEL[viewSeat.block]} · ` : ""}
-                  {viewSeat.category}
+                  {categoryLabel(viewSeat.category)}
                   {viewSeat.seatType === "recliner" ? " · Recliner" : ""} · {formatPrice(viewSeat.price)}
                 </p>
               </div>

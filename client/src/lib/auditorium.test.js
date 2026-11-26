@@ -1,27 +1,9 @@
 import { buildAuditorium, viewingInfo, rowLabelOf, seatIndexOf } from "./auditorium";
 
-// Same shape the server sends for the classic hall (geometry trimmed to what is used).
-const layout = {
-  id: "classic-136",
-  name: "Classic hall with balcony",
-  screen: { width: 14, height: 6, bottom: 1.4 },
-  geometry: {
-    seatWidth: { standard: 0.62, recliner: 0.9 },
-    rowPitch: { standard: 1.1, recliner: 1.7 },
-    aisleWidth: 1.3,
-    eyeHeight: 1.15,
-    stalls: { firstRowDistance: 5.5, riser: 0.17 },
-    balcony: { gapBeforeFirstRow: 1.6, floorElevation: 4.2, riser: 0.32 },
-  },
-  rows: [
-    ...["L", "K", "J", "I"].map((label) => ({ label, section: "Second Class", tier: "stalls", seatType: "standard", seats: 12, aisleAfter: [6] })),
-    ...["H", "G", "F", "E"].map((label) => ({ label, section: "First Class", tier: "stalls", seatType: "standard", seats: 12, aisleAfter: [6] })),
-    { label: "D", section: "Balcony", tier: "balcony", seatType: "standard", seats: 10, aisleAfter: [5] },
-    { label: "C", section: "Balcony", tier: "balcony", seatType: "standard", seats: 10, aisleAfter: [5] },
-    { label: "B", section: "Balcony", tier: "balcony", seatType: "recliner", seats: 10, aisleAfter: [5] },
-    { label: "A", section: "Balcony", tier: "balcony", seatType: "recliner", seats: 10, aisleAfter: [5] },
-  ].map((r, order) => ({ ...r, order })),
-};
+// The classic hall exactly as the server sends it (single level: the former
+// balcony rows A–D continue the raked floor behind a cross-aisle).
+const { getLayout } = require("../../../server/utils/auditoriumLayouts");
+const layout = getLayout("classic-136");
 
 const allSeats = layout.rows.flatMap((r) =>
   Array.from({ length: r.seats }, (_, i) => ({ seatNumber: `${r.label}${i + 1}`, category: r.section }))
@@ -39,16 +21,18 @@ test("places every existing seat exactly once", () => {
   expect(hall.rows.map((r) => r.label)).toEqual(["L", "K", "J", "I", "H", "G", "F", "E", "D", "C", "B", "A"]);
 });
 
-test("rows get further from the screen and higher; the balcony is raised", () => {
+test("rows get further from the screen and higher on one raked floor, with a cross-aisle before row D", () => {
   const hall = buildAuditorium(layout, allSeats);
   for (let i = 1; i < hall.rows.length; i++) {
     expect(hall.rows[i].z).toBeGreaterThan(hall.rows[i - 1].z);
     expect(hall.rows[i].floorY).toBeGreaterThan(hall.rows[i - 1].floorY);
+    expect(hall.rows[i].floorY - hall.rows[i - 1].floorY).toBeLessThan(0.5); // no upper tier
   }
+  hall.rows.forEach((r) => expect(r.tier).toBe("stalls"));
   const E = hall.rows.find((r) => r.label === "E");
   const D = hall.rows.find((r) => r.label === "D");
-  expect(D.floorY).toBeGreaterThanOrEqual(4.2);
-  expect(D.z - E.z).toBeCloseTo(1.1 + 1.6); // row pitch + balcony gap
+  expect(D.z - E.z).toBeCloseTo(1.1 + 1.5); // row pitch + cross-aisle
+  expect(hall.crossAisles).toEqual([expect.objectContaining({ beforeRow: "D", floorY: E.floorY })]);
 });
 
 test("seat 1 is at +x, seats are evenly spaced and the aisle opens a gap", () => {
@@ -88,7 +72,8 @@ test("viewing info: centre seats look straight ahead; front rows see a wider scr
   expect(front.distance).toBeLessThan(back.distance);
   expect(side.horizontalAngle).toBeGreaterThan(10);
   expect(front.verticalAngle).toBeGreaterThan(0); // front row looks up
-  expect(viewingInfo(hall.seatIndex.get("A5"), layout.screen).verticalAngle).toBeLessThan(0); // balcony looks down
+  // The back row looks up less than the front row (or slightly down).
+  expect(viewingInfo(hall.seatIndex.get("A5"), layout.screen).verticalAngle).toBeLessThan(front.verticalAngle);
   expect(typeof front.viewLabel).toBe("string");
 });
 

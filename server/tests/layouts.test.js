@@ -41,13 +41,16 @@ describe("classic-136 template", () => {
     const sectionNames = layout.sections.map((s) => s.name);
     layout.rows.forEach((r) => {
       expect(sectionNames).toContain(r.section);
-      expect(["stalls", "balcony"]).toContain(r.tier);
+      expect(r.tier).toBe("stalls"); // single level: no balcony
       expect(["standard", "recliner"]).toContain(r.seatType);
       r.aisleAfter.forEach((a) => expect(a > 0 && a < r.seats).toBe(true));
     });
-    // Nearest row first; the balcony is at the back.
+    // Nearest row first; the former balcony rows (premium, "Balcony" key) are
+    // now the back of the same raked floor, behind a cross-aisle.
     expect(layout.rows[0].label).toBe("L");
-    expect(layout.rows.at(-1)).toMatchObject({ label: "A", tier: "balcony" });
+    expect(layout.rows.at(-1)).toMatchObject({ label: "A", tier: "stalls", section: "Balcony", seatType: "recliner" });
+    expect(layout.rows.find((r) => r.label === "D").crossAisleBefore).toBe(true);
+    expect(layout.geometry.balcony).toBeUndefined();
   });
 
   test("every live-style show (no layoutId) maps to the classic template", () => {
@@ -118,11 +121,12 @@ describe("API", () => {
 
     const ok = await request(app).post("/api/shows").set("Authorization", auth).send(body);
     expect(ok.status).toBe(201);
-    expect(ok.body.layoutId).toBe("classic-136");
-    expect(ok.body.seats).toHaveLength(136);
+    // New showtimes get the single-level 800-seat Grand hall by default.
+    expect(ok.body.layoutId).toBe("grand-800");
+    expect(ok.body.seats).toHaveLength(800);
 
     const map = await request(app).get(`/api/shows/single/${ok.body._id}`);
-    expect(map.body.layout.id).toBe("classic-136");
+    expect(map.body.layout.id).toBe("grand-800");
 
     const bad = await request(app).post("/api/shows").set("Authorization", auth).send({ ...body, layoutId: "../../etc" });
     expect(bad.status).toBe(400);
@@ -168,7 +172,7 @@ describe("API", () => {
     const res = await request(app).get("/api/shows/layouts");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
-      { id: "classic-136", name: "Classic hall with balcony", totalSeats: 136, rows: 12, custom: false },
+      { id: "classic-136", name: "Classic hall", totalSeats: 136, rows: 12, custom: false },
       ...[300, 350, 400, 450, 500].map((n) => ({
         id: `multiplex-${n}`,
         name: `Multiplex hall · ${n} seats`,
@@ -176,6 +180,7 @@ describe("API", () => {
         rows: expect.any(Number),
         custom: false,
       })),
+      ...[600, 700, 800].map((n) => ({ id: `grand-${n}`, name: `Grand hall · ${n} seats`, totalSeats: n, rows: 25, custom: false })),
     ]);
   });
 });

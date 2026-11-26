@@ -5,7 +5,7 @@ import Icon from "../components/ui/Icon";
 import Poster from "../components/Poster";
 import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
-import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../lib/format";
+import { categoryLabel, formatPrice, formatShowDate, formatShowTime, isUpcomingShow } from "../lib/format";
 import { buildAuditorium } from "../lib/auditorium";
 import { defaultQuality, hasWebGL, isNarrowScreen, prefersReducedMotion } from "../lib/webgl";
 import { heatmap, recommendSeats } from "../lib/seatInsights";
@@ -166,7 +166,7 @@ export default function Seats() {
           category = { name: row.section, price: row.seats[0].price, rows: [] };
           categories.push(category);
         }
-        category.rows.push({ label: row.label, seats: row.seats, aisleAfter: row.aisleAfter || [], seatType: row.seatType });
+        category.rows.push({ label: row.label, seats: row.seats, aisleAfter: row.aisleAfter || [], seatType: row.seatType, crossAisleBefore: !!row.crossAisleBefore });
       });
       return categories;
     }
@@ -390,7 +390,7 @@ export default function Seats() {
               <li key={c.name} className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
                   <span className="block font-medium text-white">
-                    {c.name} × {c.picked.length}
+                    {categoryLabel(c.name)} × {c.picked.length}
                   </span>
                   <span className="block truncate text-xs text-gray-400">
                     {c.picked.map((s) => s.seatNumber).join(", ")}
@@ -570,7 +570,7 @@ export default function Seats() {
                             <span className="h-px flex-1 bg-fill-strong" />
                             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                               {isPremium && <Icon name="crown" className="h-3.5 w-3.5 text-accent-300" />}
-                              {category.name}
+                              {categoryLabel(category.name)}
                               <span className="text-white">{formatPrice(category.price)}</span>
                             </span>
                             <span className="h-px flex-1 bg-fill-strong" />
@@ -589,7 +589,8 @@ export default function Seats() {
                               });
                               const recliner = row.seatType === "recliner";
                               return (
-                                <div key={row.label} className={`flex items-center justify-center gap-2 ${recliner ? "py-0.5" : ""}`}>
+                                <React.Fragment key={row.label}>
+                                <div className={`flex items-center justify-center gap-2 ${recliner ? "py-0.5" : ""}`}>
                                   <span className="w-5 text-center text-2xs font-semibold text-gray-500" aria-hidden="true">
                                     {row.label}
                                   </span>
@@ -616,6 +617,15 @@ export default function Seats() {
                                     {row.label}
                                   </span>
                                 </div>
+                                {/* A level cross-aisle runs in front of this row (towards the screen). */}
+                                {row.crossAisleBefore && (
+                                  <div className="flex items-center gap-3 py-1.5" aria-hidden="true" data-testid="cross-aisle-2d">
+                                    <span className="h-px flex-1 border-t border-dashed border-line-strong" />
+                                    <span className="text-3xs font-semibold uppercase tracking-[0.2em] text-gray-500">Cross-aisle</span>
+                                    <span className="h-px flex-1 border-t border-dashed border-line-strong" />
+                                  </div>
+                                )}
+                                </React.Fragment>
                               );
                             })}
                           </div>
@@ -639,7 +649,7 @@ export default function Seats() {
             {/* Legend */}
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-line px-4 py-4 text-xs text-gray-400">
               <LegendItem className="border-white/25 bg-fill-subtle" label="Available" />
-              {premiumCategory && <LegendItem className="border-accent-400/60 bg-accent-500/[0.1]" label={`Premium (${premiumCategory})`} />}
+              {premiumCategory && <LegendItem className="border-accent-400/60 bg-accent-500/[0.1]" label="Premium" />}
               {layout.some((c) => c.rows.some((r) => r.seatType === "recliner")) && (
                 <LegendItem className="w-6 rounded-t-lg border-white/25 bg-fill-subtle" label="Recliner" />
               )}
@@ -772,9 +782,9 @@ function SeatButton({ seat, selected, premium, recliner, onToggle, heatColor = n
           ? `Seat ${seat.seatNumber}, reserved by another customer`
           : seat.isBooked
           ? `Seat ${seat.seatNumber}, booked`
-          : `Seat ${seat.seatNumber}, ${kind}${accessText}${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}${compared ? ", in comparison" : ""}`
+          : `Seat ${seat.seatNumber}, ${kind}${accessText}${categoryLabel(seat.category)}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}${compared ? ", in comparison" : ""}`
       }
-      title={seat.reserved ? `${seat.seatNumber} · Reserved` : seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${recliner ? "Recliner · " : ""}${seat.category} · ${formatPrice(seat.price)}`}
+      title={seat.reserved ? `${seat.seatNumber} · Reserved` : seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${recliner ? "Recliner · " : ""}${categoryLabel(seat.category)} · ${formatPrice(seat.price)}`}
       className={`${base} ${style}`}
       style={inline}
     >

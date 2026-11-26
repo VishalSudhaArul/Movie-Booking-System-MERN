@@ -1,5 +1,5 @@
 import React from "react";
-import { formatPrice } from "../lib/format";
+import { categoryLabel, formatPrice } from "../lib/format";
 
 /**
  * Reconciled figures from GET /api/analytics (server/utils/revenue.js):
@@ -103,7 +103,7 @@ export default function FinancePanels({ data }) {
             <tbody className="divide-y divide-line text-gray-200">
               {data.categories.map((c) => (
                 <tr key={c.category}>
-                  <td className="py-1.5 pr-2">{c.category}</td>
+                  <td className="py-1.5 pr-2">{categoryLabel(c.category)}</td>
                   <td className="py-1.5 pr-2">{c.ticketsSold}</td>
                   <td className="py-1.5 pr-2 font-mono">{formatPrice(c.gross)}</td>
                   <td className="py-1.5 font-mono">{formatPrice(c.net)}</td>

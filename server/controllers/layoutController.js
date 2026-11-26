@@ -47,6 +47,7 @@ const slug = (name) =>
 const cleanSpec = (body) => ({
   name: body && body.name,
   wheelchairSpaces: body && body.wheelchairSpaces,
+  ...(body && body.crossAisleBefore !== undefined && body.crossAisleBefore !== null ? { crossAisleBefore: body.crossAisleBefore } : {}),
   rows:
     body && Array.isArray(body.rows)
       ? body.rows.map((r) => ({ blocks: r && r.blocks, section: r && r.section, seatType: (r && r.seatType) || "standard" }))

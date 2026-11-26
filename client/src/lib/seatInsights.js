@@ -8,6 +8,7 @@
 // free here only when the server says it isn't booked or held by someone else.
 
 import { viewingInfo } from "./auditorium";
+import { categoryLabel } from "./format";
 
 // Seated eye to the top of the head, in metres (used for sightlines).
 const HEAD_ABOVE_EYE = 0.1;
@@ -301,7 +302,7 @@ export function heatmap(hall, mode) {
     const cats = [...new Set(all.map((s) => s.category))];
     const map = new Map(cats.map((c, i) => [c, CATEGORY_COLORS[i % CATEGORY_COLORS.length]]));
     all.forEach((s) => colors.set(s.seatNumber, map.get(s.category)));
-    return { colors, legend: { type: "categories", label: "Seat category", items: cats.map((c) => [c, map.get(c)]) } };
+    return { colors, legend: { type: "categories", label: "Seat category", items: cats.map((c) => [categoryLabel(c), map.get(c)]) } };
   }
   const def = METRIC[mode];
   if (!def) return { colors: null, legend: null };

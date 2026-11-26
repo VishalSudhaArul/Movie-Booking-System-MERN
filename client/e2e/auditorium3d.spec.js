@@ -260,7 +260,7 @@ test.describe("desktop and tablet", () => {
 
   test("3D selection → automatic hold → checkout → confirmed booking", async ({ page, request }, testInfo) => {
     const { showId } = await open3D(page);
-    // Two balcony seats that are still free on the server (this test really books them).
+    // Two premium (back-row) seats that are still free on the server (this test really books them).
     const free = Object.values(await serverSeats(request, showId))
       .filter((s) => /^[CD]\d+$/.test(s.seatNumber) && !s.isBooked && !s.isHeld)
       .map((s) => s.seatNumber);
@@ -277,7 +277,8 @@ test.describe("desktop and tablet", () => {
     for (const n of seats) {
       await expect(panel(page)).toContainText(n);
     }
-    await expect(panel(page)).toContainText("Balcony");
+    await expect(panel(page)).toContainText("Premium");
+    await expect(panel(page)).not.toContainText("Balcony"); // no balcony anywhere for customers
     await expect(panel(page)).toContainText("₹640"); // 2 × ₹320
     await expect(panel(page)).toContainText("2 tickets");
     // The hold is placed automatically and the countdown starts at ~8 minutes.

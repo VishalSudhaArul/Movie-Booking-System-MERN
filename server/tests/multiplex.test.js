@@ -51,14 +51,14 @@ describe.each(MULTIPLEX_CAPACITIES)("multiplex-%i layout", (capacity) => {
     expect(layout.rows[layout.rows.length - 1].seats).toBeGreaterThanOrEqual(layout.rows[0].seats);
   });
 
-  test("stadium rake: flat front rows, then every row higher, the back rising most", () => {
+  test("stadium rake: flat front row (step-free), then every row higher, the back rising most", () => {
     const risers = layout.rows.map((r) => r.riser);
-    expect(risers.slice(0, 2)).toEqual([0, 0]);
-    risers.slice(2).forEach((r, i, list) => {
+    expect(risers[0]).toBe(0);
+    risers.slice(1).forEach((r, i, list) => {
       expect(r).toBeGreaterThan(0);
       if (i > 0) expect(r).toBeGreaterThanOrEqual(list[i - 1]);
     });
-    expect(risers[risers.length - 1]).toBeGreaterThan(risers[2] * 2);
+    expect(risers[risers.length - 1]).toBeGreaterThan(risers[1] * 2);
     const backFloor = risers.reduce((a, b) => a + b, 0);
     expect(backFloor + 2.5).toBeLessThan(layout.room.height); // headroom over the back row
   });
