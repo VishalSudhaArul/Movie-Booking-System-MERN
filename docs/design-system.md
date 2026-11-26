@@ -55,13 +55,33 @@ text; they are below 3:1.
 | --- | --- | --- |
 | `border-line-subtle` | 5% | Nested dividers |
 | `border-line` | 8% | Card borders, section dividers |
-| `border-line-strong` | 14% | Control borders (buttons, inputs, chips) |
+| `border-line-strong` | 14% | Button and chip borders |
+| `--line-control` | 36% | Input and select borders (applied by `.input` / `.select`) |
 | `bg-fill-subtle` | 3% | Table header, row hover |
 | `bg-fill` | 5% | Ghost hover, quiet buttons |
 | `bg-fill-strong` | 8% | Secondary buttons, selected list items |
 | `bg-fill-emphasis` | 12% | Selected segment, count pills |
 
 These have no `/opacity` modifier; pick the step instead.
+
+Input borders use `--line-control` because WCAG 1.4.11 (non-text contrast)
+needs 3:1 between a form control's boundary and the surface around it. The old
+14% border measured 1.40:1; 36% measures 3.21–3.32:1 on every surface while
+staying quiet. Card and divider borders are decorative and keep `line`/`line-strong`.
+
+### Measured contrast
+
+`node client/scripts/contrast-report.js` reads the tokens from `src/index.css`
+and checks every pair below for all five themes (it exits non-zero on a failure).
+Latest run: **69/69 pairs meet WCAG AA**.
+
+| Pair | Lowest measured | Needs |
+| --- | --- | --- |
+| Text roles (`fg-*`) on every surface | 5.13:1 (`fg-subtle` on overlay) | 4.5:1 |
+| `on-brand` text on `brand-solid` | 4.81:1 (Electric Blue) | 4.5:1 |
+| `brand-300` links on every surface, all themes | above 4.5:1 in every theme | 4.5:1 |
+| `brand-400` focus ring on every surface, all themes | 4.91:1 (Crimson Red) | 3:1 |
+| `--line-control` input borders on every surface | 3.21:1 (canvas) | 3:1 |
 
 ### Accents (themed)
 
@@ -90,6 +110,11 @@ icon or a word; never rely on colour alone.
 
 Seat states on the 2D map and in the 3D hall keep their own fixed palette
 (`pages/Seats.jsx`, `components/cinema3d/`).
+
+Seat heatmaps (`lib/seatInsights.js`) use the colour-blind-safe viridis scale
+for measured values and Okabe–Ito colours for categories; speaker markers and
+admin hall plans use Okabe–Ito too. A heatmap only recolours free seats, so a
+taken seat never looks bookable. Every heatmap has a text legend.
 
 ## 2. Typography
 
@@ -207,6 +232,16 @@ Every interactive component has:
 - **active**: `scale-press` on buttons and chips
 - **disabled**: 50% opacity, `not-allowed` cursor, no hover or press change
 - **loading** (buttons): spinner, label kept or replaced by `loadingText`, `aria-busy`
+
+### Virtual Cinema components
+
+| Component | File | Notes |
+| --- | --- | --- |
+| Seat advisor | `components/SeatAdvisor.jsx` | Tabs (Recommend / Heatmap / Compare); chips, steppers and a comparison table; shared by the 2D map and 3D hall |
+| Hall plan | `components/HallPreview.jsx` | Read-only plan with a text summary (`role="img"` + label) |
+| Finding your seat | `components/VenueGuide.jsx` | Row, seat, nearest door and published venue places |
+| Finance panels | `components/FinancePanels.jsx` | Reconciliation, occupancy, categories, food, trend |
+| Walk-through HUD and joystick | `components/cinema3d/WalkMode.jsx` | Keyboard (WASD/arrows/Q/E/Esc) and touch joystick |
 
 ## 7. Themes
 

@@ -450,8 +450,8 @@ test("opening and closing the 500-seat hall repeatedly doesn't leak, and Lite mo
     lite: { drawCalls: lite.drawCalls, triangles: lite.triangles, ...liteFrames },
   });
   expect(lite.drawCalls).toBeLessThan(first.drawCalls + 1);
-  // Back to full quality for other tests.
-  await page.getByRole("button", { name: "Lite" }).click();
+  // Back to the balanced default for other tests.
+  await page.getByRole("button", { name: "Balanced" }).click();
   await waitFirstFrame(page);
 });
 

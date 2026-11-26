@@ -56,3 +56,4 @@ This document outlines the feature recommendations and enhancement roadmap for t
 - [x] Booking Analytics CSV Export
 - [x] Standalone F&B Express Pantry (Theater & Movie filtered Food & Beverage ordering + Digital Snack Pass QR)
 - [x] 4K 60FPS AI Motion Controller Launch Trailer (MediaPipe 21-Joint Holographic Hand Skeleton Tracking + Web Audio SFX Engine)
+- [x] Virtual Cinema 2.0 (Phases 0–11): 3D stadium halls, walk-through mode, seat advisor (recommendations, heatmaps, comparison), speaker layout, accessible seating and ticket wayfinding, admin layout editor, venues, promotions and review moderation, reconciled analytics, graphics quality levels — see `docs/virtual-cinema.md`

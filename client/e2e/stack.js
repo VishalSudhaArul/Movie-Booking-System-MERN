@@ -106,6 +106,22 @@ async function seed() {
     await Parking.create({ theatre, priceBike: 30, priceCar: 80 });
   }
 
+  // Venue directions for IMAX only, so tickets show both cases: published
+  // directions, and a theatre (KS Cinemas) that hasn't published any.
+  await model("Venue").create({
+    name: "IMAX",
+    key: "imax",
+    address: "12 Lake View Road",
+    mapUrl: "https://maps.example.com/imax",
+    entryInstructions: "Show your QR code at the main gate, then take the escalator to level 2.",
+    points: [
+      { kind: "entrance", label: "Main gate", directions: "Ground floor, facing the car park" },
+      { kind: "food", label: "Snack counter", directions: "Level 2, opposite the escalator" },
+      { kind: "restroom", label: "Restrooms", directions: "Level 2, past the snack counter" },
+      { kind: "accessible", label: "Lift", directions: "Next to the main gate, to all levels" },
+    ],
+  });
+
   await Review.create([
     { movieId: movies[0]._id, userId: user._id, userName: "Riya Sharma", rating: 5, comment: "Stunning visuals and a great score." },
     { movieId: movies[1]._id, userId: user._id, userName: "Riya Sharma", rating: 4, comment: "Clever twists, a bit long." },
