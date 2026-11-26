@@ -44,6 +44,9 @@ function standardChair(seatWidth) {
     place(new BoxGeometry(0.05, 0.62, 0.08), { x: -armX, y: 0.31, z: 0.12 }),
     place(new BoxGeometry(w * 0.5, 0.05, 0.36), { y: 0.025, z: 0.08 }),
     place(new CylinderGeometry(0.035, 0.05, 0.38, 10), { y: 0.21, z: 0.06 }),
+    // Cup holders set into the front of both armrests.
+    place(new CylinderGeometry(0.04, 0.034, 0.06, 12, 1, true), { x: armX, y: 0.68, z: -0.17 }),
+    place(new CylinderGeometry(0.04, 0.034, 0.06, 12, 1, true), { x: -armX, y: 0.68, z: -0.17 }),
   ]);
   return { upholstery, frame };
 }
@@ -63,7 +66,9 @@ function reclinerChair(seatWidth) {
   ]);
   const frame = merge([
     place(new BoxGeometry(w * 0.96, 0.1, 0.8), { y: 0.05, z: 0.08 }),
-    place(rounded(0.1, 0.04, 0.14, 0.02), { x: w / 2 - armW / 2, y: 0.69, z: -0.18 }),
+    // Cup holders in both padded arms.
+    place(new CylinderGeometry(0.045, 0.038, 0.06, 12, 1, true), { x: w / 2 - armW / 2, y: 0.69, z: -0.18 }),
+    place(new CylinderGeometry(0.045, 0.038, 0.06, 12, 1, true), { x: -(w / 2 - armW / 2), y: 0.69, z: -0.18 }),
   ]);
   return { upholstery, frame };
 }

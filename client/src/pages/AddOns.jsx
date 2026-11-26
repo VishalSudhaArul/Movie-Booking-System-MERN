@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { QRCodeCanvas } from "qrcode.react";
 import API from "../api";
 import Icon from "../components/ui/Icon";
+import VenueGuide from "../components/VenueGuide";
 import Poster from "../components/Poster";
 import { ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
@@ -301,6 +302,10 @@ function AddOns() {
                 <dd className="mt-0.5 break-all font-mono text-xs text-gray-300">{booking._id}</dd>
               </div>
             </dl>
+          </div>
+
+          <div className="px-6 pb-6">
+            <VenueGuide showId={showId} theatre={show.theatre} screenName={show.screenName} seats={booking.seats || selectedSeats} />
           </div>
 
           <div className="grid gap-2 border-t border-line p-4 sm:grid-cols-2">

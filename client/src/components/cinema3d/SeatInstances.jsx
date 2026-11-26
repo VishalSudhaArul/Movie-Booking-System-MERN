@@ -44,7 +44,7 @@ const white = new Color("#ffffff");
  * All seats of one chair type, drawn with two instanced meshes (upholstery and
  * frame). Hover and click resolve the seat from the instance id.
  */
-function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows }) {
+function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows, overrideColors, highlightSet }) {
   const upholsteryRef = useRef();
   const frameRef = useRef();
   const invalidate = useThree((s) => s.invalidate);
@@ -72,13 +72,17 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
     if (!upholsteryRef.current) return;
     seats.forEach((seat, i) => {
       const state = seatState(seat, selectedSet.has(seat.seatNumber), premiumCategory);
-      color.set(colors[state]);
-      if (hoveredSeat === seat.seatNumber && state !== "booked" && state !== "reserved") color.lerp(white, HOVER_LIFT);
+      // A heatmap recolours free seats only: taken seats stay "unavailable" and
+      // the user's own picks stay "selected" in every heatmap.
+      const heat = overrideColors && (state === "available" || state === "premium") ? overrideColors.get(seat.seatNumber) : null;
+      color.set(heat || colors[state]);
+      const taken = state === "booked" || state === "reserved";
+      if (!taken && (hoveredSeat === seat.seatNumber || highlightSet?.has(seat.seatNumber))) color.lerp(white, HOVER_LIFT);
       upholsteryRef.current.setColorAt(i, color);
     });
     if (upholsteryRef.current.instanceColor) upholsteryRef.current.instanceColor.needsUpdate = true;
     invalidate();
-  }, [seats, colors, selectedSet, premiumCategory, hoveredSeat, invalidate]);
+  }, [seats, colors, selectedSet, premiumCategory, hoveredSeat, invalidate, overrideColors, highlightSet]);
 
   if (seats.length === 0) return null;
 
@@ -115,7 +119,7 @@ function ChairGroup({ seats, geo, colors, selectedSet, premiumCategory, hoveredS
   );
 }
 
-export default function SeatInstances({ hall, selected, premiumCategory, hoveredSeat, onHover, onPick, shadows }) {
+export default function SeatInstances({ hall, selected, premiumCategory, hoveredSeat, onHover, onPick, shadows, overrideColors = null, highlight = null }) {
   const geos = useMemo(() => buildChairGeometries(hall.geometry), [hall.geometry]);
   // Released when the hall changes or the 3D view closes.
   useEffect(
@@ -137,7 +141,8 @@ export default function SeatInstances({ hall, selected, premiumCategory, hovered
   }, [hall]);
 
   const colors = useSeatColors();
-  const shared = { colors, selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows };
+  const highlightSet = useMemo(() => (highlight && highlight.length ? new Set(highlight) : null), [highlight]);
+  const shared = { colors, selectedSet, premiumCategory, hoveredSeat, onHover, onPick, shadows, overrideColors, highlightSet };
   return (
     <group>
       <ChairGroup seats={standard} geo={geos.standard} {...shared} />

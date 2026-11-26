@@ -62,7 +62,7 @@ function useCurvedScreen(width, height, curve) {
   }, [width, height, curve]);
 }
 
-export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowPower = false, shadows, topView = false }) {
+export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowPower = false, shadows, shadowMapSize = 1024, topView = false }) {
   const { room, screen, geometry: g } = hall;
   const theme = useThemeColors(["brand-300", "brand-500", "accent-400"]);
   const STEP_LIGHT = theme["brand-300"];
@@ -146,6 +146,31 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
   }, [backZ, halfW, hall, COVE, COVE_VIOLET]);
   const projectorY = Math.min(room.height - 1.6, Math.max(maxFloor, 4) + 3.2);
 
+  // Door leaves, frames and exit signs, from the layout's configured doors.
+  const doorParts = useMemo(() => {
+    const leaves = [];
+    const frames = [];
+    const signs = [];
+    (hall.doors || []).forEach((d) => {
+      const x = Math.sign(d.x) * (halfW - 0.04);
+      const y0 = d.floorY || 0;
+      const ry = [0, Math.PI / 2, 0];
+      leaves.push({ p: [x, y0 + 1.1, d.z], s: [1.4, 2.2, 0.06], r: ry });
+      frames.push({ p: [x, y0 + 2.25, d.z], s: [1.6, 0.06, 0.08], r: ry });
+      [-1, 1].forEach((k) => frames.push({ p: [x, y0 + 1.12, d.z + k * 0.78], s: [0.06, 2.25, 0.08], r: ry }));
+      signs.push({ p: [Math.sign(d.x) * (halfW - 0.08), y0 + 2.6, d.z], s: [0.6, 0.22, 0.03], r: ry });
+    });
+    return { leaves, frames, signs };
+  }, [hall, halfW]);
+
+  const wheelchairMarks = useMemo(
+    () =>
+      hall.rows.flatMap((r) =>
+        r.seats.filter((s) => s.wheelchair).map((s) => ({ p: [s.x, s.floorY + 0.012, s.z - 0.55], s: [s.seatWidth * 0.8, 0.5, 1], r: [-Math.PI / 2, 0, 0] }))
+      ),
+    [hall]
+  );
+
   return (
     <group>
       {/* Lighting: dim house lights, light from the screen, a soft key light. */}
@@ -171,7 +196,7 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         decay={1.4}
         color="#c9d6ff"
         castShadow={shadows}
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[shadowMapSize, shadowMapSize]}
         shadow-bias={-0.0004}
       />
       {/* Two wall-wash lights; the sconces below are glowing fixtures, not
@@ -288,18 +313,26 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         <meshBasicMaterial color={STEP_LIGHT} toneMapped={false} />
       </Instances>
 
-      {/* Exit signs over the doors */}
-      {[
-        [-(halfW - 0.6), 3.1, 3.2],
-        [halfW - 0.6, 3.1, 3.2],
-        [-(halfW - 0.6), floorAt(stallsEndZ - 0.5) + 3.1, stallsEndZ - 0.5],
-        [halfW - 0.6, floorAt(stallsEndZ - 0.5) + 3.1, stallsEndZ - 0.5],
-      ].map((p, i) => (
-        <mesh key={`exit-${i}`} position={p} rotation-y={p[0] < 0 ? Math.PI / 2 : -Math.PI / 2}>
-          <planeGeometry args={[0.6, 0.22]} />
-          <meshBasicMaterial color={EXIT_GREEN} toneMapped={false} side={DoubleSide} />
-        </mesh>
-      ))}
+      {/* Doors from the layout: a dark door leaf in a lit frame, with a green
+          exit sign above. Halls without configured doors draw none. */}
+      <Instances items={doorParts.leaves}>
+        <boxGeometry />
+        <meshStandardMaterial color="#0c1122" roughness={0.6} metalness={0.2} />
+      </Instances>
+      <Instances items={doorParts.frames}>
+        <boxGeometry />
+        <meshBasicMaterial color={STEP_LIGHT} toneMapped={false} />
+      </Instances>
+      <Instances items={doorParts.signs}>
+        <boxGeometry />
+        <meshBasicMaterial color={EXIT_GREEN} toneMapped={false} />
+      </Instances>
+
+      {/* Wheelchair spaces: a blue floor marking in front of each configured seat */}
+      <Instances items={wheelchairMarks}>
+        <planeGeometry />
+        <meshBasicMaterial color="#2f7df6" transparent opacity={0.85} toneMapped={false} />
+      </Instances>
 
       {/* Projection booth window and a faint beam towards the screen */}
       <mesh position={[0, projectorY, backZ - 0.05]} rotation-y={Math.PI}>

@@ -27,6 +27,9 @@
   --line-subtle: rgb(255 255 255 / 0.05);
   --line: rgb(255 255 255 / 0.08);
   --line-strong: rgb(255 255 255 / 0.14);
+  /* Borders that identify a form control (inputs, selects). WCAG 1.4.11 needs
+     3:1 against the surface around them: 36% white gives 3.2–3.3:1 on every surface. */
+  --line-control: rgb(255 255 255 / 0.36);
   --fill-subtle: rgb(255 255 255 / 0.03);
   --fill: rgb(255 255 255 / 0.05);
   --fill-strong: rgb(255 255 255 / 0.08);
@@ -377,11 +380,12 @@
     @apply mb-1.5 block text-xs font-semibold text-fg-muted;
   }
   .input {
-    @apply w-full rounded-control border border-line-strong bg-surface-sunken/80 px-4 py-3 text-sm text-fg
+    @apply w-full rounded-control border bg-surface-sunken/80 px-4 py-3 text-sm text-fg
       placeholder-gray-500 transition duration-base ease-standard
-      hover:border-white/25
+      hover:border-white/50
       focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25
       disabled:cursor-not-allowed disabled:opacity-60;
+    border-color: var(--line-control);
   }
   .input-error {
     @apply border-danger-500/70 focus:border-danger-500 focus:ring-danger-500/25;

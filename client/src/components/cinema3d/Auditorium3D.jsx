@@ -5,10 +5,14 @@ import { Box3, MathUtils, Vector3 } from "three";
 import HallScene from "./HallScene";
 import { TrailerControls, useScreenTrailer } from "./ScreenTrailer";
 import SeatInstances, { seatState, useSeatColors } from "./SeatInstances";
+import SoundLayout from "./SoundLayout";
+import { TouchJoystick, WalkControls, useWalkInput, useWalkKeys } from "./WalkMode";
 import Icon from "../ui/Icon";
 import HoldCountdown from "../HoldCountdown";
 import { Spinner } from "../ui/Feedback";
-import { buildAuditorium, viewingInfo } from "../../lib/auditorium";
+import { buildAuditorium, nearestDoor, viewingInfo } from "../../lib/auditorium";
+import { routeToSeat, walkArea } from "../../lib/walkway";
+import { SPEAKER_KINDS, SPEAKER_NOTE } from "../../lib/speakers";
 import { formatPrice } from "../../lib/format";
 import { getRendererName } from "../../lib/webgl";
 
@@ -86,6 +90,20 @@ const VIEWS = [
   ["map", "Seat map"],
 ];
 const BLOCK_LABEL = { left: "Left block", centre: "Centre block", right: "Right block" };
+// Graphics quality levels (see Seats.jsx for how the default is chosen).
+export const QUALITY_LEVELS = [
+  ["high", "High", "Sharpest image and detailed shadows. For fast computers."],
+  ["balanced", "Balanced", "Good image and shadows. Suits most devices."],
+  ["lite", "Lite", "Lite mode: lower resolution, no shadows. For slower devices."],
+];
+const QUALITY = {
+  high: { shadows: true, shadowMap: 2048, dpr: [1, 2], antialias: true },
+  balanced: { shadows: true, shadowMap: 1024, dpr: [1, 1.5], antialias: true },
+  lite: { shadows: false, shadowMap: 512, dpr: 1, antialias: false },
+};
+/** Accessibility notes for a seat, from the hall's configured data only. */
+const seatAccess = (seat) =>
+  [seat.wheelchair && "Wheelchair space", seat.companion && "Companion seat", seat.aisleSeat && "Aisle seat"].filter(Boolean);
 
 /** Records when the first frame was actually drawn (startup diagnostics). */
 function FirstFrame({ onFirstFrame }) {
@@ -178,9 +196,16 @@ export default function Auditorium3D({
   moviePoster,
   trailerUrl,
   reducedMotion = false,
-  lowPower = false,
-  onToggleLite,
+  quality = "balanced",
+  onQualityChange,
+  heatmapColors = null,
+  highlight = null,
+  compareMode = false,
+  onCompare,
+  previewRequest = null,
 }) {
+  const q = QUALITY[quality] || QUALITY.balanced;
+  const lowPower = quality === "lite";
   // The movie's trailer on the big screen (poster when there's none).
   const trailer = useScreenTrailer(trailerUrl, { reducedMotion, lowPower });
   // Startup timings (ms since page start): mounted → canvas created → first frame.
@@ -224,7 +249,20 @@ export default function Auditorium3D({
   const lastPickedRef = useRef(null);
   const prevSelectedRef = useRef(selected);
   const animate = !reducedMotion;
-  const shadows = !lowPower;
+  const shadows = q.shadows;
+
+  /* ---------- Walk-through and sound layout ---------- */
+  const area = useMemo(() => walkArea(hall), [hall]);
+  const [walking, setWalking] = useState(false);
+  const [walkLabel, setWalkLabel] = useState("");
+  const [walkMsg, setWalkMsg] = useState("");
+  const [arrivedSeat, setArrivedSeat] = useState(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const walkInput = useWalkInput();
+  const walkApi = useRef(null);
+  // Where the orbit camera resumes after walking, and a seat to preview once it's back.
+  const resumeRef = useRef(null);
+  const pendingSeatRef = useRef(null);
 
   const controls = () => controlsRef.current;
   const handleSceneReady = useCallback((s) => {
@@ -331,9 +369,75 @@ export default function Auditorium3D({
         finishIntro();
         setMode((m) => (m === "seat" ? m : "free"));
       });
+      // Coming back from walk mode: carry on from where the visitor stood.
+      if (resumeRef.current) {
+        c.setFocalOffset(0, 0, 0, false);
+        c.setLookAt(...resumeRef.current.pos, ...resumeRef.current.target, false);
+        resumeRef.current = null;
+      }
+      if (pendingSeatRef.current) {
+        const seat = pendingSeatRef.current;
+        pendingSeatRef.current = null;
+        requestAnimationFrame(() => enterSeatView(seat));
+      }
     },
-    [animate, freeLimits, presets, introDone, finishIntro, panelOffset]
+    [animate, freeLimits, presets, introDone, finishIntro, panelOffset, enterSeatView]
   );
+
+  const enterWalk = useCallback(() => {
+    finishIntro();
+    setHover(null);
+    setSheetOpen(false);
+    setWalkMsg("");
+    setArrivedSeat(null);
+    controlsRef.current = null; // the orbit controls unmount while walking
+    setViewSeat(null);
+    setMode("walk");
+    setWalking(true);
+    // Bring the whole hall on screen, so the joystick and view are both in reach.
+    // (84 px clears the sticky site header, as in the scroll intro.)
+    const el = stageRef.current;
+    if (el) window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - 84), behavior: animate ? "smooth" : "auto" });
+  }, [finishIntro, animate]);
+
+  const exitWalk = useCallback((thenSeat = null) => {
+    const pose = walkApi.current?.getPose();
+    if (pose) {
+      const ahead = [pose.x - Math.sin(pose.yaw) * 2, pose.y + Math.sin(pose.pitch) * 2, pose.z - Math.cos(pose.yaw) * 2];
+      resumeRef.current = { pos: [pose.x, pose.y, pose.z], target: ahead };
+    }
+    pendingSeatRef.current = thenSeat;
+    setWalking(false);
+    setWalkMsg("");
+    setArrivedSeat(null);
+    setMode("free");
+  }, []);
+  const exitWalkKey = useCallback(() => exitWalk(), [exitWalk]);
+  const kickWalk = useCallback(() => walkApi.current?.kick(), []);
+  useWalkKeys(walking, walkInput, exitWalkKey, kickWalk);
+
+  // The seat to walk to: the one being previewed, else the first one selected.
+  const walkTarget = viewSeat || (selected.length ? hall.seatIndex.get(selected[0]) : null);
+  const walkToSeat = () => {
+    const seat = walkTarget;
+    const api = walkApi.current;
+    if (!seat || !api) return;
+    const route = routeToSeat(area, api.getPose(), seat);
+    if (!route.length) {
+      setWalkMsg(`${seat.seatNumber} is in the balcony, which has its own stairs. Walk mode covers the stalls; preview the view from the seat instead.`);
+      return;
+    }
+    setWalkMsg(`Walking to ${seat.seatNumber}...`);
+    setArrivedSeat(null);
+    api.walkTo(route, () => {
+      api.face(seat.x, seat.z);
+      const row = hall.rows.find((r) => r.seats.includes(seat));
+      const block = row ? row.seats.filter((x) => x.block === seat.block) : [];
+      const fromEnd = block.length ? Math.min(seat.index - block[0].index, block[block.length - 1].index - seat.index) : 0;
+      setWalkMsg(`You're beside row ${row?.label}. ${seat.seatNumber} is ${fromEnd === 0 ? "the aisle seat" : `${fromEnd + 1} seats in from the aisle`}.`);
+      setArrivedSeat(seat);
+    });
+  };
 
   // The wheel zooms once the intro has finished (during it, scrolling flies the
   // camera in). At the zoom limits the wheel scrolls the page again, so the
@@ -417,12 +521,26 @@ export default function Auditorium3D({
   const handlePick = useCallback(
     (seat) => {
       if (seat.isBooked) return; // booked or reserved by someone else
+      if (compareMode && onCompare) {
+        onCompare(seat);
+        return;
+      }
       lastPickedRef.current = seat.seatNumber;
       finishIntro();
       onToggle(seat);
     },
-    [onToggle, finishIntro]
+    [onToggle, finishIntro, compareMode, onCompare]
   );
+
+  // "Preview the view" requests from outside (seat advisor, compare tray).
+  useEffect(() => {
+    if (!previewRequest) return;
+    const seat = hall.seatIndex.get(previewRequest.seatNumber);
+    if (!seat) return;
+    finishIntro();
+    if (walking) exitWalk(seat);
+    else enterSeatView(seat);
+  }, [previewRequest]); // only when a new preview is requested
 
   // When a seat picked in 3D becomes selected, fly to it to show its view.
   useEffect(() => {
@@ -434,8 +552,9 @@ export default function Auditorium3D({
       const seat = hall.seatIndex.get(picked);
       if (seat) enterSeatView(seat);
     }
-    // Leave the seat view if that seat was deselected elsewhere.
-    if (viewSeat && !selected.includes(viewSeat.seatNumber) && !picked) exitSeatView();
+    // Leave the seat view if that seat was deselected elsewhere. (Previewing a
+    // seat that isn't selected, e.g. from the seat advisor, stays open.)
+    if (viewSeat && prev.includes(viewSeat.seatNumber) && !selected.includes(viewSeat.seatNumber) && !picked) exitSeatView();
   }, [selected, hall, enterSeatView, exitSeatView, viewSeat]);
 
   const handleHover = useCallback((seat, e) => {
@@ -474,6 +593,12 @@ export default function Auditorium3D({
           rows: hall.rows.length,
           layout: hall.id,
           trailer: trailer.status,
+          quality,
+          walking,
+          walkLabel,
+          walkPose: walking ? walkApi.current?.getPose() || null : null,
+          sound: soundOn,
+          doors: hall.doors.length,
         };
       },
       // Screen coordinates of a point on the cinema screen (u, v from -1 to 1).
@@ -510,13 +635,14 @@ export default function Auditorium3D({
     return () => {
       delete window.__cinema3d;
     };
-  }, [mode, introDone, viewSeat, hall, goTo, presets, trailer.status]);
+  }, [mode, introDone, viewSeat, hall, goTo, presets, trailer.status, quality, lowPower, walking, walkLabel, soundOn]);
 
   /* ---------- Keyboard navigation (when the 3D view has focus) ---------- */
 
   const KEY_STEP = MathUtils.degToRad(15);
   const onKeyDown = (e) => {
     if (e.target !== e.currentTarget) return; // typing in the seat finder, a button, etc.
+    if (walking) return; // walk mode has its own keys
     const c = controls();
     if (!c) return;
     const presetKeys = Object.fromEntries(VIEWS.map(([name], i) => [String(i + 1), [name, presets[name]]]));
@@ -603,15 +729,15 @@ export default function Auditorium3D({
         data-testid="auditorium-3d"
         tabIndex={0}
         role="region"
-        aria-label="3D auditorium. Use the arrow keys to look around, plus and minus to zoom, 1 to 5 for the Overview, Front, Centre, Rear and Seat map views, 0 to reset. Use the seat finder to pick seats by number."
+        aria-label="3D auditorium. Use the arrow keys to look around, plus and minus to zoom, 1 to 5 for the Overview, Front, Centre, Rear and Seat map views, 0 to reset. Use the seat finder to pick seats by number, or the Walk button to walk through the hall."
         onKeyDown={onKeyDown}
       >
         <Canvas
           frameloop={shadersReady ? "demand" : "never"}
           shadows={shadows ? "percentage" : false}
-          dpr={lowPower ? 1 : [1, 1.75]}
+          dpr={q.dpr}
           camera={{ fov: FOV, near: 0.05, far: 120, position: presets.stage.pos }}
-          gl={{ antialias: !lowPower, powerPreference: "high-performance" }}
+          gl={{ antialias: q.antialias, powerPreference: "high-performance" }}
           // Its own stacking context: a YouTube trailer raises the canvas's
           // z-index (see MovieScreen), which must never cover our overlays.
           style={{ isolation: "isolate" }}
@@ -630,8 +756,10 @@ export default function Auditorium3D({
             trailer={trailer.screen}
             lowPower={lowPower}
             shadows={shadows}
+            shadowMapSize={q.shadowMap}
             topView={mode === "map"}
           />
+          {soundOn && <SoundLayout hall={hall} />}
           <SeatInstances
             hall={hall}
             selected={selected}
@@ -640,10 +768,16 @@ export default function Auditorium3D({
             onHover={handleHover}
             onPick={handlePick}
             shadows={shadows}
+            overrideColors={heatmapColors}
+            highlight={highlight}
           />
           {/* After the hall and seats, so everything it compiles is already in the scene. */}
           <ShaderWarmup ready={shadersReady} onDone={onShadersDone} />
-          <CameraControls ref={onControlsReady} makeDefault />
+          {walking ? (
+            <WalkControls area={area} input={walkInput} apiRef={walkApi} onPosition={setWalkLabel} reducedMotion={reducedMotion} />
+          ) : (
+            <CameraControls ref={onControlsReady} makeDefault />
+          )}
         </Canvas>
 
         {/* Shown until the first frame has actually been drawn */}
@@ -663,7 +797,8 @@ export default function Auditorium3D({
           {VIEWS.map(([name, label], i) => (
             <button
               key={name}
-              className={`${toolbarBtn(mode === name)} shrink-0`}
+              className={`${toolbarBtn(mode === name)} shrink-0 disabled:opacity-40`}
+              disabled={walking}
               onClick={() => { finishIntro(); goTo(presets[name], name); }}
               aria-pressed={mode === name}
               aria-keyshortcuts={String(i + 1)}
@@ -671,25 +806,46 @@ export default function Auditorium3D({
               {label}
             </button>
           ))}
+          <button
+            className={`${toolbarBtn(walking)} flex shrink-0 items-center gap-1`}
+            onClick={() => (walking ? exitWalk() : enterWalk())}
+            aria-pressed={walking}
+            title="Walk through the auditorium in first person"
+          >
+            <Icon name="user" className="h-3.5 w-3.5" /> Walk
+          </button>
+          <button
+            className={`${toolbarBtn(soundOn)} flex shrink-0 items-center gap-1`}
+            onClick={() => setSoundOn((v) => !v)}
+            aria-pressed={soundOn}
+            title="Show the approximate speaker layout"
+          >
+            <Icon name="volume" className="h-3.5 w-3.5" /> Sound
+          </button>
           <span className="mx-1 h-5 w-px shrink-0 bg-fill-emphasis" aria-hidden="true" />
-          <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(3, animate); }} disabled={mode === "seat"} aria-label="Zoom in" title="Zoom in" aria-keyshortcuts="+">
+          <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(3, animate); }} disabled={mode === "seat" || walking} aria-label="Zoom in" title="Zoom in" aria-keyshortcuts="+">
             <Icon name="plus" className="h-4 w-4" />
           </button>
-          <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(-3, animate); }} disabled={mode === "seat"} aria-label="Zoom out" title="Zoom out" aria-keyshortcuts="-">
+          <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(-3, animate); }} disabled={mode === "seat" || walking} aria-label="Zoom out" title="Zoom out" aria-keyshortcuts="-">
             <Icon name="minus" className="h-4 w-4" />
           </button>
-          <button className={`${toolbarBtn(false)} flex shrink-0 items-center gap-1`} onClick={() => { finishIntro(); goTo(presets.overview, "overview"); }} aria-label="Reset view" title="Reset view" aria-keyshortcuts="0">
+          <button className={`${toolbarBtn(false)} flex shrink-0 items-center gap-1 disabled:opacity-40`} disabled={walking} onClick={() => { finishIntro(); goTo(presets.overview, "overview"); }} aria-label="Reset view" title="Reset view" aria-keyshortcuts="0">
             <Icon name="refresh" className="h-3.5 w-3.5" /> Reset
           </button>
-          {onToggleLite && (
-            <button
-              className={`${toolbarBtn(lowPower)} shrink-0`}
-              onClick={onToggleLite}
-              aria-pressed={lowPower}
-              title="Lite mode: lower resolution, no shadows. For slower devices."
-            >
-              Lite
-            </button>
+          {onQualityChange && (
+            <span className="ml-1 flex shrink-0 items-center gap-0.5 rounded-lg bg-fill-subtle p-0.5" role="group" aria-label="Graphics quality">
+              {QUALITY_LEVELS.map(([value, label, hint]) => (
+                <button
+                  key={value}
+                  className={`${toolbarBtn(quality === value)} shrink-0 px-2`}
+                  onClick={() => quality !== value && onQualityChange(value)}
+                  aria-pressed={quality === value}
+                  title={hint}
+                >
+                  {label}
+                </button>
+              ))}
+            </span>
           )}
         </div>
 
@@ -708,7 +864,7 @@ export default function Auditorium3D({
             </p>
           </div>
         ) : (
-          mode !== "seat" && !coarse && (
+          mode !== "seat" && !walking && !coarse && (
             <p className="pointer-events-none absolute bottom-3 left-3 hidden rounded-lg bg-ink-950/70 px-2.5 py-1.5 text-2xs text-gray-400 lg:block">
               Drag or arrow keys to look around · Scroll or +/− to zoom · 1–5 views, 0 resets · Click seats to select them
             </p>
@@ -716,7 +872,7 @@ export default function Auditorium3D({
         )}
 
         {/* Touch: explore mode toggle */}
-        {coarse && mode !== "seat" && (
+        {coarse && mode !== "seat" && !walking && (
           <div className="absolute right-2 top-14 md:bottom-3 md:left-3 md:right-auto md:top-auto">
             <button
               onClick={() => setTouchExplore((v) => !v)}
@@ -745,6 +901,8 @@ export default function Auditorium3D({
               {BLOCK_LABEL[hover.seat.block] ? `${BLOCK_LABEL[hover.seat.block]} · ` : ""}
               {hover.seat.category} · {formatPrice(hover.seat.price)} · <span className="text-gray-200">{STATE_LABEL[hoverState]}</span>
             </p>
+            {seatAccess(hover.seat).length > 0 && <p className="text-brand-200">{seatAccess(hover.seat).join(" · ")}</p>}
+            {compareMode && hoverState !== "booked" && hoverState !== "reserved" && <p className="text-gray-400">Click to add it to the comparison</p>}
           </div>
         )}
 
@@ -839,6 +997,58 @@ export default function Auditorium3D({
           </div>
         </aside>
 
+        {/* Walk-through HUD */}
+        {walking && (
+          <div className="glass absolute left-2 right-2 top-14 z-10 rounded-2xl p-3 md:bottom-3 md:left-3 md:right-auto md:top-auto md:w-[330px]" data-testid="walk-panel" aria-live="polite">
+            <p className="eyebrow">Walk-through</p>
+            <p className="mt-1 font-semibold text-white" data-testid="walk-position">{walkLabel || "Auditorium"}</p>
+            <p className="mt-1 hidden text-2xs text-gray-400 md:block">
+              W A S D or arrow keys to walk · Q / E or left / right to turn · drag to look · Shift to hurry · Esc to leave
+            </p>
+            <p className="mt-1 text-2xs text-gray-400 md:hidden">Use the joystick to walk and drag the view to look around.</p>
+            {walkMsg && <p className="mt-2 text-xs text-gray-200" role="status">{walkMsg}</p>}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button className="btn-primary btn-sm" onClick={walkToSeat} disabled={!walkTarget}>
+                <Icon name="pin" className="h-4 w-4" /> {walkTarget ? `Walk to ${walkTarget.seatNumber}` : "Select a seat to walk to it"}
+              </button>
+              {arrivedSeat && (
+                <button className="btn-secondary btn-sm" onClick={() => exitWalk(arrivedSeat)}>
+                  <Icon name="eye" className="h-4 w-4" /> Sit in {arrivedSeat.seatNumber}
+                </button>
+              )}
+              <button className="btn-ghost btn-sm" onClick={() => exitWalk()}>Leave walk mode</button>
+            </div>
+          </div>
+        )}
+        {walking && coarse && (
+          <div className="absolute bottom-36 left-3 z-10 md:bottom-3 md:left-[350px]">
+            <TouchJoystick input={walkInput} onMove={kickWalk} />
+          </div>
+        )}
+
+        {/* Approximate speaker layout */}
+        {soundOn && (
+          <div className="glass absolute left-2 top-24 z-10 max-w-[250px] rounded-2xl p-3 text-2xs text-gray-300" data-testid="sound-panel">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-white">Speaker layout · 7.1</p>
+              <button className={iconBtn} onClick={() => setSoundOn(false)} aria-label="Hide the speaker layout">
+                <Icon name="close" className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <ul className="mt-1.5 space-y-1">
+              {Object.entries(SPEAKER_KINDS).map(([kind, k]) => (
+                <li key={kind} className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: k.color }} aria-hidden="true" /> {k.label}
+                </li>
+              ))}
+              <li className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full border-2" style={{ borderColor: "#F0E442" }} aria-hidden="true" /> Estimated sweet spot
+              </li>
+            </ul>
+            <p className="mt-2 text-gray-400">{SPEAKER_NOTE}</p>
+          </div>
+        )}
+
         {/* First-person seat view */}
         {mode === "seat" && viewSeat && info && (
           <div className="glass absolute left-2 right-2 top-14 z-10 rounded-2xl p-3 md:bottom-3 md:left-3 md:right-[306px] md:top-auto md:w-[330px] md:p-4" aria-live="polite" data-testid="seat-view-panel">
@@ -873,6 +1083,7 @@ export default function Auditorium3D({
                 </div>
               </div>
             )}
+            <SeatAccessNote hall={hall} seat={viewSeat} />
             <p className="mt-3 hidden text-2xs text-gray-500 md:block">Drag or use the arrow keys to look around a little.</p>
             <button onClick={exitSeatView} className="btn-secondary btn-sm mt-2 w-full">
               <Icon name="arrowLeft" className="h-4 w-4" /> Back to the auditorium
@@ -884,5 +1095,22 @@ export default function Auditorium3D({
         {selected.length} of {maxSeats} seats selected{selected.length ? `: ${selected.join(", ")}` : ""}.
       </p>
     </div>
+  );
+}
+
+/** Accessibility notes and the nearest door for a seat (configured data only). */
+function SeatAccessNote({ hall, seat }) {
+  const exit = nearestDoor(hall, seat);
+  const notes = seatAccess(seat);
+  if (!exit && !notes.length) return null;
+  return (
+    <p className="mt-2 text-2xs text-gray-400" data-testid="seat-view-access">
+      {notes.length > 0 && <span className="text-brand-200">{notes.join(" · ")}. </span>}
+      {exit && (
+        <>
+          Nearest door: {exit.door.label} (about {exit.metres} m){exit.door.accessible ? ", step-free" : ""}.
+        </>
+      )}
+    </p>
   );
 }

@@ -49,6 +49,19 @@ export function isLowPowerDevice() {
   return cores <= 4 || memory <= 2 || !!saveData || isSoftwareRenderer();
 }
 
+/**
+ * Default 3D graphics quality for this device: "lite" for weak or software-
+ * rendered devices, "high" for computers with plenty of cores and memory and a
+ * fine pointer, otherwise "balanced". The user can always change it.
+ */
+export function defaultQuality() {
+  if (isLowPowerDevice()) return "lite";
+  const cores = navigator.hardwareConcurrency || 4;
+  const memory = navigator.deviceMemory || 4;
+  const coarse = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  return cores >= 8 && memory >= 8 && !coarse ? "high" : "balanced";
+}
+
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

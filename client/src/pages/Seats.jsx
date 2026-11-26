@@ -7,7 +7,9 @@ import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
 import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../lib/format";
 import { buildAuditorium } from "../lib/auditorium";
-import { hasWebGL, isLowPowerDevice, isNarrowScreen, prefersReducedMotion } from "../lib/webgl";
+import { defaultQuality, hasWebGL, isNarrowScreen, prefersReducedMotion } from "../lib/webgl";
+import { heatmap, recommendSeats } from "../lib/seatInsights";
+import SeatAdvisor from "../components/SeatAdvisor";
 import ErrorBoundary from "../components/ErrorBoundary";
 import HoldCountdown from "../components/HoldCountdown";
 import useSeatHold, { inBookingFlow, releaseHoldNow } from "../lib/useSeatHold";
@@ -67,16 +69,17 @@ export default function Seats() {
   const webgl = useMemo(() => hasWebGL(), []);
   const show3d = view === "3d" && webgl && !view3dFailed;
   const reducedMotion = useMemo(() => prefersReducedMotion(), []);
-  // Lite mode for the 3D hall: detected for weak devices, or chosen on the
-  // 3D toolbar (remembered on this device).
-  const detectedLowPower = useMemo(() => isLowPowerDevice(), []);
-  const [quality, setQuality] = useState(() => localStorage.getItem(QUALITY_KEY));
-  const lowPower = quality ? quality === "lite" : detectedLowPower;
-  const toggleLite = useCallback(() => {
-    const next = lowPower ? "full" : "lite";
+  // Graphics quality for the 3D hall (High / Balanced / Lite): chosen from the
+  // device's capability, or picked on the 3D toolbar (remembered on this device).
+  const [quality, setQualityState] = useState(() => {
+    const saved = localStorage.getItem(QUALITY_KEY);
+    if (saved === "full") return "balanced"; // the old "full quality" setting
+    return ["high", "balanced", "lite"].includes(saved) ? saved : defaultQuality();
+  });
+  const setQuality = useCallback((next) => {
     localStorage.setItem(QUALITY_KEY, next);
-    setQuality(next);
-  }, [lowPower]);
+    setQualityState(next);
+  }, []);
   const chooseView = (v) => {
     setView(v);
     localStorage.setItem(VIEW_KEY, v);
@@ -150,9 +153,10 @@ export default function Seats() {
 
   // Categories top-to-bottom (back of the hall first, screen at the bottom), each
   // with rows of seats. Rows, aisles and recliners come from the show's layout.
+  // The hall (seat positions, accessibility, doors) from the show's layout.
+  const hall = useMemo(() => (show?.seats ? buildAuditorium(show.layout, show.seats) : null), [show]);
   const layout = useMemo(() => {
     if (!show?.seats) return [];
-    const hall = buildAuditorium(show.layout, show.seats);
     if (hall) {
       const categories = [];
       [...hall.rows].reverse().forEach((row) => {
@@ -187,7 +191,7 @@ export default function Seats() {
       c.rows.forEach((r) => r.seats.sort((a, b) => numberOf(a.seatNumber) - numberOf(b.seatNumber)))
     );
     return categories;
-  }, [show]);
+  }, [show, hall]);
 
   const premiumCategory = useMemo(() => {
     if (layout.length < 2) return null;
@@ -201,8 +205,44 @@ export default function Seats() {
   const total = selectedObjects.reduce((sum, s) => sum + s.price, 0);
   const availableCount = (show?.seats || []).filter((s) => !s.isBooked).length;
 
+  /* ---------- Seat advisor: heatmap, comparison, previews ---------- */
+  const [heatMode, setHeatMode] = useState("availability");
+  const heat = useMemo(() => heatmap(hall, heatMode), [hall, heatMode]);
+  const [compare, setCompare] = useState([]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [previewRequest, setPreviewRequest] = useState(null);
+  const addToCompare = useCallback(
+    (seat) => {
+      setCompare((list) => {
+        if (list.includes(seat.seatNumber)) return list.filter((n) => n !== seat.seatNumber);
+        if (list.length >= 3) {
+          toast.info("You can compare up to three seats. Remove one first.");
+          return list;
+        }
+        return [...list, seat.seatNumber];
+      });
+    },
+    [toast]
+  );
+  const applySeats = (numbers) => {
+    if (show && !isUpcomingShow(show)) {
+      toast.info("This showtime has already started, so seats can't be booked.");
+      return;
+    }
+    const free = numbers.filter((n) => {
+      const s = hall?.seatIndex.get(n);
+      return s && (!s.isBooked || selectedSeats.includes(n));
+    });
+    setSelectedSeats(free.slice(0, MAX_SEATS));
+    setCompareMode(false);
+  };
+
   const toggleSeat = (seat) => {
     if (seat.isBooked) return;
+    if (compareMode) {
+      addToCompare(seat);
+      return;
+    }
     if (show && !isUpcomingShow(show)) {
       toast.info("This showtime has already started, so seats can't be booked.");
       return;
@@ -216,29 +256,11 @@ export default function Seats() {
     }
   };
 
-  // Pick the most central block of `count` adjacent free seats, preferring the middle rows.
+  // Pick the best `count` adjacent free seats by viewing geometry (see lib/seatInsights).
   const pickBestSeats = (count) => {
-    const rows = layout.flatMap((c) => c.rows);
-    const middle = (rows.length - 1) / 2;
-    let best = null;
-    rows.forEach((row, rowIndex) => {
-      const centre = (row.seats.length - 1) / 2;
-      for (let start = 0; start + count <= row.seats.length; start++) {
-        const block = row.seats.slice(start, start + count);
-        const adjacent = block.every(
-          (s, i) => !s.isBooked && (i === 0 || numberOf(s.seatNumber) - numberOf(block[i - 1].seatNumber) === 1)
-        );
-        if (!adjacent) continue;
-        const blockCentre = start + (count - 1) / 2;
-        // Keep groups on one side of the aisle whenever a row allows it.
-        const aisle = Math.ceil(row.seats.length / 2);
-        const splitByAisle = start < aisle && start + count > aisle ? 4 : 0;
-        const score = Math.abs(blockCentre - centre) + Math.abs(rowIndex - middle) * 1.5 + splitByAisle;
-        if (!best || score < best.score) best = { score, seats: block.map((s) => s.seatNumber) };
-      }
-    });
+    const best = hall ? recommendSeats(hall, { mode: "best", count, limit: 1 }).options[0] : null;
     if (best) {
-      setSelectedSeats(best.seats);
+      applySeats(best.seatNumbers);
       return;
     }
     const free = (show?.seats || []).filter((s) => !s.isBooked).map((s) => s.seatNumber);
@@ -506,8 +528,14 @@ export default function Seats() {
                   <div className="p-2 sm:p-3">
                     <Auditorium3D
                       // A new renderer when the quality changes (antialiasing is fixed at creation).
-                      key={lowPower ? "lite" : "full"}
-                      onToggleLite={toggleLite}
+                      key={quality}
+                      quality={quality}
+                      onQualityChange={setQuality}
+                      heatmapColors={heat.colors}
+                      highlight={compare}
+                      compareMode={compareMode}
+                      onCompare={addToCompare}
+                      previewRequest={previewRequest}
                       layout={show.layout}
                       seats={show.seats}
                       selected={selectedSeats}
@@ -524,7 +552,6 @@ export default function Seats() {
                       moviePoster={movie?.poster}
                       trailerUrl={movie?.trailerUrl}
                       reducedMotion={reducedMotion}
-                      lowPower={lowPower}
                     />
                   </div>
                 </Suspense>
@@ -578,6 +605,8 @@ export default function Seats() {
                                             recliner={recliner}
                                             selected={selectedSeats.includes(seat.seatNumber)}
                                             onToggle={toggleSeat}
+                                            heatColor={heat.colors ? heat.colors.get(seat.seatNumber) : null}
+                                            compared={compare.includes(seat.seatNumber)}
                                           />
                                         ))}
                                       </div>
@@ -617,7 +646,16 @@ export default function Seats() {
               <LegendItem className="border-brand-solid bg-brand-solid" label="Selected" />
               <LegendItem className="border-dashed border-sky-400/50 bg-sky-400/[0.08]" label="Reserved (someone is checking out)" />
               <LegendItem className="border-transparent bg-fill-strong" label="Booked" />
+              {hall?.accessibility?.configured && (
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-t-md rounded-b-[3px] border border-sky-300/70 text-[9px] font-bold text-sky-200" aria-hidden="true">♿</span>
+                  Wheelchair space
+                </span>
+              )}
             </div>
+            {hall?.accessibility?.configured && hall.accessibility.note && (
+              <p className="border-t border-line px-4 py-2 text-center text-2xs text-gray-500" data-testid="access-note">{hall.accessibility.note}</p>
+            )}
           </section>
 
           {/* ───────────── Summary (desktop) ───────────── */}
@@ -646,6 +684,27 @@ export default function Seats() {
             </div>
           </aside>
         </div>
+
+        {hall && (
+          <div className={`mt-6 ${show3d ? "" : "lg:max-w-[calc(100%-364px)]"}`}>
+            <SeatAdvisor
+              hall={hall}
+              selected={selectedSeats}
+              premiumCategory={premiumCategory}
+              maxSeats={MAX_SEATS}
+              onApply={applySeats}
+              onPreview={show3d ? (n) => setPreviewRequest({ seatNumber: n, at: Date.now() }) : null}
+              heatMode={heatMode}
+              onHeatMode={setHeatMode}
+              legend={heat.legend}
+              compare={compare}
+              onCompareChange={setCompare}
+              compareMode={compareMode}
+              onCompareMode={setCompareMode}
+              disabled={ended}
+            />
+          </div>
+        )}
       </div>
 
       {/* ───────────── Summary bar (mobile & tablet) ───────────── */}
@@ -669,22 +728,38 @@ export default function Seats() {
   );
 }
 
-function SeatButton({ seat, selected, premium, recliner, onToggle }) {
+// True for colours light enough that dark text reads better than white on them.
+const isLightColor = (hex) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.18;
+};
+
+function SeatButton({ seat, selected, premium, recliner, onToggle, heatColor = null, compared = false }) {
   const size = recliner ? "h-7 w-8 rounded-t-xl sm:h-8 sm:w-10" : "h-7 w-7 rounded-t-lg sm:h-8 sm:w-8";
   const base = `flex ${size} items-center justify-center rounded-b-[4px] border text-3xs font-semibold transition duration-150 sm:text-2xs`;
   const kind = recliner ? "recliner, " : "";
+  const access = [seat.wheelchair && "wheelchair space", seat.companion && "companion seat", seat.aisleSeat && "aisle seat"].filter(Boolean);
+  const accessText = access.length ? `${access.join(", ")}, ` : "";
   let style;
+  let inline;
   if (seat.reserved) {
     style = "cursor-not-allowed border-dashed border-sky-400/50 bg-sky-400/[0.08] text-transparent";
   } else if (seat.isBooked) {
     style = "cursor-not-allowed border-transparent bg-fill-strong text-transparent";
   } else if (selected) {
     style = "scale-105 border-brand-solid bg-brand-solid text-on-brand shadow-glow";
+  } else if (heatColor) {
+    // Heatmap: the colour shows the metric; the number is dark on light shades
+    // and white on dark ones, so it stays readable across the whole scale.
+    style = `border-white/30 ${isLightColor(heatColor) ? "text-ink-950" : "text-white"} hover:brightness-125`;
+    inline = { background: heatColor };
   } else if (premium) {
     style = "border-accent-400/60 bg-accent-500/[0.1] text-accent-200 hover:bg-accent-500/25";
   } else {
     style = "border-white/25 bg-fill-subtle text-gray-300 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white";
   }
+  if (seat.wheelchair && !seat.isBooked && !selected) style += " border-2 border-sky-300";
+  if (compared) style += " ring-2 ring-white ring-offset-1 ring-offset-ink-900";
 
   return (
     <button
@@ -697,10 +772,11 @@ function SeatButton({ seat, selected, premium, recliner, onToggle }) {
           ? `Seat ${seat.seatNumber}, reserved by another customer`
           : seat.isBooked
           ? `Seat ${seat.seatNumber}, booked`
-          : `Seat ${seat.seatNumber}, ${kind}${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}`
+          : `Seat ${seat.seatNumber}, ${kind}${accessText}${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}${compared ? ", in comparison" : ""}`
       }
       title={seat.reserved ? `${seat.seatNumber} · Reserved` : seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${recliner ? "Recliner · " : ""}${seat.category} · ${formatPrice(seat.price)}`}
       className={`${base} ${style}`}
+      style={inline}
     >
       {numberOf(seat.seatNumber)}
     </button>

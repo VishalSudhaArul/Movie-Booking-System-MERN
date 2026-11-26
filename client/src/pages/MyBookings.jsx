@@ -5,6 +5,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import API from "../api";
 import Icon from "../components/ui/Icon";
 import Modal from "../components/ui/Modal";
+import VenueGuide from "../components/VenueGuide";
 import Poster from "../components/Poster";
 import MovieCard from "../components/MovieCard";
 import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
@@ -293,6 +294,17 @@ function MyBookings() {
               <Detail label={amountLabel(openBooking)} value={formatPrice(openBooking.totalPrice)} />
               <Detail label="Booked on" value={formatDate(openBooking.createdAt)} />
             </dl>
+            {openBooking.showId?.screenName && (
+              <p className="mt-3 text-sm text-gray-300">Auditorium: <span className="font-semibold text-white">{openBooking.showId.screenName}</span></p>
+            )}
+            <div className="mt-4">
+              <VenueGuide
+                showId={openBooking.showId?._id}
+                theatre={openBooking.showId?.theatre}
+                screenName={openBooking.showId?.screenName}
+                seats={openBooking.seats || []}
+              />
+            </div>
             <p className="mt-4 break-all border-t border-dashed border-line-strong pt-3 font-mono text-2xs text-gray-500">
               Booking ID: {openBooking._id}
             </p>
