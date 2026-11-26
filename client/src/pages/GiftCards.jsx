@@ -24,7 +24,7 @@ export default function GiftCards() {
   const active = THEMES.find((t) => t.id === theme);
 
   return (
-    <main id="main" className="container-page space-y-8 py-8 sm:py-10">
+    <main id="main" className="container-page page page-enter space-y-8">
       <PageHeader
         eyebrow="Gift cards"
         title="Gift a night at the movies"
@@ -42,11 +42,11 @@ export default function GiftCards() {
         {/* Live preview */}
         <div className="space-y-4">
           <div
-            className={`relative aspect-[1.6/1] overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br ${active.className} p-6 shadow-glow sm:p-8`}
+            className={`relative aspect-[1.6/1] overflow-hidden rounded-3xl border border-line-strong bg-gradient-to-br ${active.className} p-6 shadow-glow sm:p-8`}
             role="img"
             aria-label={`Gift card preview: ${active.name} design, ${formatPrice(amount)}${recipientName ? `, for ${recipientName}` : ""}`}
           >
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" aria-hidden="true" />
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-fill-emphasis blur-2xl" aria-hidden="true" />
             <div className="relative flex h-full flex-col justify-between">
               <div className="flex items-start justify-between">
                 <span className="flex items-center gap-2 font-display text-lg font-bold text-white">
@@ -68,7 +68,7 @@ export default function GiftCards() {
                 role="radio"
                 aria-checked={theme === t.id}
                 onClick={() => setTheme(t.id)}
-                className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-sm transition ${theme === t.id ? "border-brand-500 bg-brand-500/10 text-white" : "border-white/10 text-gray-400 hover:text-white"}`}
+                className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-sm transition ${theme === t.id ? "border-brand-500 bg-brand-500/10 text-white" : "border-line-strong text-gray-400 hover:text-white"}`}
               >
                 <span className={`h-6 w-6 shrink-0 rounded-md bg-gradient-to-br ${t.className}`} aria-hidden="true" />
                 {t.name}

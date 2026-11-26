@@ -18,7 +18,7 @@ export default function MovieCard({ movie, onPlayTrailer }) {
 
   return (
     <article className="group relative flex flex-col">
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.07] shadow-card transition duration-300 group-hover:-translate-y-1 group-hover:border-white/20">
+      <div className="relative overflow-hidden rounded-2xl border border-line shadow-card transition duration-300 group-hover:-translate-y-1 group-hover:border-white/20">
         <Link to={`/movies/${movie._id}`} aria-label={`${movie.title} — view details`} className="block">
           <Poster
             src={movie.poster}
@@ -38,7 +38,7 @@ export default function MovieCard({ movie, onPlayTrailer }) {
               </span>
             ) : null}
             {comingSoon && (
-              <span className="rounded-lg bg-accent-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-on-accent">
+              <span className="rounded-lg bg-accent-500 px-2 py-1 text-3xs font-bold uppercase tracking-wide text-on-accent">
                 Coming soon
               </span>
             )}
@@ -49,7 +49,7 @@ export default function MovieCard({ movie, onPlayTrailer }) {
             aria-pressed={saved}
             aria-label={saved ? `Remove ${movie.title} from watchlist` : `Add ${movie.title} to watchlist`}
             className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full backdrop-blur transition ${
-              saved ? "bg-brand-500 text-on-brand" : "bg-black/60 text-white hover:bg-black/80"
+              saved ? "bg-brand-solid text-on-brand" : "bg-black/60 text-white hover:bg-black/80"
             }`}
           >
             <Icon name="heart" filled={saved} className="h-4 w-4" />
@@ -75,7 +75,7 @@ export default function MovieCard({ movie, onPlayTrailer }) {
       </div>
 
       <div className="mt-3 min-w-0">
-        <h3 className="truncate text-[15px] font-semibold text-white">
+        <h3 className="truncate text-md font-semibold text-white">
           <Link to={`/movies/${movie._id}`} className="transition hover:text-brand-400">
             {movie.title}
           </Link>

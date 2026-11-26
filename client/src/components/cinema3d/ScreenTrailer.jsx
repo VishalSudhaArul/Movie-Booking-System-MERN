@@ -68,7 +68,7 @@ const STATUS_TEXT = {
   failed: "Trailer unavailable · showing the poster",
 };
 
-const btn = "rounded-lg p-1.5 text-gray-300 hover:bg-white/10 hover:text-white disabled:opacity-40";
+const btn = "rounded-lg p-1.5 text-gray-300 hover:bg-fill-emphasis hover:text-white disabled:opacity-40";
 
 /** Play / pause and sound for the screen trailer. Hidden when there's no trailer. */
 export function TrailerControls({ trailer, className = "" }) {

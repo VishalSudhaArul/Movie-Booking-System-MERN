@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Icon from "./ui/Icon";
 import { THEMES, useTheme } from "../lib/theme";
+import { useDismiss } from "../lib/a11y";
 
 const Swatch = ({ colors, className = "h-5 w-5" }) => (
   <span
@@ -47,11 +48,11 @@ export function ThemeOptions({ onPicked, compact = false }) {
             }}
             className={
               compact
-                ? `flex aspect-square items-center justify-center rounded-xl border transition ${
-                    checked ? "border-white/60 bg-white/[0.08]" : "border-white/10 hover:border-white/30"
+                ? `flex aspect-square items-center justify-center rounded-control border transition duration-base ${
+                    checked ? "border-white/60 bg-fill-strong" : "border-line-strong hover:border-white/30"
                   }`
-                : `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${
-                    checked ? "bg-white/[0.08] text-white" : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+                : `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition duration-fast ${
+                    checked ? "bg-fill-strong text-fg" : "text-fg-secondary hover:bg-fill hover:text-fg"
                   }`
             }
           >
@@ -72,25 +73,15 @@ export default function ThemePicker({ className = "" }) {
   const ref = useRef(null);
   const current = THEMES.find((t) => t.id === theme) || THEMES[0];
 
+  // Outside press or Escape closes it; Escape also returns focus to the button.
+  useDismiss(ref, open, (e) => {
+    setOpen(false);
+    if (e?.key === "Escape") ref.current?.querySelector("button")?.focus();
+  });
+
+  // Move focus to the selected option when the popover opens.
   useEffect(() => {
-    if (!open) return undefined;
-    const onDown = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        ref.current?.querySelector("button")?.focus();
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    // Move focus to the selected option when the popover opens.
-    ref.current?.querySelector('[role="radio"][aria-checked="true"]')?.focus();
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    if (open) ref.current?.querySelector('[role="radio"][aria-checked="true"]')?.focus();
   }, [open]);
 
   return (
@@ -107,8 +98,8 @@ export default function ThemePicker({ className = "" }) {
         <Swatch colors={current.swatch} className="h-[18px] w-[18px]" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-white/10 bg-ink-850 p-1.5 shadow-2xl animate-fadeUp">
-          <p className="flex items-center gap-2 px-3 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+        <div className="menu absolute right-0 mt-2 w-60 p-1.5">
+          <p className="flex items-center gap-2 px-3 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
             <Icon name="palette" className="h-3.5 w-3.5" /> Colour theme
           </p>
           <ThemeOptions onPicked={() => setOpen(false)} />

@@ -20,7 +20,12 @@ module.exports = defineConfig({
     baseURL: "http://localhost:3000",
     // Uses the installed Google Chrome, so no browser download is needed.
     channel: "chrome",
-    trace: "retain-on-failure",
+    // Traces keep DOM snapshots for failed tests, but not the continuous
+    // screencast (recorded for every test and then thrown away when it
+    // passes, which costs a lot of memory on 8 GB machines). A failure still
+    // gets one screenshot.
+    trace: { mode: "retain-on-failure", screenshots: false, snapshots: true, sources: true },
+    screenshot: "only-on-failure",
   },
   projects: Object.entries(viewports).map(([name, viewport]) => ({
     name,

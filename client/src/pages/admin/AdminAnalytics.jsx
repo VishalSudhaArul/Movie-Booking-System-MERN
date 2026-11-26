@@ -90,9 +90,9 @@ export default function AdminAnalytics() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="space-y-8">
         <PageHeader
-          eyebrow="Admin"
+          breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Analytics" }]}
           title="Analytics"
           subtitle="Booking value by movie and theatre. Checkout is a demo, so these are booked values, not collected payments."
           icon="chart"
@@ -110,7 +110,7 @@ export default function AdminAnalytics() {
 
         {/* Filters: one row above everything they affect */}
         <div className="card flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex gap-1 rounded-xl bg-white/[0.03] p-1" role="group" aria-label="Time period">
+          <div className="flex gap-1 rounded-xl bg-fill-subtle p-1" role="group" aria-label="Time period">
             {PERIODS.map((p) => (
               <button key={p} onClick={() => choosePeriod(p)} aria-pressed={period === p} className={`btn-sm rounded-lg px-3 py-1.5 text-xs font-semibold transition ${period === p ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                 {p === "All" ? "All time" : p === "Week" ? "Last 7 days" : p === "Month" ? "Last 30 days" : p}
@@ -150,7 +150,7 @@ export default function AdminAnalytics() {
               status === "ready" && (
                 <>
                   <section className="card overflow-hidden" aria-labelledby="by-movie">
-                    <h2 id="by-movie" className="border-b border-white/[0.07] px-5 py-4 font-semibold text-white">By movie</h2>
+                    <h2 id="by-movie" className="border-b border-line px-5 py-4 font-semibold text-white">By movie</h2>
                     <div className="overflow-x-auto">
                       <table className="data-table">
                         <thead>
@@ -177,7 +177,7 @@ export default function AdminAnalytics() {
                                 <td className="text-right font-semibold text-white">{formatPrice(m.ticketRevenue)}</td>
                                 <td>
                                   <span className="flex items-center gap-2">
-                                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill-strong">
                                       <span className="block h-full rounded-full bg-[#3987e5]" style={{ width: `${share}%` }} />
                                     </span>
                                     <span className="w-9 text-right text-xs text-gray-400">{share}%</span>
@@ -216,7 +216,7 @@ export default function AdminAnalytics() {
                             ))}
                           </dl>
                           {t.movies?.length > 0 && (
-                            <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs text-gray-500">
+                            <p className="mt-3 border-t border-line-subtle pt-3 text-xs text-gray-500">
                               {t.movies.map((m) => m.title).join(" · ")}
                             </p>
                           )}

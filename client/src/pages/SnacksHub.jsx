@@ -158,7 +158,7 @@ export default function SnacksHub() {
   const filtered = snacks.filter((s) => categoryFilter === "All" || categoryOf(s.name) === categoryFilter);
 
   return (
-    <main id="main" className={`container-page py-8 sm:py-10 ${cart.length ? "pb-48 sm:pb-36" : ""}`}>
+    <main id="main" className={`container-page page page-enter ${cart.length ? "pb-48 sm:pb-36" : ""}`}>
       <PageHeader
         eyebrow="Food & Drinks"
         title="Order snacks for your show"
@@ -178,18 +178,18 @@ export default function SnacksHub() {
         <>
           <div className="card mt-8 grid gap-4 p-4 sm:p-5 md:grid-cols-3">
             <Field id="f-theatre" label="Theatre">
-              <select id="f-theatre" className="input" value={selectedTheatre} onChange={(e) => chooseTheatre(e.target.value)}>
+              <select id="f-theatre" className="select" value={selectedTheatre} onChange={(e) => chooseTheatre(e.target.value)}>
                 {theatres.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
             <Field id="f-movie" label="Movie (optional)">
-              <select id="f-movie" className="input" value={selectedMovie} onChange={(e) => setSelectedMovie(e.target.value)}>
+              <select id="f-movie" className="select" value={selectedMovie} onChange={(e) => setSelectedMovie(e.target.value)}>
                 <option value="">Any movie</option>
                 {(moviesByTheatre[selectedTheatre] || []).map((m) => <option key={m._id} value={m.title}>{m.title}</option>)}
               </select>
             </Field>
             <Field id="f-booking" label="Attach to my ticket (optional)" hint={!isLoggedIn ? "Sign in to attach an order to your ticket" : undefined}>
-              <select id="f-booking" className="input" value={selectedBookingId} onChange={handleBookingSelect} disabled={!isLoggedIn || userBookings.length === 0}>
+              <select id="f-booking" className="select" value={selectedBookingId} onChange={handleBookingSelect} disabled={!isLoggedIn || userBookings.length === 0}>
                 <option value="">{userBookings.length ? "Don't attach" : "No upcoming tickets"}</option>
                 {userBookings.map((b) => (
                   <option key={b._id} value={b._id}>
@@ -226,17 +226,17 @@ export default function SnacksHub() {
                       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-300 shadow-inner-line">
                         <Icon name="popcorn" className="h-5 w-5" />
                       </span>
-                      <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{categoryOf(snack.name)}</p>
+                      <p className="mt-3 text-2xs font-semibold uppercase tracking-wider text-gray-500">{categoryOf(snack.name)}</p>
                       <h3 className="mt-0.5 font-semibold text-white">{snack.name}</h3>
                       <div className="mt-auto flex items-center justify-between gap-2 pt-4">
                         <span className="font-display text-lg font-bold text-white">{formatPrice(snack.price)}</span>
                         {qty > 0 ? (
-                          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1">
-                            <button onClick={() => changeQty(snack, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-300 hover:bg-white/10" aria-label={`Remove one ${snack.name}`}>
+                          <div className="flex items-center gap-1 rounded-xl border border-line-strong bg-fill p-1">
+                            <button onClick={() => changeQty(snack, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-300 hover:bg-fill-emphasis" aria-label={`Remove one ${snack.name}`}>
                               <Icon name="minus" className="h-4 w-4" />
                             </button>
                             <span className="w-6 text-center text-sm font-bold text-white" aria-live="polite">{qty}</span>
-                            <button onClick={() => changeQty(snack, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-brand-300 hover:bg-white/10" aria-label={`Add one more ${snack.name}`}>
+                            <button onClick={() => changeQty(snack, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-brand-300 hover:bg-fill-emphasis" aria-label={`Add one more ${snack.name}`}>
                               <Icon name="plus" className="h-4 w-4" />
                             </button>
                           </div>
@@ -266,7 +266,7 @@ export default function SnacksHub() {
               <p className="truncate text-xs text-gray-400">{cart.map((i) => `${i.name} × ${i.qty}`).join(", ")}</p>
             </div>
             <div className="flex flex-wrap items-start gap-2">
-              <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1 text-xs" role="group" aria-label="Delivery">
+              <div className="flex rounded-xl border border-line-strong bg-fill-subtle p-1 text-xs" role="group" aria-label="Delivery">
                 {[["Express Counter Pickup", "Counter pickup"], ["In-Seat Delivery", "To my seat"]].map(([value, label]) => (
                   <button key={value} onClick={() => setDeliveryType(value)} aria-pressed={deliveryType === value} className={`rounded-lg px-3 py-1.5 font-semibold transition ${deliveryType === value ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                     {label}
@@ -302,7 +302,7 @@ export default function SnacksHub() {
       <Modal isOpen={!!completedOrder} onClose={() => setCompletedOrder(null)} title="Order placed" size="sm">
         {completedOrder && (
           <div className="space-y-4 p-5 text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-500/15 text-success-300">
               <Icon name="check" className="h-7 w-7" />
             </span>
             <div>
@@ -313,7 +313,7 @@ export default function SnacksHub() {
             <dl className="card-muted space-y-2 p-4 text-left text-sm">
               <div className="flex justify-between gap-3"><dt className="text-gray-400">Theatre</dt><dd className="text-white">{completedOrder.theatre}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-gray-400">Delivery</dt><dd className="text-white">{completedOrder.deliveryType === "In-Seat Delivery" ? `To seat ${completedOrder.seatNumber}` : "Counter pickup"}</dd></div>
-              <div className="flex justify-between gap-3 border-t border-white/[0.07] pt-2"><dt className="text-gray-400">Total (demo, not charged)</dt><dd className="font-semibold text-white">{formatPrice(completedOrder.totalPrice)}</dd></div>
+              <div className="flex justify-between gap-3 border-t border-line pt-2"><dt className="text-gray-400">Total (demo, not charged)</dt><dd className="font-semibold text-white">{formatPrice(completedOrder.totalPrice)}</dd></div>
             </dl>
             <div className="flex gap-2">
               <Link to="/my-bookings" className="btn-primary flex-1">View my orders</Link>

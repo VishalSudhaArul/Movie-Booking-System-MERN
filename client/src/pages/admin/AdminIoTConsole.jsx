@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Switch } from "../../components/ui/Input";
 import { Link } from "react-router-dom";
 import API from "../../api";
 import AdminLayout from "../../components/AdminLayout";
@@ -88,9 +89,9 @@ export default function AdminIoTConsole() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         <PageHeader
-          eyebrow="Admin"
+          breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "IoT console" }]}
           title="IoT console"
           subtitle="A simulator for cinema hardware: door gates, parking barriers, seat sensors and climate."
           icon="settings"
@@ -152,11 +153,11 @@ export default function AdminIoTConsole() {
                         ? "border-gold-500/50 bg-gold-500/10 text-gold-400"
                         : s.occupied
                         ? "border-brand-500/40 bg-brand-500/10 text-brand-200"
-                        : "border-white/10 text-gray-500"
+                        : "border-line-strong text-gray-500"
                     }`}
                   >
                     <span className="block font-mono font-semibold">{s.id}</span>
-                    <span className="text-[11px]">{alert ? "Not booked" : s.occupied ? "Occupied" : "Empty"}</span>
+                    <span className="text-2xs">{alert ? "Not booked" : s.occupied ? "Occupied" : "Empty"}</span>
                   </li>
                 );
               })}
@@ -166,13 +167,12 @@ export default function AdminIoTConsole() {
 
           <Panel title="Lights & climate · Audi 1" icon="settings" badge={SIMULATED}>
             <div className="space-y-5">
-              <label className="flex items-center justify-between gap-3">
-                <span className="text-sm text-gray-300">Automatic mode</span>
-                <button type="button" role="switch" aria-checked={autoMode} onClick={() => setAutoMode((v) => !v)} className={`relative h-6 w-11 rounded-full transition ${autoMode ? "bg-brand-500" : "bg-white/15"}`}>
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${autoMode ? "left-[22px]" : "left-0.5"}`} />
-                  <span className="sr-only">Automatic mode</span>
-                </button>
-              </label>
+              <Switch
+                label="Automatic mode"
+                description="Lighting and temperature follow the show schedule."
+                checked={autoMode}
+                onChange={setAutoMode}
+              />
               <div>
                 <label htmlFor="lights" className="flex justify-between text-sm text-gray-300">
                   Lighting <span className="font-semibold text-white">{lighting}%</span>

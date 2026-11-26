@@ -110,9 +110,9 @@ export default function AdminParking() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="space-y-8">
         <PageHeader
-          eyebrow="Admin"
+          breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Parking" }]}
           title="Parking"
           subtitle="Bike and car parking prices offered at checkout, per theatre."
           icon="car"

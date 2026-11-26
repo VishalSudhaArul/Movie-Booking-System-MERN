@@ -37,7 +37,7 @@ function Footer() {
   const { active: isAdmin } = useAdminSession();
 
   return (
-    <footer className="mt-auto border-t border-white/[0.07] bg-ink-950/80">
+    <footer className="mt-auto border-t border-line bg-ink-950/80">
       <div className="h-px w-full bg-gradient-to-r from-transparent via-brand-500/40 to-transparent" aria-hidden="true" />
       <div className="container-page py-12">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-5">
@@ -68,7 +68,7 @@ function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-white/[0.07] pt-6 text-xs text-gray-500 sm:flex-row sm:items-center">
+        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-line pt-6 text-xs text-gray-500 sm:flex-row sm:items-center">
           <p>© {new Date().getFullYear()} CineBook. All rights reserved.</p>
           <p>Ticket prices are inclusive of all taxes.</p>
         </div>

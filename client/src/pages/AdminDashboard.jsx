@@ -1,11 +1,10 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 import API from "../api";
 import AdminLayout from "../components/AdminLayout";
 import PageHeader, { StatCard } from "../components/ui/PageHeader";
 import Icon from "../components/ui/Icon";
 import { ErrorState } from "../components/ui/Feedback";
-import { clearSession } from "../lib/session";
 import { formatPrice } from "../lib/format";
 
 const MODULES = [
@@ -19,7 +18,6 @@ const MODULES = [
 ];
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | ready | error
@@ -38,11 +36,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     load();
   }, [load]);
-
-  const signOut = () => {
-    clearSession();
-    navigate("/login");
-  };
 
   const exportCSVReport = () => {
     const s = stats || {};
@@ -67,21 +60,16 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="space-y-8">
         <PageHeader
           eyebrow="Admin"
           title="Dashboard"
           subtitle="Bookings, showtimes and revenue across your theatres."
           icon="grid"
           actions={
-            <>
-              <button onClick={exportCSVReport} className="btn-secondary btn-sm" disabled={status !== "ready"}>
-                <Icon name="download" className="h-4 w-4" /> Export CSV
-              </button>
-              <button onClick={signOut} className="btn-ghost btn-sm">
-                <Icon name="logout" className="h-4 w-4" /> Sign out
-              </button>
-            </>
+            <button onClick={exportCSVReport} className="btn-secondary btn-sm" disabled={status !== "ready"}>
+              <Icon name="download" className="h-4 w-4" /> Export CSV
+            </button>
           }
         />
 
@@ -90,7 +78,7 @@ export default function AdminDashboard() {
         ) : (
           <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 lg:grid-cols-4">
             {status === "loading" ? (
-              Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[118px] rounded-2xl" />)
+              Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[118px] rounded-card" />)
             ) : (
               <>
                 <StatCard label="Movies" value={stats.totalMovies ?? 0} icon="film" />
@@ -131,7 +119,7 @@ export default function AdminDashboard() {
         </section>
 
         <section className="card overflow-hidden" aria-labelledby="recent-title">
-          <div className="flex items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
+          <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
             <div>
               <h2 id="recent-title" className="font-semibold text-white">Recent bookings</h2>
               <p className="text-xs text-gray-400">The latest tickets booked across all theatres</p>

@@ -35,7 +35,7 @@ export default function Watchlist() {
   const visible = status === "ready" ? movies.filter((m) => savedIds.has(m._id)) : movies;
 
   return (
-    <main id="main" className="container-page py-8 sm:py-10">
+    <main id="main" className="container-page page page-enter">
       <PageHeader
         eyebrow="Watchlist"
         title="Saved movies"

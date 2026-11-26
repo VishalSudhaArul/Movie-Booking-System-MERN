@@ -25,7 +25,7 @@ export default function AdminNavbar() {
   };
 
   return (
-    <div className="sticky top-16 z-30 border-b border-white/[0.07] bg-ink-900/95 backdrop-blur-xl">
+    <div className="sticky top-header z-30 border-b border-line bg-surface-sunken/95 backdrop-blur-glass">
       <nav className="container-page flex items-center gap-4" aria-label="Admin sections">
         <span className="hidden shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent-300 md:flex">
           <Icon name="settings" className="h-4 w-4" /> Admin
@@ -36,10 +36,10 @@ export default function AdminNavbar() {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                `flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition duration-base ease-standard ${
                   isActive
                     ? "bg-accent-500/15 text-accent-200"
-                    : "text-gray-400 hover:bg-white/[0.05] hover:text-white"
+                    : "text-fg-muted hover:bg-fill hover:text-fg"
                 }`
               }
             >
@@ -52,7 +52,7 @@ export default function AdminNavbar() {
           type="button"
           onClick={signOut}
           disabled={signingOut}
-          className="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+          className="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-fg-muted transition duration-base hover:bg-fill hover:text-fg disabled:opacity-50"
           data-testid="admin-sign-out"
           aria-label="Sign out of admin"
         >

@@ -46,7 +46,7 @@ export default function LoyaltyWallet() {
   };
 
   return (
-    <main id="main" className="container-page space-y-10 py-8 sm:py-10">
+    <main id="main" className="container-page page page-enter space-y-10">
       <PageHeader
         eyebrow="Rewards"
         title="Offers & rewards"
@@ -99,7 +99,7 @@ export default function LoyaltyWallet() {
             points are being collected or shown.
           </p>
         </div>
-        <ul className="grid gap-px bg-white/[0.06] sm:grid-cols-3">
+        <ul className="grid gap-px bg-fill-strong sm:grid-cols-3">
           {PLANNED_PERKS.map((p) => (
             <li key={p.title} className="flex gap-3 bg-ink-850 p-5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-300">
@@ -112,7 +112,7 @@ export default function LoyaltyWallet() {
             </li>
           ))}
         </ul>
-        <div className="border-t border-white/[0.06] px-5 py-4 sm:px-8">
+        <div className="border-t border-line-subtle px-5 py-4 sm:px-8">
           <Link to="/movies" className="btn-primary btn-sm">Book a movie</Link>
         </div>
       </section>

@@ -1,8 +1,8 @@
-import React, { forwardRef, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "./Navbar";
 import Icon from "./ui/Icon";
-import { Spinner } from "./ui/Feedback";
+import Button from "./ui/Button";
 
 export const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(value).trim());
 
@@ -15,7 +15,7 @@ const PERKS = [
 /** Two-column shell shared by the sign-in and registration screens. */
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
-    <main id="main" className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
+    <main id="main" className="relative flex min-h-screen-nav items-center justify-center px-4 py-10 page-enter">
       <div className="card grid w-full max-w-4xl overflow-hidden lg:grid-cols-2">
         {/* Visual panel */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-ink-900 p-10 lg:flex">
@@ -54,8 +54,8 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
 
         {/* Form panel */}
         <div className="p-6 sm:p-10">
-          <h1 className="font-display text-2xl font-extrabold text-white sm:text-3xl">{title}</h1>
-          {subtitle && <p className="mt-1.5 text-sm text-gray-400">{subtitle}</p>}
+          <h1 className="page-title font-extrabold">{title}</h1>
+          {subtitle && <p className="mt-1.5 text-sm text-fg-muted">{subtitle}</p>}
           <div className="mt-7">{children}</div>
           {footer && <p className="mt-7 text-center text-sm text-gray-400">{footer}</p>}
         </div>
@@ -71,7 +71,7 @@ export function FormAlert({ message, onDismiss }) {
       <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
       <span className="flex-1">{message}</span>
       {onDismiss && (
-        <button type="button" onClick={onDismiss} aria-label="Dismiss" className="text-brand-300 hover:text-white">
+        <button type="button" onClick={onDismiss} aria-label="Dismiss" className="-m-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-danger-300 transition duration-fast hover:bg-fill hover:text-fg">
           <Icon name="close" className="h-4 w-4" />
         </button>
       )}
@@ -79,64 +79,13 @@ export function FormAlert({ message, onDismiss }) {
   );
 }
 
-export function TextField({ id, label, icon, error, className = "", ...props }) {
-  return (
-    <div>
-      <label htmlFor={id} className="label">{label}</label>
-      <div className="relative">
-        {icon && <Icon name={icon} className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />}
-        <input
-          id={id}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={`input ${icon ? "pl-10" : ""} ${error ? "input-error" : ""} ${className}`}
-          {...props}
-        />
-      </div>
-      {error && <p id={`${id}-error`} className="field-error">{error}</p>}
-    </div>
-  );
-}
-
-export const PasswordField = forwardRef(function PasswordField({ id, label, error, hint, ...props }, ref) {
-  const [visible, setVisible] = useState(false);
-  return (
-    <div>
-      <label htmlFor={id} className="label">{label}</label>
-      <div className="relative">
-        <Icon name="lock" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-        <input
-          id={id}
-          ref={ref}
-          type={visible ? "text" : "password"}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={`input pl-10 pr-11 ${error ? "input-error" : ""}`}
-          {...props}
-        />
-        <button
-          type="button"
-          onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "Hide password" : "Show password"}
-          aria-pressed={visible}
-          className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 hover:text-white"
-        >
-          <Icon name={visible ? "eyeOff" : "eye"} className="h-4 w-4" />
-        </button>
-      </div>
-      {error ? (
-        <p id={`${id}-error`} className="field-error">{error}</p>
-      ) : (
-        hint && <p className="mt-1.5 text-xs text-gray-500">{hint}</p>
-      )}
-    </div>
-  );
-});
+// The sign-in screens use the shared form controls.
+export { TextField, PasswordField } from "./ui/Input";
 
 export function SubmitButton({ loading, loadingLabel, children }) {
   return (
-    <button type="submit" disabled={loading} className="btn-primary btn-lg w-full">
-      {loading ? <><Spinner className="h-5 w-5" /> {loadingLabel}</> : children}
-    </button>
+    <Button type="submit" size="lg" fullWidth loading={loading} loadingText={loadingLabel}>
+      {children}
+    </Button>
   );
 }

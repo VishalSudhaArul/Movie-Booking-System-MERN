@@ -325,7 +325,7 @@ export default function Seats() {
 
   if (status === "loading") {
     return (
-      <main className="container-page min-h-[80vh] py-10" role="status" aria-label="Loading seats">
+      <main id="main" className="container-page min-h-[80vh] py-10" role="status" aria-label="Loading seats">
         <div className="skeleton h-16 w-full max-w-xl rounded-2xl" />
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
           <div className="skeleton h-[480px] rounded-2xl" />
@@ -387,7 +387,7 @@ export default function Seats() {
   return (
     <main id="main" className="min-h-screen pb-32 lg:pb-16">
       {/* ───────────── Show header ───────────── */}
-      <div className="border-b border-white/[0.07] bg-ink-900">
+      <div className="border-b border-line bg-ink-900">
         <div className="container-page flex flex-wrap items-center justify-between gap-4 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <button onClick={() => navigate(movieId ? `/movies/${movieId}` : -1)} className="btn-icon" aria-label="Back to movie">
@@ -430,15 +430,15 @@ export default function Seats() {
         {/* Steps */}
         <ol className="mb-6 flex items-center gap-2 text-xs font-semibold text-gray-500" aria-label="Booking progress">
           <li className="flex items-center gap-2 text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] text-on-brand">1</span> Seats
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-solid text-2xs text-on-brand">1</span> Seats
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">2</span> Extras &amp; checkout
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-emphasis text-2xs">2</span> Extras &amp; checkout
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">3</span> Ticket
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-emphasis text-2xs">3</span> Ticket
           </li>
         </ol>
 
@@ -453,10 +453,10 @@ export default function Seats() {
         <div className={`grid gap-6 ${show3d ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}>
           {/* ───────────── Seat map ───────────── */}
           <section className={`card ${view === "2d" ? "overflow-hidden" : ""}`} aria-label="Seat map">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-6">
               <div className="flex flex-wrap items-center gap-3">
                 {webgl && (
-                  <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Seat view">
+                  <div className="flex rounded-xl border border-line-strong bg-fill-subtle p-1" role="group" aria-label="Seat view">
                     {[["3d", "3D hall"], ["2d", "2D map"]].map(([v, label]) => (
                       <button key={v} onClick={() => chooseView(v)} aria-pressed={view === v} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${view === v ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                         {label}
@@ -478,7 +478,7 @@ export default function Seats() {
                     className={`h-8 w-8 rounded-lg border text-xs font-bold transition ${
                       selectedSeats.length === count
                         ? "border-brand-500 bg-brand-500/15 text-brand-300"
-                        : "border-white/10 text-gray-300 hover:border-white/25 hover:text-white"
+                        : "border-line-strong text-gray-300 hover:border-white/25 hover:text-white"
                     }`}
                   >
                     {count}
@@ -540,13 +540,13 @@ export default function Seats() {
                       return (
                         <div key={category.name}>
                           <div className="mb-3 flex items-center gap-3">
-                            <span className="h-px flex-1 bg-white/[0.08]" />
+                            <span className="h-px flex-1 bg-fill-strong" />
                             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                               {isPremium && <Icon name="crown" className="h-3.5 w-3.5 text-accent-300" />}
                               {category.name}
                               <span className="text-white">{formatPrice(category.price)}</span>
                             </span>
-                            <span className="h-px flex-1 bg-white/[0.08]" />
+                            <span className="h-px flex-1 bg-fill-strong" />
                           </div>
   
                           <div className="space-y-1.5">
@@ -563,7 +563,7 @@ export default function Seats() {
                               const recliner = row.seatType === "recliner";
                               return (
                                 <div key={row.label} className={`flex items-center justify-center gap-2 ${recliner ? "py-0.5" : ""}`}>
-                                  <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
+                                  <span className="w-5 text-center text-2xs font-semibold text-gray-500" aria-hidden="true">
                                     {row.label}
                                   </span>
                                   {blocks.map((block, i) => (
@@ -583,7 +583,7 @@ export default function Seats() {
                                       </div>
                                     </React.Fragment>
                                   ))}
-                                  <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
+                                  <span className="w-5 text-center text-2xs font-semibold text-gray-500" aria-hidden="true">
                                     {row.label}
                                   </span>
                                 </div>
@@ -597,7 +597,7 @@ export default function Seats() {
                     {/* Screen */}
                     <div className="px-6 pt-4" aria-hidden="true">
                       <div className="mx-auto h-10 w-full max-w-md rounded-[50%] border-t-4 border-white/70 bg-gradient-to-b from-white/15 to-transparent" />
-                      <p className="-mt-3 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500">
+                      <p className="-mt-3 text-center text-2xs font-semibold uppercase tracking-[0.3em] text-gray-500">
                         Screen this way
                       </p>
                     </div>
@@ -608,15 +608,15 @@ export default function Seats() {
             )}
 
             {/* Legend */}
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-white/[0.07] px-4 py-4 text-xs text-gray-400">
-              <LegendItem className="border-white/25 bg-white/[0.03]" label="Available" />
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-line px-4 py-4 text-xs text-gray-400">
+              <LegendItem className="border-white/25 bg-fill-subtle" label="Available" />
               {premiumCategory && <LegendItem className="border-accent-400/60 bg-accent-500/[0.1]" label={`Premium (${premiumCategory})`} />}
               {layout.some((c) => c.rows.some((r) => r.seatType === "recliner")) && (
-                <LegendItem className="w-6 rounded-t-lg border-white/25 bg-white/[0.03]" label="Recliner" />
+                <LegendItem className="w-6 rounded-t-lg border-white/25 bg-fill-subtle" label="Recliner" />
               )}
-              <LegendItem className="border-brand-500 bg-brand-500" label="Selected" />
+              <LegendItem className="border-brand-solid bg-brand-solid" label="Selected" />
               <LegendItem className="border-dashed border-sky-400/50 bg-sky-400/[0.08]" label="Reserved (someone is checking out)" />
-              <LegendItem className="border-transparent bg-white/[0.08]" label="Booked" />
+              <LegendItem className="border-transparent bg-fill-strong" label="Booked" />
             </div>
           </section>
 
@@ -625,7 +625,7 @@ export default function Seats() {
             <div className="card sticky top-24 p-5">
               <h2 className="text-lg font-bold text-white">Your selection</h2>
               <div className="mt-4 min-h-[72px]">{summary}</div>
-              <div className="mt-4 flex items-center justify-between border-t border-white/[0.07] pt-4">
+              <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
                 <span className="text-sm text-gray-400">
                   {selectedSeats.length} {selectedSeats.length === 1 ? "ticket" : "tickets"}
                 </span>
@@ -640,7 +640,7 @@ export default function Seats() {
                 </button>
               )}
               <HoldCountdown hold={hold} selectedCount={selectedSeats.length} onRenew={renew} className="mt-3 justify-center" />
-              <p className="mt-2 text-center text-[11px] text-gray-500">
+              <p className="mt-2 text-center text-2xs text-gray-500">
                 Seats you pick are held for you for 8 minutes. They're confirmed when you complete checkout.
               </p>
             </div>
@@ -649,7 +649,7 @@ export default function Seats() {
       </div>
 
       {/* ───────────── Summary bar (mobile & tablet) ───────────── */}
-      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "hidden" : ""}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-line-strong bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "hidden" : ""}`}>
         <div className="container-page flex items-center justify-between gap-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-xs text-gray-400" aria-live="polite">
@@ -671,19 +671,19 @@ export default function Seats() {
 
 function SeatButton({ seat, selected, premium, recliner, onToggle }) {
   const size = recliner ? "h-7 w-8 rounded-t-xl sm:h-8 sm:w-10" : "h-7 w-7 rounded-t-lg sm:h-8 sm:w-8";
-  const base = `flex ${size} items-center justify-center rounded-b-[4px] border text-[10px] font-semibold transition duration-150 sm:text-[11px]`;
+  const base = `flex ${size} items-center justify-center rounded-b-[4px] border text-3xs font-semibold transition duration-150 sm:text-2xs`;
   const kind = recliner ? "recliner, " : "";
   let style;
   if (seat.reserved) {
     style = "cursor-not-allowed border-dashed border-sky-400/50 bg-sky-400/[0.08] text-transparent";
   } else if (seat.isBooked) {
-    style = "cursor-not-allowed border-transparent bg-white/[0.08] text-transparent";
+    style = "cursor-not-allowed border-transparent bg-fill-strong text-transparent";
   } else if (selected) {
-    style = "scale-105 border-brand-500 bg-brand-500 text-on-brand shadow-glow";
+    style = "scale-105 border-brand-solid bg-brand-solid text-on-brand shadow-glow";
   } else if (premium) {
     style = "border-accent-400/60 bg-accent-500/[0.1] text-accent-200 hover:bg-accent-500/25";
   } else {
-    style = "border-white/25 bg-white/[0.03] text-gray-300 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white";
+    style = "border-white/25 bg-fill-subtle text-gray-300 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white";
   }
 
   return (

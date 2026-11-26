@@ -6,8 +6,8 @@ import { formatShowDate, formatShowTime } from "../lib/format";
 export const ticketIdFrom = (value) => String(value || "").trim().split(/[/?#]/).filter(Boolean).pop() || "";
 
 const STATES = {
-  valid: { icon: "check", title: "Valid ticket", tone: "border-emerald-500/40 bg-emerald-500/[0.08] text-emerald-300" },
-  admitted: { icon: "check", title: "Admitted. Enjoy the show!", tone: "border-emerald-500/40 bg-emerald-500/[0.08] text-emerald-300" },
+  valid: { icon: "check", title: "Valid ticket", tone: "border-success-500/40 bg-success-500/[0.08] text-success-300" },
+  admitted: { icon: "check", title: "Admitted. Enjoy the show!", tone: "border-success-500/40 bg-success-500/[0.08] text-success-300" },
   used: { icon: "alert", title: "Already used: do not admit", tone: "border-gold-500/40 bg-gold-500/[0.08] text-gold-400" },
   invalid: { icon: "close", title: "Ticket not found", tone: "border-danger-500/40 bg-danger-500/[0.08] text-danger-300" },
 };
@@ -20,7 +20,7 @@ export default function TicketResult({ state, booking, message, children }) {
   return (
     <div className={`overflow-hidden rounded-2xl border ${s.tone} animate-fadeUp`} role="status" aria-live="polite">
       <div className="flex items-center gap-3 px-5 py-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-fill-emphasis">
           <Icon name={s.icon} className="h-5 w-5" />
         </span>
         <div>
@@ -29,7 +29,7 @@ export default function TicketResult({ state, booking, message, children }) {
         </div>
       </div>
       {booking && (
-        <dl className="grid grid-cols-2 gap-4 border-t border-white/[0.07] bg-ink-900/60 px-5 py-4 text-sm sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-4 border-t border-line bg-ink-900/60 px-5 py-4 text-sm sm:grid-cols-4">
           <div className="col-span-2">
             <dt className="text-xs text-gray-500">Movie</dt>
             <dd className="font-semibold text-white">{show?.movieId?.title || "—"}</dd>
@@ -54,7 +54,7 @@ export default function TicketResult({ state, booking, message, children }) {
           </div>
         </dl>
       )}
-      {children && <div className="border-t border-white/[0.07] bg-ink-900/60 px-5 py-4">{children}</div>}
+      {children && <div className="border-t border-line bg-ink-900/60 px-5 py-4">{children}</div>}
     </div>
   );
 }

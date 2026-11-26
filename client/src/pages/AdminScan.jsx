@@ -53,7 +53,7 @@ export default function AdminScan() {
     <AdminLayout>
       <div className="mx-auto max-w-3xl space-y-6">
         <PageHeader
-          eyebrow="Admin"
+          breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Scan tickets" }]}
           title="Scan tickets"
           subtitle="Enter a booking ID or paste a ticket link, check it, then admit the guest."
           icon="qr"
@@ -82,7 +82,7 @@ export default function AdminScan() {
 
         <TicketResult state={state} booking={booking} message={message}>
           {state === "valid" && (
-            <button onClick={admit} disabled={admitting} className="btn btn-lg w-full bg-emerald-600 text-white hover:bg-emerald-500">
+            <button onClick={admit} disabled={admitting} className="btn-success btn-lg w-full">
               {admitting ? <><Spinner className="h-5 w-5" /> Admitting…</> : <><Icon name="check" className="h-5 w-5" /> Admit guest</>}
             </button>
           )}

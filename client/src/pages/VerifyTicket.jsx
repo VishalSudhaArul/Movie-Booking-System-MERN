@@ -75,7 +75,7 @@ function VerifyTicket() {
   // Staff at the door get the scan result first.
   if (isAdmin) {
     return (
-      <main id="main" className="container-page py-10">
+      <main id="main" className="container-page page page-enter">
         <div className="mx-auto max-w-xl space-y-4">
           <TicketResult state={status === "ADMITTED" ? "admitted" : status === "USED" ? "used" : "valid"} booking={booking} />
           <Link to="/scanner" className="btn-secondary w-full">
@@ -92,8 +92,8 @@ function VerifyTicket() {
   const snacks = booking.snacks?.length ? booking.snacks.map((s) => `${s.name} × ${s.qty}`).join(", ") : null;
 
   return (
-    <main id="main" className="container-page py-10">
-      <article className="mx-auto max-w-md overflow-hidden rounded-3xl border border-white/[0.08] bg-ink-850 shadow-card" aria-label={`Ticket for ${movie.title || "your movie"}`}>
+    <main id="main" className="container-page page page-enter">
+      <article className="mx-auto max-w-md overflow-hidden rounded-3xl border border-line bg-ink-850 shadow-card" aria-label={`Ticket for ${movie.title || "your movie"}`}>
         {/* Header with poster */}
         <div className="relative">
           <Poster src={movie.poster} alt="" className="h-44 w-full opacity-60" />
@@ -138,7 +138,7 @@ function VerifyTicket() {
 
         {/* Tear line */}
         <div className="relative px-5" aria-hidden="true">
-          <div className="border-t border-dashed border-white/15" />
+          <div className="border-t border-dashed border-line-strong" />
           <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full bg-ink-950" />
           <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full bg-ink-950" />
         </div>
@@ -154,7 +154,7 @@ function VerifyTicket() {
               <p className="text-sm text-gray-400">Show this code at the entrance.</p>
             </>
           )}
-          <p className="break-all font-mono text-[11px] text-gray-500">Booking ID {booking._id}</p>
+          <p className="break-all font-mono text-2xs text-gray-500">Booking ID {booking._id}</p>
         </div>
       </article>
 

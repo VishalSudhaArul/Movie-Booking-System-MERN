@@ -586,8 +586,8 @@ export default function Auditorium3D({
   const hoverState = hover ? seatState(hover.seat, selected.includes(hover.seat.seatNumber), premiumCategory) : null;
   const rowOf = (n) => (n.match(/^[A-Z]+/) || [""])[0];
   const toolbarBtn = (active) =>
-    `rounded-lg px-3 py-1.5 text-xs font-semibold transition ${active ? "bg-brand-gradient text-on-brand" : "text-gray-300 hover:bg-white/10 hover:text-white"}`;
-  const iconBtn = "rounded-lg p-1.5 text-gray-300 hover:bg-white/10 hover:text-white disabled:opacity-40";
+    `rounded-lg px-3 py-1.5 text-xs font-semibold transition ${active ? "bg-brand-gradient text-on-brand" : "text-gray-300 hover:bg-fill-emphasis hover:text-white"}`;
+  const iconBtn = "rounded-lg p-1.5 text-gray-300 hover:bg-fill-emphasis hover:text-white disabled:opacity-40";
 
   return (
     <div
@@ -671,7 +671,7 @@ export default function Auditorium3D({
               {label}
             </button>
           ))}
-          <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
+          <span className="mx-1 h-5 w-px shrink-0 bg-fill-emphasis" aria-hidden="true" />
           <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(3, animate); }} disabled={mode === "seat"} aria-label="Zoom in" title="Zoom in" aria-keyshortcuts="+">
             <Icon name="plus" className="h-4 w-4" />
           </button>
@@ -709,7 +709,7 @@ export default function Auditorium3D({
           </div>
         ) : (
           mode !== "seat" && !coarse && (
-            <p className="pointer-events-none absolute bottom-3 left-3 hidden rounded-lg bg-ink-950/70 px-2.5 py-1.5 text-[11px] text-gray-400 lg:block">
+            <p className="pointer-events-none absolute bottom-3 left-3 hidden rounded-lg bg-ink-950/70 px-2.5 py-1.5 text-2xs text-gray-400 lg:block">
               Drag or arrow keys to look around · Scroll or +/− to zoom · 1–5 views, 0 resets · Click seats to select them
             </p>
           )
@@ -726,14 +726,14 @@ export default function Auditorium3D({
               <Icon name={touchExplore ? "check" : "eye"} className="h-4 w-4" />
               {touchExplore ? "Done exploring" : "Explore in 3D"}
             </button>
-            {!touchExplore && <p className="mt-1.5 hidden max-w-[220px] rounded-lg bg-ink-950/70 px-2 py-1 text-[11px] text-gray-400 md:block">Tap seats to select. Drag sideways to turn, pinch to zoom. Explore to tilt and pan.</p>}
+            {!touchExplore && <p className="mt-1.5 hidden max-w-[220px] rounded-lg bg-ink-950/70 px-2 py-1 text-2xs text-gray-400 md:block">Tap seats to select. Drag sideways to turn, pinch to zoom. Explore to tilt and pan.</p>}
           </div>
         )}
 
         {/* Hover tooltip */}
         {hover && mode !== "seat" && (
           <div
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[115%] rounded-xl border border-white/10 bg-ink-900/95 px-3 py-2 text-xs shadow-card"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[115%] rounded-xl border border-line-strong bg-ink-900/95 px-3 py-2 text-xs shadow-card"
             style={{ left: hover.x, top: hover.y }}
             role="status"
           >
@@ -754,13 +754,13 @@ export default function Auditorium3D({
           aria-label="Your booking"
           data-testid="booking-panel"
         >
-          <div id="booking-sheet-details" className={`${sheetOpen ? "" : "hidden"} border-b border-white/[0.07] p-4 md:block`}>
+          <div id="booking-sheet-details" className={`${sheetOpen ? "" : "hidden"} border-b border-line p-4 md:block`}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-white">Your seats</h3>
               <span className="text-xs text-gray-400">{selected.length} of {maxSeats}</span>
             </div>
             <p className="mt-0.5 text-xs text-gray-500">{availableCount} of {hall.seatCount} seats still available</p>
-            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400" aria-label="Seat colours" data-testid="seat-legend-3d">
+            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-gray-400" aria-label="Seat colours" data-testid="seat-legend-3d">
               {LEGEND.map(([state, label]) => (
                 <li key={state} className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-sm ring-1 ring-white/20" style={{ background: colors[state] }} aria-hidden="true" />
@@ -785,7 +785,7 @@ export default function Auditorium3D({
                 <Icon name="search" className="h-4 w-4" />
               </button>
             </form>
-            {finderMsg && <p className="mt-1.5 text-[11px] text-gold-400" role="alert">{finderMsg}</p>}
+            {finderMsg && <p className="mt-1.5 text-2xs text-gold-400" role="alert">{finderMsg}</p>}
           </div>
 
           <div className={`${sheetOpen ? "" : "hidden"} min-h-0 flex-1 overflow-y-auto p-2 md:block`}>
@@ -794,7 +794,7 @@ export default function Auditorium3D({
             ) : (
               <ul className="space-y-1">
                 {selectedSeats.map((s) => (
-                  <li key={s.seatNumber} className={`flex items-center gap-2 rounded-xl px-2.5 py-2 ${viewSeat?.seatNumber === s.seatNumber ? "bg-brand-500/15" : "hover:bg-white/[0.04]"}`}>
+                  <li key={s.seatNumber} className={`flex items-center gap-2 rounded-xl px-2.5 py-2 ${viewSeat?.seatNumber === s.seatNumber ? "bg-brand-500/15" : "hover:bg-fill"}`}>
                     <span className="flex h-8 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/20 font-mono text-xs font-bold text-brand-200">{s.seatNumber}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-medium text-white">
@@ -814,7 +814,7 @@ export default function Auditorium3D({
             )}
           </div>
 
-          <div className="space-y-2.5 border-t border-white/[0.07] p-3 md:p-4">
+          <div className="space-y-2.5 border-t border-line p-3 md:p-4">
             <button
               type="button"
               onClick={() => setSheetOpen((v) => !v)}
@@ -857,13 +857,13 @@ export default function Auditorium3D({
               <span className="badge-brand shrink-0">{info.viewLabel.split(":")[0]}</span>
             </div>
             <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-white/[0.04] p-2"><dt className="text-[10px] text-gray-500">To screen</dt><dd className="text-sm font-semibold text-white">{info.distance} m</dd></div>
-              <div className="rounded-lg bg-white/[0.04] p-2"><dt className="text-[10px] text-gray-500">Off centre</dt><dd className="text-sm font-semibold text-white">{Math.abs(info.horizontalAngle)}°</dd></div>
-              <div className="rounded-lg bg-white/[0.04] p-2"><dt className="text-[10px] text-gray-500">Screen fills</dt><dd className="text-sm font-semibold text-white">{info.screenWidthAngle}°</dd></div>
+              <div className="rounded-lg bg-fill p-2"><dt className="text-3xs text-gray-500">To screen</dt><dd className="text-sm font-semibold text-white">{info.distance} m</dd></div>
+              <div className="rounded-lg bg-fill p-2"><dt className="text-3xs text-gray-500">Off centre</dt><dd className="text-sm font-semibold text-white">{Math.abs(info.horizontalAngle)}°</dd></div>
+              <div className="rounded-lg bg-fill p-2"><dt className="text-3xs text-gray-500">Screen fills</dt><dd className="text-sm font-semibold text-white">{info.screenWidthAngle}°</dd></div>
             </dl>
             {selectedSeats.length > 1 && (
               <div className="mt-3">
-                <p className="mb-1.5 text-[11px] text-gray-500">Compare your seats</p>
+                <p className="mb-1.5 text-2xs text-gray-500">Compare your seats</p>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedSeats.map((s) => (
                     <button key={s.seatNumber} onClick={() => enterSeatView(s)} aria-pressed={s.seatNumber === viewSeat.seatNumber} className={`chip px-3 py-1 ${s.seatNumber === viewSeat.seatNumber ? "chip-active" : ""}`}>
@@ -873,7 +873,7 @@ export default function Auditorium3D({
                 </div>
               </div>
             )}
-            <p className="mt-3 hidden text-[11px] text-gray-500 md:block">Drag or use the arrow keys to look around a little.</p>
+            <p className="mt-3 hidden text-2xs text-gray-500 md:block">Drag or use the arrow keys to look around a little.</p>
             <button onClick={exitSeatView} className="btn-secondary btn-sm mt-2 w-full">
               <Icon name="arrowLeft" className="h-4 w-4" /> Back to the auditorium
             </button>
