@@ -15,7 +15,12 @@ if (problems.length) {
 // Admin access problems switch admin sign-in off; they don't stop the site.
 describeAdminConfig().forEach((note) => console.warn(`Admin access: ${note}`));
 
-connectDB();
+connectDB().then(() =>
+  // Halls designed in the admin layout editor.
+  require("./controllers/layoutController")
+    .loadCustomLayouts()
+    .catch(() => console.warn("Custom auditorium layouts could not be loaded"))
+);
 
 const app = createApp();
 const PORT = process.env.PORT || 5000;

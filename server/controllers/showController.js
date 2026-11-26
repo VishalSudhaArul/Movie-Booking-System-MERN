@@ -3,6 +3,7 @@ const Movie = require("../models/Movie");
 const Parking = require("../models/Parking");
 const { isObjectId, cleanString, cleanNumber, exactInsensitive } = require("../utils/validate");
 const { showForUser } = require("../utils/seatHolds");
+const { ensureLayout } = require("./layoutController");
 const {
   DEFAULT_LAYOUT_ID,
   getLayout,
@@ -49,6 +50,15 @@ const readShowInput = (body, { partial = false } = {}) => {
     if (!time || !TIME_RE.test(time)) errors.push("Enter a valid show time");
     else out.time = time;
   }
+  // Optional auditorium name shown on tickets, e.g. "Audi 3".
+  if (has("screenName")) {
+    if (body.screenName === "" || body.screenName === null) out.screenName = "";
+    else {
+      const screenName = cleanString(body.screenName, { max: 40 });
+      if (!screenName) errors.push("The screen name can be up to 40 characters");
+      else out.screenName = screenName;
+    }
+  }
   Object.values(CATEGORY_PRICE_FIELDS).forEach((field) => {
     if (!partial || has(field)) {
       const price = cleanNumber(body[field], { min: 0, max: MAX_PRICE });
@@ -71,7 +81,7 @@ exports.addShow = async (req, res, next) => {
     }
 
     const layoutId = req.body.layoutId === undefined ? DEFAULT_LAYOUT_ID : req.body.layoutId;
-    const layout = typeof layoutId === "string" ? getLayout(layoutId) : null;
+    const layout = typeof layoutId === "string" ? await ensureLayout(layoutId) : null;
     if (!layout) return res.status(400).json({ message: "Unknown auditorium layout" });
 
     const seats = generateSeatsFromLayout(layout, values);
@@ -99,6 +109,7 @@ exports.getShowById = async (req, res, next) => {
     const show = await query;
     if (!show) return res.status(404).json({ message: "Show not found" });
     // The seat map and the 3D auditorium are both drawn from `layout`.
+    if (show.layoutId && !getLayout(show.layoutId)) await ensureLayout(show.layoutId);
     return res.json({ ...showForUser(show, req.user?.id), layout: layoutForShow(show) });
   } catch (err) {
     return next(err);

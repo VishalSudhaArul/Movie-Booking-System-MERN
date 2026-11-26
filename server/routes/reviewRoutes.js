@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const Review = require("../models/Review");
 const Movie = require("../models/Movie");
-const { authMiddleware } = require("../middleware/authMiddleware");
+const { authMiddleware, authOrAdminSession } = require("../middleware/authMiddleware");
+const { adminAccess } = require("../middleware/adminMiddleware");
 const { isObjectId, cleanString, cleanNumber } = require("../utils/validate");
 
 // GET average rating and review count for every reviewed movie
@@ -72,6 +73,28 @@ router.post("/", authMiddleware, async (req, res, next) => {
     return res.status(201).json({ message: "Review posted successfully!", review });
   } catch (error) {
     return next(error);
+  }
+});
+
+/* ── Admin: review moderation ── */
+
+router.get("/admin/recent", authOrAdminSession, adminAccess, async (req, res, next) => {
+  try {
+    const reviews = await Review.find().sort({ createdAt: -1 }).limit(100).populate("movieId", "title").lean();
+    return res.json(reviews.map((r) => ({ _id: r._id, movie: r.movieId?.title || "Removed movie", userName: r.userName, rating: r.rating, comment: r.comment, createdAt: r.createdAt })));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.delete("/:id", authOrAdminSession, adminAccess, async (req, res, next) => {
+  try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ message: "Invalid review ID" });
+    const deleted = await Review.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Review not found" });
+    return res.json({ message: "Review removed" });
+  } catch (err) {
+    return next(err);
   }
 });
 

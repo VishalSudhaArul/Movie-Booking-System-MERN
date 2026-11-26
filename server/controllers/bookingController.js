@@ -186,6 +186,15 @@ exports.bookSeats = async (req, res, next) => {
         couponCode: appliedCoupon,
         discountAmount: discount,
         totalPrice,
+        pricing: {
+          seats: selectedSeatObjects.map((s) => ({ seatNumber: s.seatNumber, category: s.category, price: Number(s.price) || 0 })),
+          seatTotal,
+          snacksTotal,
+          parkingTotal: cleanParking ? cleanParking.price : 0,
+          subtotal,
+          discount,
+          total: totalPrice,
+        },
         // Demo checkout: no money is taken, and the record says so.
         paymentStatus: "Demo",
         paymentMode: "DEMO",

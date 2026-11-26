@@ -39,6 +39,25 @@ const bookingSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // What was charged, frozen at booking time. Analytics reads this rather
+    // than the show's current prices, which an admin may change later.
+    // Bookings made before this field existed don't have it.
+    pricing: {
+      type: new mongoose.Schema(
+        {
+          seats: [{ _id: false, seatNumber: String, category: String, price: Number }],
+          seatTotal: Number,
+          snacksTotal: Number,
+          parkingTotal: Number,
+          subtotal: Number,
+          discount: Number,
+          total: Number,
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
+
     couponCode: String,
 
     discountAmount: {
