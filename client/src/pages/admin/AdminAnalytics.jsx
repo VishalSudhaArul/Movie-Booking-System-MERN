@@ -4,6 +4,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import RevenueCharts from "../../components/RevenueCharts";
 import AdminLayout from "../../components/AdminLayout";
+import FinancePanels from "../../components/FinancePanels";
 import PageHeader, { StatCard } from "../../components/ui/PageHeader";
 import Icon from "../../components/ui/Icon";
 import Poster from "../../components/Poster";
@@ -94,7 +95,7 @@ export default function AdminAnalytics() {
         <PageHeader
           breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Analytics" }]}
           title="Analytics"
-          subtitle="Booking value by movie and theatre. Checkout is a demo, so these are booked values, not collected payments."
+          subtitle="Reconciled from each booking's own price record. Checkout is a demo, so demo values are booked, not collected, payments."
           icon="chart"
           actions={
             <>
@@ -139,10 +140,12 @@ export default function AdminAnalytics() {
                   <StatCard label="Movies" value={summary.totalMovies ?? 0} icon="film" />
                   <StatCard label="Showtimes" value={summary.totalShows ?? 0} icon="calendar" tone="accent" />
                   <StatCard label="Tickets" value={summary.totalTickets ?? 0} icon="ticket" tone="green" />
-                  <StatCard label="Booking value" value={formatPrice(summary.totalRevenue || 0)} icon="chart" tone="gold" />
+                  <StatCard label="Net booking value" value={formatPrice(summary.totalRevenue || 0)} icon="chart" tone="gold" />
                 </>
               )}
             </div>
+
+            {status === "ready" && data?.finance && <FinancePanels data={data} />}
 
             {status === "ready" && movieStats.length === 0 ? (
               <EmptyState icon="chart" title="No bookings in this period" message="Try a longer time range." />

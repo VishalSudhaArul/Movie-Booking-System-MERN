@@ -10,9 +10,12 @@ import { formatPrice } from "../lib/format";
 const MODULES = [
   { icon: "film", title: "Movies", desc: "Add titles, trailers, posters and details.", path: "/admin/movies" },
   { icon: "calendar", title: "Showtimes", desc: "Schedule shows, halls, dates and seat prices.", path: "/admin/shows" },
+  { icon: "grid", title: "Auditoriums", desc: "Design and preview seat layouts for new halls.", path: "/admin/auditoriums" },
+  { icon: "pin", title: "Venues", desc: "Publish entrances, food counters and exits for tickets.", path: "/admin/venues" },
   { icon: "popcorn", title: "Snacks", desc: "Manage each theatre's food and drinks menu.", path: "/admin/snacks" },
   { icon: "car", title: "Parking", desc: "Set bike and car parking prices per theatre.", path: "/admin/parking" },
-  { icon: "chart", title: "Analytics", desc: "Revenue by movie and theatre, with charts.", path: "/admin/analytics" },
+  { icon: "star", title: "Promotions & reviews", desc: "Create promo codes and moderate movie reviews.", path: "/admin/promotions" },
+  { icon: "chart", title: "Analytics", desc: "Reconciled revenue, occupancy, categories and food sales.", path: "/admin/analytics" },
   { icon: "qr", title: "Scan tickets", desc: "Verify tickets and admit guests at the door.", path: "/admin/scan" },
   { icon: "settings", title: "IoT console", desc: "Hardware simulator for gates, parking and sensors.", path: "/admin/iot" },
 ];

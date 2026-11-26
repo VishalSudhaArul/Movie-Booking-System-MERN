@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Pagination } from "../../components/ui/Navigation";
-
-const PAGE_SIZE = 12;
 import { SearchInput } from "../../components/ui/Input";
 import API from "../../api";
 import AdminLayout from "../../components/AdminLayout";
@@ -14,8 +12,10 @@ import { EmptyState, ErrorState, Spinner } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/Toast";
 import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../../lib/format";
 
+const PAGE_SIZE = 12;
+
 const DEFAULT_LAYOUT = "classic-136";
-const EMPTY_FORM = { movieId: "", theatre: "", date: "", time: "", balconyPrice: "", firstClassPrice: "", secondClassPrice: "", layoutId: DEFAULT_LAYOUT };
+const EMPTY_FORM = { movieId: "", theatre: "", date: "", time: "", balconyPrice: "", firstClassPrice: "", secondClassPrice: "", layoutId: DEFAULT_LAYOUT, screenName: "" };
 
 const PRICE_FIELDS = [
   { key: "balconyPrice", label: "Balcony price (₹)" },
@@ -99,6 +99,7 @@ function AdminShows() {
         balconyPrice: Number(form.balconyPrice),
         firstClassPrice: Number(form.firstClassPrice),
         secondClassPrice: Number(form.secondClassPrice),
+        screenName: (form.screenName || "").trim(),
       };
       if (editId) {
         // The hall of an existing showtime is fixed (its seats and bookings come from it).
@@ -131,6 +132,7 @@ function AdminShows() {
       firstClassPrice: String(s.firstClassPrice ?? ""),
       secondClassPrice: String(s.secondClassPrice ?? ""),
       layoutId: s.layoutId || DEFAULT_LAYOUT,
+      screenName: s.screenName || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -231,6 +233,9 @@ function AdminShows() {
                   </option>
                 ))}
               </select>
+            </Field>
+            <Field id="s-screen" label="Auditorium name (optional)" hint="Shown on tickets, e.g. Audi 3.">
+              <input id="s-screen" className="input" maxLength={40} placeholder="e.g. Audi 3" value={form.screenName} onChange={update("screenName")} />
             </Field>
             <Field id="s-date" label="Date" required error={errors.date}>
               <input id="s-date" type="date" className={`input ${errors.date ? "input-error" : ""}`} value={form.date} onChange={update("date")} />
