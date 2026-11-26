@@ -2,6 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────── Design tokens ─────────────────────────
+   The single source for colours, motion and surfaces. Tailwind maps these to
+   class names (tailwind.config.js); three.js and canvas code reads them with
+   themeColor() in lib/theme.js. Roles are documented in docs/design-system.md.
+   Colour values are RGB channels so Tailwind can add opacity (bg-canvas/80).
+   These do not change with the colour theme; only the accents below do. */
+:root {
+  /* Surfaces, darkest to lightest (the ink-* ramp) */
+  --surface-canvas: 5 7 15;
+  --surface-sunken: 9 13 26;
+  --surface-raised: 13 19 36;
+  --surface-overlay: 18 26 48;
+  --surface-highlight: 27 37 65;
+
+  /* Text roles. Every one of these is at least 4.5:1 on every surface. */
+  --fg-strong: 255 255 255;
+  --fg-body: 229 231 235;
+  --fg-secondary: 209 213 219;
+  --fg-muted: 156 163 175;
+  --fg-subtle: 132 140 160;
+
+  /* Hairlines and translucent fills over the dark surfaces */
+  --line-subtle: rgb(255 255 255 / 0.05);
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.14);
+  /* Borders that identify a form control (inputs, selects). WCAG 1.4.11 needs
+     3:1 against the surface around them: 36% white gives 3.2–3.3:1 on every surface. */
+  --line-control: rgb(255 255 255 / 0.36);
+  --fill-subtle: rgb(255 255 255 / 0.03);
+  --fill: rgb(255 255 255 / 0.05);
+  --fill-strong: rgb(255 255 255 / 0.08);
+  --fill-emphasis: rgb(255 255 255 / 0.12);
+
+  /* Status colours: fixed, so success/warning/error/info mean the same thing
+     in every theme. */
+  --success-200: 167 243 208;
+  --success-300: 110 231 183;
+  --success-400: 52 211 153;
+  --success-500: 16 185 129;
+  --success-600: 5 150 105;
+  --success-700: 4 120 87;
+  --warning-300: 253 230 138;
+  --warning-400: 252 211 77;
+  --warning-500: 245 184 61;
+  --info-200: 186 230 253;
+  --info-300: 125 211 252;
+  --info-400: 56 189 248;
+  --info-500: 14 165 233;
+  --danger-300: 253 164 175;
+  --danger-400: 251 113 133;
+  --danger-500: 244 63 94;
+  --danger-600: 225 29 72;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layout */
+  --header-height: 4rem;
+
+  color-scheme: dark;
+}
+
 /* ───────────────────────── Colour themes ─────────────────────────
    Only the accent colours change between themes. Values are RGB channels so
    Tailwind can add opacity (bg-brand-500/20). Errors (danger), warnings (gold)
@@ -27,6 +93,7 @@
   --grad-from: 10 111 224;
   --grad-via: 99 82 240;
   --grad-to: 124 58 237;
+  --brand-solid: 10 111 224;
   --on-brand: 255 255 255;
   --on-accent: 255 255 255;
 }
@@ -48,6 +115,7 @@
   --grad-from: 124 58 237;
   --grad-via: 147 51 234;
   --grad-to: 192 38 211;
+  --brand-solid: 124 58 237;
   --on-brand: 255 255 255;
   --on-accent: 28 6 34;
 }
@@ -69,6 +137,7 @@
   --grad-from: 220 38 38;
   --grad-via: 190 24 60;
   --grad-to: 159 18 57;
+  --brand-solid: 220 38 38;
   --on-brand: 255 255 255;
   --on-accent: 26 10 3;
 }
@@ -90,6 +159,7 @@
   --grad-from: 16 185 129;
   --grad-via: 20 184 166;
   --grad-to: 6 182 212;
+  --brand-solid: 16 185 129;
   --on-brand: 3 20 15;
   --on-accent: 3 20 15;
 }
@@ -111,6 +181,7 @@
   --grad-from: 251 191 36;
   --grad-via: 245 158 11;
   --grad-to: 249 115 22;
+  --brand-solid: 245 158 11;
   --on-brand: 26 16 3;
   --on-accent: 26 16 3;
 }
@@ -144,7 +215,7 @@
   }
 
   body {
-    @apply bg-ink-950 font-sans text-gray-200 antialiased;
+    @apply bg-canvas font-sans text-fg-body antialiased;
     /* Soft accent-coloured light from the top of the page. Fixed so it doesn't
        repaint while scrolling. */
     background-image: radial-gradient(1200px 600px at 10% -10%, rgb(var(--brand-500) / 0.09), transparent 60%),
@@ -169,33 +240,105 @@
     background: rgb(var(--brand-500) / 0.4);
     color: #fff;
   }
+
+  /* Native form controls pick up the theme accent */
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  progress {
+    accent-color: rgb(var(--brand-500));
+  }
 }
 
 /* ─────────────────────── Components ─────────────────────── */
 
 @layer components {
+  /* ── Layout ──
+     container-page: default content width with responsive gutters.
+     container-narrow: forms, tickets and single-column reading.
+     page: a routed page's main region (vertical rhythm + entrance).
+     section: vertical spacing between large page sections. */
   .container-page {
-    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-page px-4 sm:px-6 lg:px-8;
+  }
+  .container-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 sm:px-6;
+  }
+  .page {
+    @apply py-8 sm:py-10 lg:py-12;
+  }
+  .page-enter {
+    @apply animate-enter;
+  }
+  .section {
+    @apply py-12 sm:py-16;
   }
 
-  /* Buttons */
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
-      transition duration-200 select-none whitespace-nowrap
-      disabled:cursor-not-allowed disabled:opacity-50;
+  /* ── Typography ──
+     display: hero headlines. page-title: one per page (h1).
+     section-title: section headings (h2). card-title: headings inside cards.
+     eyebrow/overline: small uppercase label above a title. caption: hints. */
+  .text-display {
+    @apply font-display text-display-md font-extrabold text-fg sm:text-display-lg lg:text-display-xl;
+  }
+  .page-title {
+    @apply font-display text-2xl font-bold tracking-tight text-fg sm:text-display-sm;
+  }
+  .section-title {
+    @apply font-display text-2xl font-bold tracking-tight text-fg sm:text-3xl;
+  }
+  .card-title {
+    @apply font-display text-lg font-bold text-fg;
+  }
+  .eyebrow {
+    @apply text-2xs font-bold uppercase tracking-overline text-brand-400;
+  }
+  .overline {
+    @apply text-2xs font-semibold uppercase tracking-wider text-fg-muted;
+  }
+  .caption {
+    @apply text-xs text-fg-subtle;
+  }
+  .text-gradient {
+    @apply bg-brand-gradient bg-clip-text text-transparent;
+  }
+
+  /* ── Buttons ──
+     One base (.btn) plus variants. Sizes: btn-sm, (default), btn-lg.
+     Every variant has hover, focus-visible (global ring), active and disabled. */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger,
+  .btn-danger-solid,
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2 rounded-control px-5 py-2.5 text-sm font-semibold
+      transition duration-base ease-standard select-none whitespace-nowrap
+      active:scale-press
+      disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary {
-    @apply btn bg-brand-gradient text-on-brand shadow-glow hover:brightness-110 active:brightness-95
+    @apply bg-brand-gradient text-on-brand shadow-glow hover:brightness-110 active:brightness-95
       disabled:hover:brightness-100;
   }
   .btn-secondary {
-    @apply btn border border-white/10 bg-white/[0.06] text-white hover:border-white/20 hover:bg-white/[0.1];
+    @apply border border-line-strong bg-fill-strong text-fg hover:bg-fill-emphasis
+      disabled:hover:bg-fill-strong;
   }
   .btn-ghost {
-    @apply btn text-gray-300 hover:bg-white/[0.06] hover:text-white;
+    @apply text-fg-secondary hover:bg-fill hover:text-fg;
   }
   .btn-danger {
-    @apply btn border border-danger-500/40 bg-danger-500/10 text-danger-300 hover:bg-danger-500/20;
+    @apply border border-danger-500/40 bg-danger-500/10 text-danger-300 hover:bg-danger-500/20;
+  }
+  /* Destructive confirmation (the final "Delete" in a dialog) */
+  .btn-danger-solid {
+    @apply bg-danger-600 text-white hover:bg-danger-500;
+  }
+  /* Positive confirmation (e.g. "Admit guest"); 5.5:1 white text */
+  .btn-success {
+    @apply bg-success-700 text-white hover:brightness-110;
   }
   .btn-lg {
     @apply px-7 py-3.5 text-base;
@@ -204,130 +347,233 @@
     @apply rounded-lg px-3.5 py-2 text-xs;
   }
   .btn-icon {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10
-      bg-white/[0.04] text-gray-300 transition hover:border-white/20 hover:bg-white/[0.1] hover:text-white;
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-line-strong
+      bg-fill text-fg-secondary transition duration-base ease-standard
+      hover:bg-fill-emphasis hover:text-fg active:scale-press
+      disabled:cursor-not-allowed disabled:opacity-50;
   }
 
-  /* Surfaces */
+  /* ── Surfaces ──
+     card: resting panel. card-muted: flatter, for nested or secondary panels.
+     glass: translucent bar/overlay over content (nav, sheets). */
   .card {
-    @apply rounded-2xl border border-white/[0.08] bg-ink-850/80 bg-surface-gradient shadow-card backdrop-blur-sm;
+    @apply rounded-card border border-line bg-surface/80 bg-surface-gradient shadow-card backdrop-blur-sm;
   }
   .card-muted {
-    @apply rounded-2xl border border-white/[0.06] bg-ink-900/80;
+    @apply rounded-card border border-line-subtle bg-surface-sunken/80;
+  }
+  .card-header {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4;
   }
   .glass {
-    @apply border border-white/[0.08] bg-ink-900/70 backdrop-blur-xl;
+    @apply border border-line bg-surface-sunken/70 backdrop-blur-glass;
   }
   .card-interactive {
-    @apply transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/30 hover:shadow-glow;
+    @apply transition duration-base ease-standard hover:-translate-y-0.5 hover:border-brand-500/30 hover:shadow-glow;
+  }
+  .divider {
+    @apply border-t border-line;
   }
 
-  /* Forms */
+  /* ── Forms ── */
   .label {
-    @apply mb-1.5 block text-xs font-semibold text-gray-400;
+    @apply mb-1.5 block text-xs font-semibold text-fg-muted;
   }
   .input {
-    @apply w-full rounded-xl border border-white/10 bg-ink-900/80 px-4 py-3 text-sm text-white
-      placeholder-gray-500 transition
-      focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25;
+    @apply w-full rounded-control border bg-surface-sunken/80 px-4 py-3 text-sm text-fg
+      placeholder-gray-500 transition duration-base ease-standard
+      hover:border-white/50
+      focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25
+      disabled:cursor-not-allowed disabled:opacity-60;
+    border-color: var(--line-control);
   }
   .input-error {
     @apply border-danger-500/70 focus:border-danger-500 focus:ring-danger-500/25;
+  }
+  /* Native <select> with the shared chevron */
+  .select {
+    @apply input cursor-pointer appearance-none bg-no-repeat pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.85rem center;
+    background-size: 1rem;
+  }
+  .select option {
+    @apply bg-ink-850 text-fg;
   }
   .field-error {
     @apply mt-1.5 text-xs text-danger-300;
   }
   .help-text {
-    @apply mt-1.5 text-xs text-gray-500;
+    @apply mt-1.5 text-xs text-fg-subtle;
+  }
+  /* Checkbox and radio (native input, themed) */
+  .checkbox,
+  .radio {
+    @apply h-4 w-4 shrink-0 cursor-pointer border-line-strong bg-surface-sunken
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .checkbox {
+    @apply rounded;
+  }
+  .radio {
+    @apply rounded-full;
+  }
+  /* Switch: a button with role="switch" (see ui/Switch) */
+  .switch {
+    @apply relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-line-strong
+      bg-fill-strong transition duration-base ease-standard
+      aria-checked:border-transparent aria-checked:bg-brand-solid
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .switch-thumb {
+    @apply inline-block h-4 w-4 translate-x-1 rounded-full bg-white shadow transition duration-base ease-standard;
+  }
+  .switch[aria-checked="true"] .switch-thumb {
+    @apply translate-x-6;
   }
 
-  /* Chips & badges */
+  /* ── Chips, badges, status ── */
   .chip {
-    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04]
-      px-4 py-2 text-xs font-semibold text-gray-300 transition hover:border-white/20 hover:text-white;
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-fill
+      px-4 py-2 text-xs font-semibold text-fg-secondary transition duration-base ease-standard
+      hover:border-white/25 hover:text-fg active:scale-press;
   }
   .chip-active {
-    @apply border-transparent bg-brand-gradient text-on-brand shadow-glow hover:border-transparent;
+    @apply border-transparent bg-brand-gradient text-on-brand shadow-glow hover:border-transparent hover:text-on-brand;
   }
-  .badge {
-    @apply inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06]
-      px-2 py-0.5 text-[11px] font-semibold text-gray-300;
+  .badge,
+  .badge-brand,
+  .badge-accent,
+  .badge-success,
+  .badge-green,
+  .badge-warning,
+  .badge-gold,
+  .badge-info,
+  .badge-danger {
+    @apply inline-flex items-center gap-1 rounded-md border border-line-strong bg-fill-strong
+      px-2 py-0.5 text-2xs font-semibold text-fg-secondary;
   }
   .badge-brand {
-    @apply badge border-brand-500/30 bg-brand-500/10 text-brand-300;
+    @apply border-brand-500/30 bg-brand-500/10 text-brand-300;
   }
   .badge-accent {
-    @apply badge border-accent-500/30 bg-accent-500/10 text-accent-300;
+    @apply border-accent-500/30 bg-accent-500/10 text-accent-300;
   }
-  .badge-gold {
-    @apply badge border-gold-500/30 bg-gold-500/10 text-gold-400;
-  }
+  .badge-success,
   .badge-green {
-    @apply badge border-emerald-500/30 bg-emerald-500/10 text-emerald-300;
+    @apply border-success-500/30 bg-success-500/10 text-success-300;
+  }
+  .badge-warning,
+  .badge-gold {
+    @apply border-warning-500/30 bg-warning-500/10 text-warning-400;
+  }
+  .badge-info {
+    @apply border-info-500/30 bg-info-500/10 text-info-300;
   }
   .badge-danger {
-    @apply badge border-danger-500/30 bg-danger-500/10 text-danger-300;
+    @apply border-danger-500/30 bg-danger-500/10 text-danger-300;
+  }
+  /* Small dot before a status label */
+  .status-dot {
+    @apply inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-current;
   }
 
   /* Inline status messages */
-  .alert {
-    @apply flex items-start gap-2.5 rounded-xl border p-3.5 text-sm;
+  .alert,
+  .alert-info,
+  .alert-success,
+  .alert-warning,
+  .alert-error {
+    @apply flex items-start gap-2.5 rounded-control border p-3.5 text-sm;
   }
   .alert-info {
-    @apply alert border-brand-500/30 bg-brand-500/[0.08] text-brand-200;
+    @apply border-info-500/30 bg-info-500/[0.08] text-info-200;
   }
   .alert-success {
-    @apply alert border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-200;
+    @apply border-success-500/30 bg-success-500/[0.08] text-success-200;
   }
   .alert-warning {
-    @apply alert border-gold-500/30 bg-gold-500/[0.08] text-gold-400;
+    @apply border-warning-500/30 bg-warning-500/[0.08] text-warning-400;
   }
   .alert-error {
-    @apply alert border-danger-500/35 bg-danger-500/[0.08] text-danger-300;
+    @apply border-danger-500/35 bg-danger-500/[0.08] text-danger-300;
   }
 
-  /* Typography helpers */
-  .eyebrow {
-    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-brand-400;
+  /* ── Tabs and segmented controls (see ui/Tabs) ── */
+  .segmented {
+    @apply inline-flex max-w-full gap-1 overflow-x-auto rounded-control border border-line bg-surface-sunken p-1;
+    scrollbar-width: none;
   }
-  .section-title {
-    @apply font-display text-2xl font-bold tracking-tight text-white sm:text-3xl;
+  .segmented-item {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-fg-muted
+      transition duration-base ease-standard hover:text-fg;
   }
-  .text-gradient {
-    @apply bg-brand-gradient bg-clip-text text-transparent;
+  .segmented-item[aria-selected="true"],
+  .segmented-item[aria-pressed="true"] {
+    @apply bg-fill-emphasis text-fg shadow-inner-line;
+  }
+  .tab-underline {
+    @apply flex gap-6 overflow-x-auto border-b border-line;
+    scrollbar-width: none;
+  }
+  .tab-underline-item {
+    @apply -mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 border-transparent pb-3 pt-1 text-sm font-semibold
+      text-fg-muted transition duration-base ease-standard hover:text-fg;
+  }
+  .tab-underline-item[aria-selected="true"] {
+    @apply border-brand-400 text-fg;
+  }
+  .count-pill {
+    @apply rounded-full bg-fill-emphasis px-1.5 text-2xs font-semibold tabular-nums;
   }
 
-  /* Stat tiles (dashboards) */
+  /* ── Menus, popovers, tooltips ── */
+  .menu {
+    @apply overflow-hidden rounded-card border border-line-strong bg-surface-overlay shadow-popover animate-pop;
+  }
+  .menu-item {
+    @apply flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-fg-body
+      transition duration-fast ease-standard hover:bg-fill-strong hover:text-fg focus-visible:bg-fill-strong;
+  }
+  .tooltip {
+    @apply pointer-events-none absolute z-50 w-max max-w-[16rem] rounded-lg border border-line-strong bg-surface-overlay
+      px-2.5 py-1.5 text-xs font-medium text-fg-body shadow-popover animate-pop;
+  }
+
+  /* ── Stat tiles (dashboards) ── */
   .stat-card {
     @apply card p-5;
   }
   .stat-label {
-    @apply text-xs font-semibold uppercase tracking-wider text-gray-400;
+    @apply text-xs font-semibold uppercase tracking-wider text-fg-muted;
   }
   .stat-value {
-    @apply mt-2 font-display text-2xl font-bold text-white sm:text-3xl;
+    @apply mt-2 font-display text-2xl font-bold tabular-nums text-fg sm:text-3xl;
   }
 
-  /* Data tables (admin) */
+  /* ── Data tables ── */
   .table-wrap {
-    @apply overflow-x-auto rounded-2xl border border-white/[0.07];
+    @apply overflow-x-auto rounded-card border border-line;
   }
   .data-table {
     @apply w-full min-w-[640px] text-left text-sm;
   }
+  .data-table caption {
+    @apply sr-only;
+  }
   .data-table thead th {
-    @apply bg-white/[0.03] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400;
+    @apply bg-fill-subtle px-4 py-3 text-2xs font-semibold uppercase tracking-wider text-fg-muted;
   }
   .data-table tbody td {
-    @apply border-t border-white/[0.06] px-4 py-3 text-gray-300;
+    @apply border-t border-line px-4 py-3 text-fg-secondary;
   }
   .data-table tbody tr {
-    @apply transition hover:bg-white/[0.02];
+    @apply transition duration-fast hover:bg-fill-subtle;
   }
 
-  /* Skeleton loader */
+  /* ── Skeleton loader ── */
   .skeleton {
-    @apply relative overflow-hidden rounded-lg bg-white/[0.06];
+    @apply relative overflow-hidden rounded-lg bg-fill-strong;
   }
   .skeleton::after {
     content: "";
@@ -340,25 +586,10 @@
     @apply flex gap-2 overflow-x-auto;
     scrollbar-width: none;
   }
-  .scroll-row::-webkit-scrollbar {
+  .scroll-row::-webkit-scrollbar,
+  .segmented::-webkit-scrollbar,
+  .tab-underline::-webkit-scrollbar {
     display: none;
-  }
-
-  /* ── Admin form helpers (used by the admin pages) ── */
-  .adminInput {
-    @apply input py-2.5;
-  }
-  .adminBtn {
-    @apply btn-primary;
-  }
-  .adminBtnDelete {
-    @apply btn-danger btn-sm;
-  }
-  .dropdownMenu {
-    @apply absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-white/10 bg-ink-800 p-1 shadow-card;
-  }
-  .dropdownItem {
-    @apply cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-brand-500/15 hover:text-white;
   }
 }
 
@@ -366,7 +597,7 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #283454 transparent;
+  scrollbar-color: rgb(var(--surface-highlight)) transparent;
 }
 ::-webkit-scrollbar {
   width: 8px;
@@ -392,7 +623,7 @@
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: none;
   }
 }
 

@@ -104,6 +104,12 @@ const showSchema = new mongoose.Schema({
     default: null
   },
 
+  /* Auditorium name shown on tickets, e.g. "Audi 3" (optional) */
+  screenName: {
+    type: String,
+    default: ""
+  },
+
   /* Seat List */
   seats: [seatSchema]
 

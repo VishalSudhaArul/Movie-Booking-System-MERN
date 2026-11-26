@@ -26,7 +26,7 @@ function AdminGate({ children }) {
 
   if (status === "error") {
     return (
-      <main id="main" className="container-page flex min-h-[calc(100vh-4rem)] items-center justify-center py-16">
+      <main id="main" className="container-page flex min-h-screen-nav items-center justify-center py-16">
         <div className="w-full max-w-md">
           <ErrorState
             title="We couldn't check your access"

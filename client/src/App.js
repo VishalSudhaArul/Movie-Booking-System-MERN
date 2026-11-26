@@ -34,6 +34,9 @@ const AdminSnacks = lazy(() => import("./pages/admin/AdminSnacks"));
 const AdminParking = lazy(() => import("./pages/admin/AdminParking"));
 const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
 const AdminIoTConsole = lazy(() => import("./pages/admin/AdminIoTConsole"));
+const AdminAuditoriums = lazy(() => import("./pages/admin/AdminAuditoriums"));
+const AdminVenues = lazy(() => import("./pages/admin/AdminVenues"));
+const AdminPromotions = lazy(() => import("./pages/admin/AdminPromotions"));
 
 const GiftCards = lazy(() => import("./pages/GiftCards"));
 const LoyaltyWallet = lazy(() => import("./pages/LoyaltyWallet"));
@@ -190,6 +193,30 @@ function App() {
             element={
               <AdminGate>
                 <AdminAnalytics />
+              </AdminGate>
+            }
+          />
+          <Route
+            path="/admin/auditoriums"
+            element={
+              <AdminGate>
+                <AdminAuditoriums />
+              </AdminGate>
+            }
+          />
+          <Route
+            path="/admin/venues"
+            element={
+              <AdminGate>
+                <AdminVenues />
+              </AdminGate>
+            }
+          />
+          <Route
+            path="/admin/promotions"
+            element={
+              <AdminGate>
+                <AdminPromotions />
               </AdminGate>
             }
           />

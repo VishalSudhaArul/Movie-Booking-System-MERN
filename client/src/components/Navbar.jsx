@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import SpotlightSearch from "./SpotlightSearch";
 import Modal from "./ui/Modal";
+import Drawer from "./ui/Drawer";
+import { IconButton } from "./ui/Button";
+import { SearchInput } from "./ui/Input";
+import { useDismiss } from "../lib/a11y";
 import Icon from "./ui/Icon";
 import Poster from "./Poster";
 import { EmptyState } from "./ui/Feedback";
@@ -84,7 +88,6 @@ export default function Navbar() {
         e.preventDefault();
         setSearchOpen((open) => !open);
       }
-      if (e.key === "Escape") setUserMenuOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -97,25 +100,8 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close the account dropdown on outside click
-  useEffect(() => {
-    if (!userMenuOpen) return undefined;
-    const onClick = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [userMenuOpen]);
-
-  // Lock scroll while the mobile drawer is open
-  useEffect(() => {
-    if (!menuOpen) return undefined;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [menuOpen]);
+  // Close the account dropdown on outside click or Escape
+  useDismiss(userMenuRef, userMenuOpen, () => setUserMenuOpen(false));
 
   const handleLogout = () => {
     clearSession();
@@ -145,25 +131,25 @@ export default function Navbar() {
   const onAdminPage = location.pathname.startsWith("/admin");
 
   const linkClass = ({ isActive }) =>
-    `rounded-lg px-3 py-2 text-sm font-medium transition ${
-      isActive ? "bg-brand-500/[0.12] text-white shadow-inner-line" : "text-gray-300 hover:bg-white/[0.05] hover:text-white"
+    `rounded-lg px-3 py-2 text-sm font-medium transition duration-base ease-standard ${
+      isActive ? "bg-brand-500/[0.12] text-fg shadow-inner-line" : "text-fg-secondary hover:bg-fill hover:text-fg"
     }`;
 
   return (
     <>
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[300] focus:rounded-lg focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-on-brand"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[300] focus:rounded-lg focus:bg-brand-solid focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-on-brand"
       >
         Skip to content
       </a>
 
       <header
         className={`sticky top-0 z-40 w-full border-b transition-colors duration-300 ${
-          scrolled ? "border-white/[0.08] bg-ink-950/85 shadow-card backdrop-blur-xl" : "border-transparent bg-ink-950/60 backdrop-blur-md"
+          scrolled ? "border-line bg-canvas/85 shadow-card backdrop-blur-glass" : "border-transparent bg-canvas/60 backdrop-blur-md"
         }`}
       >
-        <nav className="container-page flex h-16 items-center justify-between gap-3" aria-label="Main">
+        <nav className="container-page flex h-header items-center justify-between gap-3" aria-label="Main">
           {/* Brand + city */}
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <Link to="/" aria-label="CineBook home" className="shrink-0">
@@ -171,7 +157,7 @@ export default function Navbar() {
             </Link>
             <button
               onClick={() => setCityOpen(true)}
-              className="hidden items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-300 transition hover:bg-white/[0.05] hover:text-white sm:flex"
+              className="hidden items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-300 transition hover:bg-fill hover:text-white sm:flex"
               aria-label={`Change city, currently ${selectedCity}`}
             >
               <Icon name="pin" className="h-4 w-4 text-brand-400" />
@@ -201,41 +187,36 @@ export default function Navbar() {
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-gray-400 transition hover:bg-white/[0.08] hover:text-white"
+              className="flex h-10 items-center gap-2 rounded-xl border border-line-strong bg-fill px-3 text-sm text-gray-400 transition hover:bg-fill-strong hover:text-white"
               aria-label="Search movies"
             >
               <Icon name="search" className="h-4 w-4" />
               <span className="hidden md:inline">Search</span>
-              <kbd className="hidden rounded border border-white/10 bg-white/[0.05] px-1.5 text-[10px] font-semibold text-gray-500 xl:inline">
+              <kbd className="hidden rounded border border-line-strong bg-fill px-1.5 text-3xs font-semibold text-gray-500 xl:inline">
                 Ctrl K
               </kbd>
             </button>
 
             <ThemePicker className="hidden sm:block" />
 
-            <button
+            <IconButton
+              icon="heart"
               onClick={() => setWatchlistOpen(true)}
-              className="btn-icon relative hidden sm:inline-flex"
-              aria-label={`Watchlist, ${watchlistItems.length} saved`}
-            >
-              <Icon name="heart" className="h-[18px] w-[18px]" />
-              {watchlistItems.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-on-brand">
-                  {watchlistItems.length}
-                </span>
-              )}
-            </button>
+              className="hidden sm:inline-flex"
+              label={`Watchlist, ${watchlistItems.length} saved`}
+              badge={watchlistItems.length}
+            />
 
             {isLoggedIn ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen((o) => !o)}
-                  className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] pl-1.5 pr-2 transition hover:bg-white/[0.08]"
+                  className="flex h-10 items-center gap-2 rounded-xl border border-line-strong bg-fill pl-1.5 pr-2 transition hover:bg-fill-strong"
                   aria-haspopup="menu"
                   aria-expanded={userMenuOpen}
                   aria-label="Account menu"
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-xs font-bold text-on-brand">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-solid text-xs font-bold text-on-brand">
                     {initial}
                   </span>
                   <span className="hidden max-w-[90px] truncate text-sm font-medium text-gray-200 md:inline">
@@ -247,9 +228,10 @@ export default function Navbar() {
                 {userMenuOpen && (
                   <div
                     role="menu"
-                    className="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-white/10 bg-ink-850 shadow-2xl animate-fadeUp"
+                    aria-label="Account"
+                    className="menu absolute right-0 mt-2 w-64"
                   >
-                    <div className="border-b border-white/[0.07] px-4 py-3.5">
+                    <div className="border-b border-line px-4 py-3.5">
                       <p className="truncate text-sm font-semibold text-white">{userName || "CineBook member"}</p>
                       <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
                         <Icon name="pin" className="h-3 w-3" /> {selectedCity}
@@ -262,11 +244,11 @@ export default function Navbar() {
                       <MenuLink to="/gift-cards" icon="gift" label="Gift cards" />
                       {adminActive && <MenuLink to="/admin/dashboard" icon="shield" label="Admin dashboard" />}
                     </div>
-                    <div className="border-t border-white/[0.07] p-1.5">
+                    <div className="border-t border-line p-1.5">
                       <button
                         role="menuitem"
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-brand-300 transition hover:bg-brand-500/10"
+                        className="menu-item text-danger-300 hover:text-danger-300"
                       >
                         <Icon name="logout" className="h-4 w-4" /> Sign out
                       </button>
@@ -299,101 +281,86 @@ export default function Navbar() {
       </header>
 
       {/* ── Mobile drawer ── */}
-      {menuOpen && (
-        <div
-          className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm animate-fadeIn lg:hidden"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setMenuOpen(false);
-          }}
-        >
-          <aside
-            className="ml-auto flex h-full w-[86%] max-w-sm flex-col border-l border-white/10 bg-ink-900 shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu"
-          >
-            <div className="flex h-16 items-center justify-between border-b border-white/[0.07] px-4">
-              <Logo />
-              <button onClick={() => setMenuOpen(false)} className="btn-icon" aria-label="Close menu">
-                <Icon name="close" className="h-5 w-5" />
-              </button>
+      <Drawer
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        label="Menu"
+        header={<Logo />}
+        className="lg:hidden"
+        footer={
+          isLoggedIn ? (
+            <button onClick={handleLogout} className="btn-danger w-full">
+              <Icon name="logout" className="h-4 w-4" /> Sign out
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Link to="/login" className="btn-secondary">
+                Sign in
+              </Link>
+              <Link to="/register" className="btn-primary">
+                Create account
+              </Link>
             </div>
+          )
+        }
+      >
+        <div className="space-y-1 p-3">
+          {NAV_LINKS.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-control px-3.5 py-3 text-md font-medium transition duration-base ${
+                  isActive ? "bg-fill-strong text-fg" : "text-fg-secondary hover:bg-fill hover:text-fg"
+                }`
+              }
+            >
+              <Icon name={link.icon} className="h-5 w-5 text-gray-400" />
+              {link.label}
+            </NavLink>
+          ))}
 
-            <div className="flex-1 space-y-1 overflow-y-auto p-3">
-              {NAV_LINKS.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.end}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-medium transition ${
-                      isActive ? "bg-white/[0.08] text-white" : "text-gray-300 hover:bg-white/[0.05]"
-                    }`
-                  }
-                >
-                  <Icon name={link.icon} className="h-5 w-5 text-gray-400" />
-                  {link.label}
-                </NavLink>
-              ))}
+          <div className="my-2 border-t border-line" />
 
-              <div className="my-2 border-t border-white/[0.07]" />
+          <DrawerButton
+            icon="heart"
+            label="Watchlist"
+            trailing={watchlistItems.length > 0 ? String(watchlistItems.length) : null}
+            onClick={() => {
+              setMenuOpen(false);
+              setWatchlistOpen(true);
+            }}
+          />
+          {isLoggedIn && (
+            <DrawerButton icon="ticket" label="My bookings" onClick={() => navigate("/my-bookings")} />
+          )}
+          <DrawerButton
+            icon="pin"
+            label="City"
+            trailing={selectedCity}
+            onClick={() => {
+              setMenuOpen(false);
+              setCityOpen(true);
+            }}
+          />
+          <DrawerButton
+            icon="shield"
+            label="Admin"
+            trailing={adminActive ? "Dashboard" : null}
+            onClick={() => navigate(adminHref)}
+          />
 
-              <DrawerButton
-                icon="heart"
-                label="Watchlist"
-                trailing={watchlistItems.length > 0 ? String(watchlistItems.length) : null}
-                onClick={() => {
-                  setMenuOpen(false);
-                  setWatchlistOpen(true);
-                }}
-              />
-              {isLoggedIn && (
-                <DrawerButton icon="ticket" label="My bookings" onClick={() => navigate("/my-bookings")} />
-              )}
-              <DrawerButton
-                icon="pin"
-                label="City"
-                trailing={selectedCity}
-                onClick={() => {
-                  setMenuOpen(false);
-                  setCityOpen(true);
-                }}
-              />
-              <DrawerButton
-                icon="shield"
-                label="Admin"
-                trailing={adminActive ? "Dashboard" : null}
-                onClick={() => navigate(adminHref)}
-              />
-
-              <div className="my-2 border-t border-white/[0.07]" />
-              <div className="px-3.5 py-2">
-                <p className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  <Icon name="palette" className="h-3.5 w-3.5" /> Colour theme
-                </p>
-                <ThemeOptions compact />
-              </div>
-            </div>
-
-            <div className="border-t border-white/[0.07] p-4">
-              {isLoggedIn ? (
-                <button onClick={handleLogout} className="btn-danger w-full">
-                  <Icon name="logout" className="h-4 w-4" /> Sign out
-                </button>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link to="/login" className="btn-secondary">
-                    Sign in
-                  </Link>
-                  <Link to="/register" className="btn-primary">
-                    Create account
-                  </Link>
-                </div>
-              )}
-            </div>
-          </aside>
+          <div className="my-2 border-t border-line" />
+          <div className="px-3.5 py-2">
+            <p className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <Icon name="palette" className="h-3.5 w-3.5" /> Colour theme
+            </p>
+            <ThemeOptions compact />
+          </div>
         </div>
-      )}
+
+  </Drawer>
 
       {/* ── City picker ── */}
       <Modal
@@ -402,17 +369,13 @@ export default function Navbar() {
         title="Choose your city"
         subtitle="We'll remember this for your next visit"
       >
-        <div className="border-b border-white/[0.07] p-4">
-          <div className="relative">
-            <Icon name="search" className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input
-              value={cityQuery}
-              onChange={(e) => setCityQuery(e.target.value)}
-              placeholder="Search for a city"
-              aria-label="Search for a city"
-              className="input pl-10"
-            />
-          </div>
+        <div className="border-b border-line p-4">
+          <SearchInput
+            value={cityQuery}
+            onChange={(e) => setCityQuery(e.target.value)}
+            placeholder="Search for a city"
+            label="Search for a city"
+          />
         </div>
         <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3">
           {filteredCities.length === 0 && (
@@ -428,7 +391,7 @@ export default function Navbar() {
                 className={`flex items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-left transition ${
                   selected
                     ? "border-brand-500 bg-brand-500/10"
-                    : "border-white/[0.07] bg-white/[0.03] hover:border-white/20"
+                    : "border-line bg-fill-subtle hover:border-white/20"
                 }`}
               >
                 <span className="min-w-0">
@@ -480,7 +443,7 @@ export default function Navbar() {
               {watchlistItems.map((movie) => (
                 <li
                   key={movie._id}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-2.5"
+                  className="flex items-center gap-3 rounded-xl border border-line bg-fill-subtle p-2.5"
                 >
                   <Poster src={movie.poster} alt="" className="h-16 w-11 shrink-0 rounded-lg" />
                   <div className="min-w-0 flex-1">
@@ -522,7 +485,7 @@ function MenuLink({ to, icon, label }) {
     <Link
       to={to}
       role="menuitem"
-      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 transition hover:bg-white/[0.06] hover:text-white"
+      className="menu-item"
     >
       <Icon name={icon} className="h-4 w-4 text-gray-400" />
       {label}
@@ -534,7 +497,7 @@ function DrawerButton({ icon, label, trailing, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] font-medium text-gray-300 transition hover:bg-white/[0.05]"
+      className="flex w-full items-center gap-3 rounded-control px-3.5 py-3 text-left text-md font-medium text-fg-secondary transition duration-base hover:bg-fill hover:text-fg"
     >
       <Icon name={icon} className="h-5 w-5 text-gray-400" />
       <span className="flex-1">{label}</span>

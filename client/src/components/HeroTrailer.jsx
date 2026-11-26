@@ -255,8 +255,22 @@ const HeroTrailer = ({ onLaunchClick }) => {
         }
       }
 
-      setCurrentTime(state.currentTime);
-      if (delta > 0) setFps((1 / delta).toFixed(1));
+      // The canvas redraws every frame, but React only needs the HUD values a
+      // few times a second (the timeline shows tenths): re-rendering this whole
+      // component at 60 Hz just to update two labels wasted CPU and memory churn.
+      if (delta > 0) {
+        state.fpsFrames = (state.fpsFrames || 0) + 1;
+        state.fpsElapsed = (state.fpsElapsed || 0) + delta;
+      }
+      if (!state.lastUiUpdate || now - state.lastUiUpdate >= 100) {
+        state.lastUiUpdate = now;
+        setCurrentTime(state.currentTime);
+        if (state.fpsElapsed >= 0.25) {
+          setFps((state.fpsFrames / state.fpsElapsed).toFixed(1));
+          state.fpsFrames = 0;
+          state.fpsElapsed = 0;
+        }
+      }
 
       const width = canvas.width;
       const height = canvas.height;
@@ -566,7 +580,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
     return () => {
       window.removeEventListener("resize", handleResize);
-      if (observer && containerRef.current) observer.unobserve(containerRef.current);
+      if (observer) observer.disconnect();
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, []);
@@ -579,7 +593,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
   };
 
   return (
-    <div className="relative w-full overflow-hidden bg-[#040409] rounded-3xl border border-brand-500/20 shadow-2xl my-8">
+    <div className="relative w-full overflow-hidden bg-[#040409] rounded-3xl border border-brand-500/20 shadow-overlay my-8">
       
       {/* 16:9 Aspect Ratio Container */}
       <div ref={containerRef} className="relative w-full aspect-video bg-black overflow-hidden">
@@ -599,7 +613,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 text-[11px] font-mono text-gray-300">
+          <div className="hidden sm:flex items-center gap-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-line-strong text-2xs font-mono text-gray-300">
             <div>FPS: <span className="text-brand-400 font-bold">{fps}</span></div>
             <div>GESTURE: <span className="text-brand-400 font-bold">{currentGesture}</span></div>
             <div>CONFIDENCE: <span className="text-brand-400 font-bold">99.8%</span></div>
@@ -612,7 +626,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
         </div>
 
         {/* Controls Footer Overlay */}
-        <div className="absolute bottom-4 left-6 right-6 z-20 bg-[#080d1a]/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl flex flex-col gap-3 shadow-2xl">
+        <div className="absolute bottom-4 left-6 right-6 z-20 bg-[#080d1a]/90 backdrop-blur-xl border border-line-strong p-4 rounded-2xl flex flex-col gap-3 shadow-overlay">
           {/* Progress Bar */}
           <div
             onClick={(e) => {
@@ -633,7 +647,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="px-3.5 py-2 bg-white/10 hover:bg-brand-500/20 text-white rounded-xl border border-white/15 transition flex items-center gap-2"
+                className="px-3.5 py-2 bg-fill-emphasis hover:bg-brand-500/20 text-white rounded-xl border border-line-strong transition flex items-center gap-2"
               >
                 <span>{isPlaying ? "⏸ PAUSE" : "▶ PLAY"}</span>
               </button>
@@ -643,7 +657,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
                   stateRef.current.currentTime = 0;
                   setIsPlaying(true);
                 }}
-                className="px-3.5 py-2 bg-white/10 hover:bg-brand-500/20 text-white rounded-xl border border-white/15 transition"
+                className="px-3.5 py-2 bg-fill-emphasis hover:bg-brand-500/20 text-white rounded-xl border border-line-strong transition"
               >
                 🔄 REPLAY
               </button>
@@ -653,7 +667,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
                 className={`px-3.5 py-2 rounded-xl transition border ${
                   isInteractive
                     ? "bg-brand-400 text-black border-brand-400 font-extrabold shadow-[0_0_15px_rgb(var(--brand-400))]"
-                    : "bg-white/10 text-white border-white/15 hover:bg-brand-500/20"
+                    : "bg-fill-emphasis text-white border-line-strong hover:bg-brand-500/20"
                 }`}
               >
                 🖐️ INTERACTIVE HAND MODE
@@ -661,7 +675,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
 
               <button
                 onClick={() => setAudioEnabled(!audioEnabled)}
-                className="px-3.5 py-2 bg-white/10 hover:bg-brand-500/20 text-white rounded-xl border border-white/15 transition"
+                className="px-3.5 py-2 bg-fill-emphasis hover:bg-brand-500/20 text-white rounded-xl border border-line-strong transition"
               >
                 {audioEnabled ? "🔊 SOUND FX ON" : "🔇 SOUND FX OFF"}
               </button>
@@ -674,7 +688,7 @@ const HeroTrailer = ({ onLaunchClick }) => {
               </button>
             </div>
 
-            <div className="flex items-center gap-3 font-mono text-gray-400 text-[11px]">
+            <div className="flex items-center gap-3 font-mono text-gray-400 text-2xs">
               <span>
                 {Math.floor(currentTime / 60)}:{(currentTime % 60).toFixed(1)} / 00:15.0
               </span>
@@ -693,8 +707,8 @@ const HeroTrailer = ({ onLaunchClick }) => {
         {/* Gesture Quick Guide Overlay Modal */}
         {showGuide && (
           <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
-            <div className="bg-[#0b1021] border border-brand-500/40 rounded-3xl p-6 max-w-lg w-full text-white shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="bg-[#0b1021] border border-brand-500/40 rounded-3xl p-6 max-w-lg w-full text-white shadow-overlay space-y-4">
+              <div className="flex items-center justify-between border-b border-line-strong pb-3">
                 <h3 className="text-base font-extrabold font-mono text-brand-300 flex items-center gap-2">
                   <span>🖐️</span> CINEBOOK AI MOTION GESTURES
                 </h3>
@@ -707,19 +721,19 @@ const HeroTrailer = ({ onLaunchClick }) => {
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                <div className="bg-fill border border-line-strong p-3 rounded-2xl">
                   <div className="text-brand-400 font-bold mb-1">🖐️ OPEN PALM</div>
                   <div className="text-gray-300">Swipe horizontally left/right to browse movies</div>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                <div className="bg-fill border border-line-strong p-3 rounded-2xl">
                   <div className="text-brand-400 font-bold mb-1">👆 POINT FINGER</div>
                   <div className="text-gray-300">Aim target reticle to expand movie details & showtimes</div>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                <div className="bg-fill border border-line-strong p-3 rounded-2xl">
                   <div className="text-brand-400 font-bold mb-1">🤏 PINCH FINGERS</div>
                   <div className="text-gray-300">Pinch index + thumb to precision lock recliner seats</div>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                <div className="bg-fill border border-line-strong p-3 rounded-2xl">
                   <div className="text-brand-400 font-bold mb-1">👍 THUMBS UP</div>
                   <div className="text-gray-300">Hold thumbs up for 1s to trigger biometric express booking</div>
                 </div>

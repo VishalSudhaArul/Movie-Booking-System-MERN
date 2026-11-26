@@ -355,6 +355,8 @@ test.describe("desktop and tablet", () => {
 
     // Customer B, in a separate browser session, sees x as taken.
     const ctxB = await browser.newContext({ viewport: page.viewportSize() });
+    // Closed even if an assertion below fails, so a second WebGL page never lingers.
+    try {
     const pageB = await ctxB.newPage();
     const { session: sessionB } = await open3D(pageB, { who: "user2" });
     await findSeat(pageB, x);
@@ -382,7 +384,9 @@ test.describe("desktop and tablet", () => {
     await expect(panel(pageB)).toContainText(x);
     await expect(heldTimer(pageB)).toBeVisible();
     await expect.poll(async () => (await serverSeats(request, showId, sessionB.token))[x].heldByMe === true).toBe(true);
-    await ctxB.close();
+    } finally {
+      await ctxB.close();
+    }
   });
 
   test("reduced motion skips the scroll intro", async ({ page }) => {
@@ -415,6 +419,7 @@ test.describe("desktop and tablet", () => {
     await noGl.goto(page.url());
     await expect(noGl.getByTestId("seat-map-scroll")).toBeVisible();
     await expect(noGl.getByRole("group", { name: "Seat view" })).toHaveCount(0);
+    await noGl.close();
   });
 });
 

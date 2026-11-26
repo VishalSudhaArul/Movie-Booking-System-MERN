@@ -71,7 +71,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <main id="main" className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10 sm:py-16">
+    <main id="main" className="relative flex min-h-screen-nav items-center justify-center px-4 py-10 sm:py-16">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-64 max-w-xl rounded-full bg-brand-500/10 blur-3xl"
         aria-hidden="true"
@@ -83,7 +83,7 @@ export default function AdminLogin() {
         <h1 className="sr-only">Admin access</h1>
 
         {expired && !error && (
-          <p role="status" className="mb-5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-gray-300" data-testid="admin-expired-notice">
+          <p role="status" className="mb-5 rounded-xl border border-line-strong bg-fill px-4 py-3 text-sm text-gray-300" data-testid="admin-expired-notice">
             Your admin session has ended. Sign in again to continue.
           </p>
         )}

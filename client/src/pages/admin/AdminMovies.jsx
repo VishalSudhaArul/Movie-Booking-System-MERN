@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { SearchInput } from "../../components/ui/Input";
 import API from "../../api";
 import TrailerModal, { getYouTubeEmbedUrl } from "../../components/TrailerModal";
 import AdminLayout from "../../components/AdminLayout";
@@ -155,9 +156,9 @@ function AdminMovies() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="space-y-8">
         <PageHeader
-          eyebrow="Admin"
+          breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Movies" }]}
           title="Movies"
           subtitle="Add and edit the films shown on the site, including in-app trailers."
           icon="film"
@@ -248,11 +249,14 @@ function AdminMovies() {
 
         {/* Search and filters */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="relative md:w-80">
-            <label htmlFor="movie-search" className="sr-only">Search movies</label>
-            <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input id="movie-search" placeholder="Search by title or genre" value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-10" />
-          </div>
+          <SearchInput
+            id="movie-search"
+            wrapperClassName="md:w-80"
+            label="Search movies"
+            placeholder="Search by title or genre"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <div className="scroll-row -mx-4 px-4 md:mx-0 md:px-0" role="group" aria-label="Filter by genre">
             {["All", ...GENRES].map((g) => {
               const count = g === "All" ? movies.length : movies.filter((m) => hasGenre(m, g)).length;
@@ -280,7 +284,7 @@ function AdminMovies() {
               <li key={m._id} className={`card flex flex-col overflow-hidden ${editId === m._id ? "ring-2 ring-brand-500" : ""}`}>
                 <div className="relative">
                   <Poster src={m.poster} alt="" className="aspect-[2/3] w-full" />
-                  <span className="badge absolute left-2 top-2 border-white/15 bg-ink-950/80 backdrop-blur">
+                  <span className="badge absolute left-2 top-2 border-line-strong bg-ink-950/80 backdrop-blur">
                     <Icon name="clock" className="h-3 w-3" /> {formatDuration(m.duration)}
                   </span>
                 </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { SearchInput } from "../../components/ui/Input";
 import API from "../../api";
 import AdminLayout from "../../components/AdminLayout";
 import PageHeader from "../../components/ui/PageHeader";
@@ -93,9 +94,9 @@ export default function AdminSnacks() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="space-y-8">
         <PageHeader
-          eyebrow="Admin"
+          breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Snacks" }]}
           title="Snacks"
           subtitle="Each theatre's food and drinks menu, shown at checkout and on the Food & Drinks page."
           icon="popcorn"
@@ -125,11 +126,14 @@ export default function AdminSnacks() {
           </div>
         </form>
 
-        <div className="relative sm:w-80">
-          <label htmlFor="snack-search" className="sr-only">Search snacks</label>
-          <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-          <input id="snack-search" className="input pl-10" placeholder="Search by item or theatre" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
+        <SearchInput
+          id="snack-search"
+          wrapperClassName="sm:w-80"
+          label="Search snacks"
+          placeholder="Search by item or theatre"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
         {status === "loading" ? (
           <div className="grid gap-4 md:grid-cols-2">
@@ -143,7 +147,7 @@ export default function AdminSnacks() {
           <div className="grid gap-4 md:grid-cols-2">
             {Object.keys(grouped).sort().map((theatreName) => (
               <section key={theatreName} className="card overflow-hidden" aria-label={`${theatreName} menu`}>
-                <header className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-3.5">
+                <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
                   <h3 className="font-semibold text-white">{theatreName}</h3>
                   <span className="badge">{grouped[theatreName].length} items</span>
                 </header>

@@ -235,7 +235,7 @@ function Home() {
             </div>
           </div>
           {showDemo && (
-            <div className="border-t border-white/[0.07] p-4 sm:p-6">
+            <div className="border-t border-line p-4 sm:p-6">
               <Suspense fallback={<div className="skeleton h-64 w-full rounded-2xl" />}>
                 <HeroTrailer />
               </Suspense>
@@ -514,7 +514,7 @@ function CinematicHero({ movies, loading, error, reload, upcomingCount, onTraile
                     src={hero.poster}
                     alt={hero.title}
                     eager
-                    className="aspect-[2/3] w-[250px] rounded-2xl border border-white/15 shadow-2xl lg:w-[300px] xl:w-[330px]"
+                    className="aspect-[2/3] w-[250px] rounded-2xl border border-line-strong shadow-overlay lg:w-[300px] xl:w-[330px]"
                   />
                   <div className="spotlight pointer-events-none absolute inset-0 rounded-2xl" aria-hidden="true" />
                 </Link>
@@ -562,7 +562,7 @@ function CinematicHero({ movies, loading, error, reload, upcomingCount, onTraile
             </div>
             <a
               href="#in-cinemas"
-              className="hidden shrink-0 flex-col items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-400 transition hover:text-white md:flex"
+              className="hidden shrink-0 flex-col items-center gap-1 text-2xs font-semibold uppercase tracking-overline text-gray-400 transition hover:text-white md:flex"
             >
               Scroll
               <span className="flex h-8 w-5 justify-center rounded-full border border-white/25 pt-1.5">
@@ -637,7 +637,7 @@ function StatsStrip({ nowShowing, showtimes, cinemas }) {
   ];
   return (
     <section className="container-page relative z-10 -mt-2 pb-14" aria-label="CineBook right now">
-      <Reveal className="grid grid-cols-3 divide-x divide-white/[0.07] overflow-hidden rounded-2xl border border-white/[0.08] bg-ink-900/70 backdrop-blur-xl">
+      <Reveal className="grid grid-cols-3 divide-x divide-white/[0.07] overflow-hidden rounded-2xl border border-line bg-ink-900/70 backdrop-blur-xl">
         {stats.map((s) => (
           <div key={s.label} className="flex flex-col items-center gap-1 px-2 py-5 text-center sm:flex-row sm:justify-center sm:gap-4 sm:px-6 sm:text-left">
             <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-300 sm:flex">
@@ -647,7 +647,7 @@ function StatsStrip({ nowShowing, showtimes, cinemas }) {
               <span className="block font-display text-2xl font-extrabold text-white sm:text-3xl">
                 <CountUp value={s.value} />
               </span>
-              <span className="block text-[11px] leading-tight text-gray-400 sm:text-xs">{s.label}</span>
+              <span className="block text-2xs leading-tight text-gray-400 sm:text-xs">{s.label}</span>
             </span>
           </div>
         ))}
@@ -727,7 +727,7 @@ function RailCard({ movie, rank }) {
       <motion.div style={tilt.style} {...tilt.handlers} className="relative">
         <Link
           to={`/movies/${movie._id}`}
-          className="relative block overflow-hidden rounded-2xl border border-white/[0.08] shadow-card transition duration-300 group-hover:border-brand-400/50 group-hover:shadow-glow"
+          className="relative block overflow-hidden rounded-2xl border border-line shadow-card transition duration-300 group-hover:border-brand-400/50 group-hover:shadow-glow"
         >
           <Poster src={movie.poster} alt={movie.title} className="aspect-[2/3] w-full transition duration-700 group-hover:scale-[1.06]" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-80 transition group-hover:opacity-100" />
@@ -807,7 +807,7 @@ function StorySection({ movies }) {
         </ol>
         <div className="hidden lg:block">
           <div className="sticky top-28">
-            <div className="relative aspect-[4/3.4] overflow-hidden rounded-3xl border border-white/[0.08] bg-ink-900/80 shadow-card">
+            <div className="relative aspect-[4/3.4] overflow-hidden rounded-3xl border border-line bg-ink-900/80 shadow-card">
               <div className="absolute inset-0 bg-brand-gradient-soft" aria-hidden="true" />
               <AnimatePresence mode="wait">
                 <motion.div
@@ -842,7 +842,7 @@ function StoryStep({ index, step, active, onActive, children }) {
     <li ref={ref} className={`card p-6 transition duration-500 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none ${active ? "lg:opacity-100" : "lg:opacity-35"}`}>
       <span
         className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl font-display text-lg font-bold transition ${
-          active ? "bg-brand-gradient text-on-brand shadow-glow" : "bg-white/[0.06] text-gray-300"
+          active ? "bg-brand-gradient text-on-brand shadow-glow" : "bg-fill-strong text-gray-300"
         }`}
       >
         {index + 1}
@@ -864,7 +864,7 @@ function StoryVisual({ which, posters, large = false }) {
           return (
             <div
               key={m._id}
-              className={`absolute bottom-0 overflow-hidden rounded-xl border border-white/15 shadow-2xl ${large ? "w-40" : "w-28"}`}
+              className={`absolute bottom-0 overflow-hidden rounded-xl border border-line-strong shadow-overlay ${large ? "w-40" : "w-28"}`}
               style={{
                 transform: `translateX(${offset * (large ? 120 : 80)}px) rotate(${offset * 8}deg) translateY(${Math.abs(offset) * 14}px)`,
                 zIndex: 10 - Math.abs(offset),
@@ -892,8 +892,8 @@ function StoryVisual({ which, posters, large = false }) {
                 const cls = picked.has(id)
                   ? "border-brand-400 bg-brand-500 shadow-glow"
                   : booked.has(id)
-                  ? "border-transparent bg-white/[0.08]"
-                  : "border-white/25 bg-white/[0.03]";
+                  ? "border-transparent bg-fill-strong"
+                  : "border-white/25 bg-fill-subtle";
                 return <span key={id} className={`h-6 w-6 rounded-t-md rounded-b-[3px] border ${i === 3 ? "mr-3" : ""} ${cls}`} />;
               })}
             </div>
@@ -905,9 +905,9 @@ function StoryVisual({ which, posters, large = false }) {
   }
   return (
     <div className="mx-auto w-full max-w-xs" aria-hidden="true">
-      <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-ink-850 shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl border border-line-strong bg-ink-850 shadow-overlay">
         <div className="bg-brand-gradient px-5 py-4 text-on-brand">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Admit</p>
+          <p className="text-3xs font-bold uppercase tracking-overline opacity-80">Admit</p>
           <p className="font-display text-xl font-bold">{posters[0]?.title || "Your movie"}</p>
         </div>
         <div className="flex items-center gap-4 px-5 py-5">
@@ -921,7 +921,7 @@ function StoryVisual({ which, posters, large = false }) {
             <p>Show this at the door</p>
           </div>
         </div>
-        <div className="border-t border-dashed border-white/15 px-5 py-3 text-[11px] text-gray-500">Example ticket</div>
+        <div className="border-t border-dashed border-line-strong px-5 py-3 text-2xs text-gray-500">Example ticket</div>
       </div>
     </div>
   );
@@ -1028,7 +1028,7 @@ function ShowtimeDiscovery({ shows, movies, loading }) {
                                 <Link
                                   key={show._id}
                                   to={`/seats/${show._id}`}
-                                  className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-semibold text-gray-200 transition hover:-translate-y-0.5 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white"
+                                  className="rounded-lg border border-line-strong bg-fill px-2.5 py-1.5 text-xs font-semibold text-gray-200 transition hover:-translate-y-0.5 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white"
                                   aria-label={`${movie.title} at ${name}, ${dayLabel(activeDay)} ${formatShowTime(show.time)}`}
                                 >
                                   {formatShowTime(show.time)}

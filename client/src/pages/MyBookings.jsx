@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Tabs from "../components/ui/Tabs";
 import { Link } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import API from "../api";
 import Icon from "../components/ui/Icon";
 import Modal from "../components/ui/Modal";
+import VenueGuide from "../components/VenueGuide";
 import Poster from "../components/Poster";
 import MovieCard from "../components/MovieCard";
 import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
@@ -106,20 +108,20 @@ function MyBookings() {
   const list = activeTab === "upcoming" ? upcoming : past;
 
   return (
-    <main id="main" className="min-h-screen pb-20">
+    <main id="main" className="min-h-screen pb-20 page-enter">
       {/* ───────────── Profile header ───────────── */}
-      <div className="border-b border-white/[0.07] bg-ink-900">
+      <div className="border-b border-line bg-surface-sunken">
         <div className="container-page py-8 sm:py-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-500 font-display text-2xl font-bold text-on-brand shadow-glow">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-solid font-display text-2xl font-bold text-on-brand shadow-glow">
                 {displayName.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">
-                <h1 className="truncate font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                <h1 className="page-title truncate font-extrabold">
                   {displayName}
                 </h1>
-                <p className="mt-0.5 truncate text-sm text-gray-400">
+                <p className="mt-0.5 truncate text-sm text-fg-muted">
                   {profile?.email || "Your bookings and saved movies"}
                   {profile?.createdAt && <span className="hidden sm:inline"> · Member since {formatDate(profile.createdAt)}</span>}
                 </p>
@@ -133,32 +135,30 @@ function MyBookings() {
             </dl>
           </div>
 
-          <div className="scroll-row -mx-4 mt-8 px-4 sm:mx-0 sm:px-0" role="tablist" aria-label="Account sections">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`chip ${activeTab === tab.id ? "chip-active" : ""}`}
-              >
-                {tab.label}
-                <span className={`rounded-full px-1.5 text-[11px] ${activeTab === tab.id ? "bg-white/20" : "bg-white/10"}`}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
+          <Tabs
+            variant="pills"
+            label="Account sections"
+            idPrefix="account"
+            className="-mx-4 mt-8 px-4 sm:mx-0 sm:px-0"
+            value={activeTab}
+            onChange={setActiveTab}
+            items={tabs}
+          />
         </div>
       </div>
 
-      <div className="container-page mt-8">
+      <div
+        className="container-page mt-8"
+        role="tabpanel"
+        id={`account-panel-${activeTab}`}
+        aria-labelledby={`account-tab-${activeTab}`}
+      >
         {/* ───────────── Bookings ───────────── */}
         {(activeTab === "upcoming" || activeTab === "past") &&
           (status === "loading" ? (
             <div className="grid gap-4 lg:grid-cols-2" role="status" aria-label="Loading bookings">
               {[0, 1].map((i) => (
-                <div key={i} className="skeleton h-44 rounded-2xl" />
+                <div key={i} className="skeleton h-44 rounded-card" />
               ))}
             </div>
           ) : status === "error" ? (
@@ -210,7 +210,7 @@ function MyBookings() {
                       >
                         {(so.status || "CONFIRMED").replace(/_/g, " ").toLowerCase().replace(/^./, (c) => c.toUpperCase())}
                       </span>
-                      <span className="font-mono text-[11px] text-gray-500">{so.orderPassId}</span>
+                      <span className="font-mono text-2xs text-gray-500">{so.orderPassId}</span>
                     </div>
                     <h3 className="mt-2 font-sans text-base font-semibold text-white">{so.theatre}</h3>
                     <p className="text-xs text-gray-400">
@@ -225,7 +225,7 @@ function MyBookings() {
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-3 border-t border-white/[0.07] pt-3 font-display text-lg font-bold text-white">
+                    <p className="mt-3 border-t border-line pt-3 font-display text-lg font-bold text-white">
                       {formatPrice(so.totalPrice)}
                     </p>
                   </div>
@@ -294,7 +294,18 @@ function MyBookings() {
               <Detail label={amountLabel(openBooking)} value={formatPrice(openBooking.totalPrice)} />
               <Detail label="Booked on" value={formatDate(openBooking.createdAt)} />
             </dl>
-            <p className="mt-4 break-all border-t border-dashed border-white/15 pt-3 font-mono text-[11px] text-gray-500">
+            {openBooking.showId?.screenName && (
+              <p className="mt-3 text-sm text-gray-300">Auditorium: <span className="font-semibold text-white">{openBooking.showId.screenName}</span></p>
+            )}
+            <div className="mt-4">
+              <VenueGuide
+                showId={openBooking.showId?._id}
+                theatre={openBooking.showId?.theatre}
+                screenName={openBooking.showId?.screenName}
+                seats={openBooking.seats || []}
+              />
+            </div>
+            <p className="mt-4 break-all border-t border-dashed border-line-strong pt-3 font-mono text-2xs text-gray-500">
               Booking ID: {openBooking._id}
             </p>
           </div>
@@ -354,8 +365,8 @@ function BookingCard({ booking, onOpen }) {
 
 function Stat({ label, value }) {
   return (
-    <div className="flex flex-col-reverse rounded-xl border border-white/[0.07] bg-ink-850 px-4 py-3">
-      <dt className="text-[11px] text-gray-400">{label}</dt>
+    <div className="flex flex-col-reverse rounded-xl border border-line bg-ink-850 px-4 py-3">
+      <dt className="text-2xs text-gray-400">{label}</dt>
       <dd className="font-display text-xl font-bold text-white">{value}</dd>
     </div>
   );
@@ -364,7 +375,7 @@ function Stat({ label, value }) {
 function Detail({ label, value, wide }) {
   return (
     <div className={wide ? "col-span-2" : ""}>
-      <dt className="text-[11px] uppercase tracking-wide text-gray-500">{label}</dt>
+      <dt className="text-2xs uppercase tracking-wide text-gray-500">{label}</dt>
       <dd className="mt-0.5 font-medium text-white">{value || "—"}</dd>
     </div>
   );

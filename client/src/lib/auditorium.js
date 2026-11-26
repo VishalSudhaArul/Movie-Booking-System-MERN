@@ -86,8 +86,14 @@ export function buildAuditorium(layout, seats) {
     byRow.get(label).push(seat);
   });
 
+  // Accessibility comes only from the layout's own configuration.
+  const access = layout.accessibility || {};
+  const wheelchair = new Set(access.wheelchair || []);
+  const companion = new Set(access.companion || []);
+
   const rows = placeRows(layout).map((row) => {
     const width = seatWidthFor(g, row.seatType);
+    const aisleSet = new Set(row.aisleAfter || []);
     const rowSeats = (byRow.get(row.label) || [])
       .slice()
       .sort((a, b) => seatIndexOf(a.seatNumber) - seatIndexOf(b.seatNumber))
@@ -105,7 +111,11 @@ export function buildAuditorium(layout, seats) {
           floorY: row.floorY,
           seatWidth: width,
           // An aisle sits just before this seat (between it and the previous number).
-          aisleBefore: (row.aisleAfter || []).includes(index - 1),
+          aisleBefore: aisleSet.has(index - 1),
+          // Next to an aisle or at the end of the row (the side walkways).
+          aisleSeat: index === 1 || index === row.seats || aisleSet.has(index - 1) || aisleSet.has(index),
+          wheelchair: wheelchair.has(seat.seatNumber),
+          companion: companion.has(seat.seatNumber),
         };
       });
     return { ...row, seatWidth: width, seats: rowSeats };
@@ -125,10 +135,26 @@ export function buildAuditorium(layout, seats) {
       });
   });
 
+  // Doors on the side walls, placed in hall coordinates.
+  const floorAt = (z) => rows.reduce((y, r) => (r.z - rowPitchFor(g, r.seatType) / 2 <= z && r.tier !== "balcony" ? r.floorY : y), 0);
+  const doors = (layout.doors || []).map((d) => ({
+    ...d,
+    // Facing the screen (-z), house right is +x.
+    x: (d.side === "right" ? 1 : -1) * (layout.room.width / 2),
+    floorY: floorAt(d.z),
+  }));
+
   return {
     id: layout.id,
     name: layout.name,
     kind: layout.kind || "classic",
+    doors,
+    accessibility: {
+      wheelchair: [...wheelchair],
+      companion: [...companion],
+      note: access.note || "",
+      configured: wheelchair.size > 0,
+    },
     screen: layout.screen,
     room: layout.room,
     geometry: g,
@@ -170,4 +196,20 @@ export function viewingInfo(seatPos, screen) {
     screenWidthAngle: round1(screenWidthAngle),
     viewLabel,
   };
+}
+
+/**
+ * The nearest door to a seat, walking along the row to the closer end and then
+ * along the side walkway. Returns { door, metres } or null when the hall has no
+ * doors configured. `accessibleOnly` limits it to step-free doors.
+ */
+export function nearestDoor(hall, seat, { accessibleOnly = false } = {}) {
+  const doors = (hall?.doors || []).filter((d) => !accessibleOnly || d.accessible);
+  if (!doors.length || !seat) return null;
+  let best = null;
+  doors.forEach((d) => {
+    const metres = Math.abs(d.x - seat.x) + Math.abs(d.z - seat.z) + Math.abs((d.floorY || 0) - (seat.floorY || 0));
+    if (!best || metres < best.metres) best = { door: d, metres: Math.round(metres) };
+  });
+  return best;
 }

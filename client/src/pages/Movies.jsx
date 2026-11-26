@@ -4,6 +4,8 @@ import useCatalog from "../hooks/useCatalog";
 import MovieCard from "../components/MovieCard";
 import Icon from "../components/ui/Icon";
 import TrailerModal from "../components/TrailerModal";
+import Tabs from "../components/ui/Tabs";
+import { SearchInput } from "../components/ui/Input";
 import { EmptyState, ErrorState, MovieGridSkeleton } from "../components/ui/Feedback";
 import { splitGenres } from "../lib/format";
 
@@ -80,27 +82,23 @@ function Movies() {
   const isFiltering = !!query.trim() || genre !== "All" || language !== "All" || status !== "all";
 
   return (
-    <main id="main" className="min-h-screen">
-      <div className="border-b border-white/[0.07] bg-ink-900">
+    <main id="main" className="min-h-screen page-enter">
+      <div className="border-b border-line bg-surface-sunken">
         <div className="container-page py-10">
           <p className="eyebrow mb-2">Browse</p>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Movies</h1>
-          <p className="mt-2 text-sm text-gray-400">
+          <h1 className="page-title font-extrabold sm:text-display-md">Movies</h1>
+          <p className="mt-2 text-sm text-fg-muted">
             Find a movie, pick a showtime and choose your seats.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center">
-            <div className="relative flex-1 md:max-w-md">
-              <Icon name="search" className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setParam("q", e.target.value)}
-                placeholder="Search by title, genre or keyword"
-                aria-label="Search movies"
-                className="input pl-10"
-              />
-            </div>
+            <SearchInput
+              wrapperClassName="flex-1 md:max-w-md"
+              value={query}
+              onChange={(e) => setParam("q", e.target.value)}
+              placeholder="Search by title, genre or keyword"
+              label="Search movies"
+            />
 
             <div className="flex gap-3">
               {languages.length > 0 && (
@@ -108,7 +106,7 @@ function Movies() {
                   value={language}
                   onChange={(e) => setParam("lang", e.target.value, "All")}
                   aria-label="Filter by language"
-                  className="input w-auto pr-8"
+                  className="select w-auto"
                 >
                   {languages.map((l) => (
                     <option key={l} value={l}>
@@ -121,7 +119,7 @@ function Movies() {
                 value={sort}
                 onChange={(e) => setParam("sort", e.target.value, "popular")}
                 aria-label="Sort movies"
-                className="input w-auto pr-8"
+                className="select w-auto"
               >
                 {Object.entries(SORTS).map(([key, s]) => (
                   <option key={key} value={key}>
@@ -136,22 +134,13 @@ function Movies() {
 
       <div className="container-page py-8">
         {/* Status tabs */}
-        <div className="mb-5 inline-flex rounded-xl border border-white/[0.07] bg-ink-900 p-1" role="tablist" aria-label="Movie status">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              role="tab"
-              aria-selected={status === tab.value}
-              onClick={() => setParam("status", tab.value, "all")}
-              className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
-                status === tab.value ? "bg-white/[0.1] text-white" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              {tab.label}
-              <span className="ml-1.5 text-xs font-normal text-gray-500">{counts[tab.value]}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs
+          label="Movie status"
+          className="mb-5"
+          value={status}
+          onChange={(v) => setParam("status", v, "all")}
+          items={STATUS_TABS.map((tab) => ({ id: tab.value, label: tab.label, count: counts[tab.value] }))}
+        />
 
         {/* Genre chips */}
         {genres.length > 2 && (

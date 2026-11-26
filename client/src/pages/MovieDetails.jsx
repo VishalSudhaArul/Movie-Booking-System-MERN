@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { rovingKeyDown } from "../lib/a11y";
 import { Link, useLocation, useParams } from "react-router-dom";
 import API from "../api";
 import Poster from "../components/Poster";
@@ -198,7 +199,7 @@ function MovieDetails() {
                   src={movie.poster}
                   alt={`${movie.title} poster`}
                   eager
-                  className="aspect-[2/3] w-full rounded-2xl border border-white/10 shadow-2xl"
+                  className="aspect-[2/3] w-full rounded-2xl border border-line-strong shadow-overlay"
                 />
                 {hasTrailer && (
                   <button
@@ -215,12 +216,12 @@ function MovieDetails() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
+              <h1 className="font-display text-display-sm font-extrabold text-fg sm:text-display-md lg:text-display-lg">
                 {movie.title}
               </h1>
 
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-300">
-                <a href="#reviews" className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.07] px-2.5 py-1.5 transition hover:bg-white/[0.12]">
+                <a href="#reviews" className="inline-flex items-center gap-1.5 rounded-lg bg-fill-strong px-2.5 py-1.5 transition hover:bg-fill-emphasis">
                   <Icon name="star" filled className="h-4 w-4 text-gold-400" />
                   {totalRatings > 0 ? (
                     <>
@@ -252,7 +253,7 @@ function MovieDetails() {
                 </div>
               )}
 
-              <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-gray-300">{movie.description}</p>
+              <p className="mt-5 max-w-2xl text-md leading-relaxed text-gray-300">{movie.description}</p>
 
               {facts.length > 0 && (
                 <dl className="mt-6 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
@@ -282,7 +283,7 @@ function MovieDetails() {
                   className={`btn btn-lg border ${
                     saved
                       ? "border-brand-500/50 bg-brand-500/10 text-brand-300"
-                      : "border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.12]"
+                      : "border-line-strong bg-fill-strong text-white hover:bg-fill-emphasis"
                   }`}
                 >
                   <Icon name="heart" filled={saved} className="h-4 w-4" />
@@ -305,8 +306,8 @@ function MovieDetails() {
               <h2 id="cast-title" className="section-title mb-4 !text-2xl">Cast</h2>
               <ul className="flex flex-wrap gap-2">
                 {cast.map((name) => (
-                  <li key={name} className="flex items-center gap-2.5 rounded-full border border-white/[0.07] bg-ink-850 py-1.5 pl-1.5 pr-4">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white">
+                  <li key={name} className="flex items-center gap-2.5 rounded-full border border-line bg-ink-850 py-1.5 pl-1.5 pr-4">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-emphasis text-xs font-bold text-white">
                       {name.charAt(0).toUpperCase()}
                     </span>
                     <span className="text-sm text-gray-200">{name}</span>
@@ -337,28 +338,35 @@ function MovieDetails() {
               <div className="space-y-6">
                 {upcomingDates.length > 0 ? (
                   <>
-                    <div className="scroll-row -mx-4 px-4 sm:mx-0 sm:px-0" role="tablist" aria-label="Choose a date">
+                    <div
+                      className="scroll-row -mx-4 px-4 sm:mx-0 sm:px-0"
+                      role="tablist"
+                      aria-label="Choose a date"
+                      onKeyDown={(e) => rovingKeyDown(e)}
+                    >
                       {upcomingDates.map((d) => {
                         const active = activeDate?.date === d.date;
                         return (
                           <button
                             key={d.date}
+                            type="button"
                             role="tab"
                             aria-selected={active}
+                            tabIndex={active ? 0 : -1}
                             onClick={() => setSelectedDate(d.date)}
-                            className={`flex min-w-[72px] shrink-0 flex-col items-center rounded-xl border px-3 py-2.5 transition ${
+                            className={`flex min-w-[72px] shrink-0 flex-col items-center rounded-control border px-3 py-2.5 transition duration-base ${
                               active
-                                ? "border-brand-500 bg-brand-500 text-on-brand"
-                                : "border-white/[0.08] bg-ink-850 text-gray-300 hover:border-white/20"
+                                ? "border-brand-solid bg-brand-solid text-on-brand"
+                                : "border-line bg-surface text-fg-secondary hover:border-line-strong hover:text-fg"
                             }`}
                           >
-                            <span className="text-[11px] font-semibold uppercase opacity-80">
+                            <span className="text-2xs font-semibold uppercase opacity-80">
                               {formatShowDate(d.date, { weekday: "short" })}
                             </span>
                             <span className="font-display text-xl font-bold leading-tight">
                               {formatShowDate(d.date, { day: "numeric" })}
                             </span>
-                            <span className="text-[11px] font-semibold uppercase opacity-80">
+                            <span className="text-2xs font-semibold uppercase opacity-80">
                               {formatShowDate(d.date, { month: "short" })}
                             </span>
                           </button>
@@ -380,7 +388,7 @@ function MovieDetails() {
                       <span>Earlier showtimes ({earlierShows.length})</span>
                       <Icon name="chevronDown" className="h-4 w-4 transition group-open:rotate-180" />
                     </summary>
-                    <div className="border-t border-white/[0.07] p-4">
+                    <div className="border-t border-line p-4">
                       <TheatreList shows={earlierShows} showDate />
                     </div>
                   </details>
@@ -407,7 +415,7 @@ function MovieDetails() {
                   <li key={rev._id} className="card p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fill-emphasis text-sm font-bold text-white">
                           {(rev.userName || "U").charAt(0).toUpperCase()}
                         </span>
                         <div className="min-w-0">
@@ -433,18 +441,25 @@ function MovieDetails() {
               <form onSubmit={handleAddReview} className="mt-4 space-y-4" noValidate>
                 <div>
                   <span className="label" id="rating-label">Your rating</span>
-                  <div className="flex gap-1" role="radiogroup" aria-labelledby="rating-label" onMouseLeave={() => setHoverRating(0)}>
+                  <div
+                    className="flex gap-1"
+                    role="radiogroup"
+                    aria-labelledby="rating-label"
+                    onMouseLeave={() => setHoverRating(0)}
+                    onKeyDown={(e) => rovingKeyDown(e, { selector: '[role="radio"]' })}
+                  >
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
                         role="radio"
                         aria-checked={userRating === star}
+                        tabIndex={userRating === star || (!userRating && star === 1) ? 0 : -1}
                         aria-label={`${star} ${star === 1 ? "star" : "stars"}`}
                         onClick={() => setUserRating(star)}
                         onMouseEnter={() => setHoverRating(star)}
-                        className={`rounded-md p-1 transition ${
-                          star <= (hoverRating || userRating) ? "text-gold-400" : "text-gray-600 hover:text-gray-400"
+                        className={`rounded-md p-1 transition duration-fast ${
+                          star <= (hoverRating || userRating) ? "text-warning-400" : "text-gray-500 hover:text-gray-400"
                         }`}
                       >
                         <Icon name="star" filled className="h-7 w-7" />
@@ -464,7 +479,7 @@ function MovieDetails() {
                     placeholder="What did you think of the movie?"
                     className="input resize-none"
                   />
-                  <p className="mt-1 text-right text-[11px] text-gray-500">
+                  <p className="mt-1 text-right text-2xs text-gray-500">
                     {userComment.length}/{REVIEW_MAX}
                   </p>
                 </div>
@@ -520,7 +535,7 @@ function TheatreList({ shows, showDate = false }) {
           <li key={theatre} className="card p-4 sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-gray-300">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fill-strong text-gray-300">
                   <Icon name="pin" className="h-5 w-5" />
                 </span>
                 <div>
@@ -541,7 +556,7 @@ function TheatreList({ shows, showDate = false }) {
                 const label = (
                   <>
                     <span className="block text-sm font-bold">{formatShowTime(show.time)}</span>
-                    <span className="block text-[11px] font-medium opacity-80">
+                    <span className="block text-2xs font-medium opacity-80">
                       {showDate
                         ? formatShowDate(show.date, { day: "numeric", month: "short", year: "numeric" })
                         : soldOut
@@ -556,7 +571,7 @@ function TheatreList({ shows, showDate = false }) {
                   return (
                     <span
                       key={show._id}
-                      className="min-w-[104px] cursor-not-allowed rounded-xl border border-white/[0.07] px-4 py-2 text-center text-gray-600"
+                      className="min-w-[104px] cursor-not-allowed rounded-xl border border-line px-4 py-2 text-center text-gray-600"
                       aria-disabled="true"
                     >
                       {label}
@@ -571,7 +586,7 @@ function TheatreList({ shows, showDate = false }) {
                     className={`min-w-[104px] rounded-xl border px-4 py-2 text-center transition hover:-translate-y-0.5 ${
                       fillingFast
                         ? "border-gold-500/40 text-gold-400 hover:bg-gold-500/10"
-                        : "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+                        : "border-success-500/40 text-success-300 hover:bg-success-500/10"
                     }`}
                   >
                     {label}
@@ -603,7 +618,7 @@ function Stars({ value }) {
 
 function DetailsSkeleton() {
   return (
-    <main className="container-page min-h-screen py-12" role="status" aria-label="Loading movie">
+    <main id="main" className="container-page min-h-screen py-12" role="status" aria-label="Loading movie">
       <div className="flex flex-col gap-8 sm:flex-row lg:gap-12">
         <div className="skeleton mx-auto aspect-[2/3] w-44 shrink-0 rounded-2xl sm:mx-0 sm:w-56 lg:w-72" />
         <div className="flex-1 space-y-4">

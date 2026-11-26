@@ -4,9 +4,9 @@ import Icon from "./Icon";
 const ToastContext = createContext(null);
 
 const STYLES = {
-  success: { icon: "check", ring: "border-emerald-500/40", tint: "bg-emerald-500/15 text-emerald-300" },
+  success: { icon: "check", ring: "border-success-500/40", tint: "bg-success-500/15 text-success-300" },
   error: { icon: "alert", ring: "border-danger-500/50", tint: "bg-danger-500/15 text-danger-300" },
-  info: { icon: "info", ring: "border-white/15", tint: "bg-white/10 text-gray-200" },
+  info: { icon: "info", ring: "border-line-strong", tint: "bg-fill-emphasis text-gray-200" },
 };
 
 export function ToastProvider({ children }) {
@@ -49,15 +49,15 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto flex w-full max-w-sm animate-fadeUp items-start gap-3 rounded-xl border ${s.ring} bg-ink-800 p-3.5 shadow-2xl`}
+              className={`pointer-events-auto flex w-full max-w-sm animate-fadeUp items-start gap-3 rounded-xl border ${s.ring} bg-surface-overlay p-3.5 shadow-popover`}
             >
               <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.tint}`}>
                 <Icon name={s.icon} className="h-4 w-4" />
               </span>
-              <p className="flex-1 pt-0.5 text-sm text-gray-100">{t.message}</p>
+              <p className="flex-1 pt-0.5 text-sm text-fg-body">{t.message}</p>
               <button
                 onClick={() => dismiss(t.id)}
-                className="text-gray-500 transition hover:text-white"
+                className="-m-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-fg-subtle transition duration-fast hover:bg-fill hover:text-fg"
                 aria-label="Dismiss notification"
               >
                 <Icon name="close" className="h-4 w-4" />

@@ -168,12 +168,13 @@ describe("API", () => {
     const res = await request(app).get("/api/shows/layouts");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
-      { id: "classic-136", name: "Classic hall with balcony", totalSeats: 136, rows: 12 },
+      { id: "classic-136", name: "Classic hall with balcony", totalSeats: 136, rows: 12, custom: false },
       ...[300, 350, 400, 450, 500].map((n) => ({
         id: `multiplex-${n}`,
         name: `Multiplex hall · ${n} seats`,
         totalSeats: n,
         rows: expect.any(Number),
+        custom: false,
       })),
     ]);
   });

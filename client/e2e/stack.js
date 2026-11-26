@@ -106,6 +106,22 @@ async function seed() {
     await Parking.create({ theatre, priceBike: 30, priceCar: 80 });
   }
 
+  // Venue directions for IMAX only, so tickets show both cases: published
+  // directions, and a theatre (KS Cinemas) that hasn't published any.
+  await model("Venue").create({
+    name: "IMAX",
+    key: "imax",
+    address: "12 Lake View Road",
+    mapUrl: "https://maps.example.com/imax",
+    entryInstructions: "Show your QR code at the main gate, then take the escalator to level 2.",
+    points: [
+      { kind: "entrance", label: "Main gate", directions: "Ground floor, facing the car park" },
+      { kind: "food", label: "Snack counter", directions: "Level 2, opposite the escalator" },
+      { kind: "restroom", label: "Restrooms", directions: "Level 2, past the snack counter" },
+      { kind: "accessible", label: "Lift", directions: "Next to the main gate, to all levels" },
+    ],
+  });
+
   await Review.create([
     { movieId: movies[0]._id, userId: user._id, userName: "Riya Sharma", rating: 5, comment: "Stunning visuals and a great score." },
     { movieId: movies[1]._id, userId: user._id, userName: "Riya Sharma", rating: 4, comment: "Clever twists, a bit long." },
@@ -118,14 +134,39 @@ async function seed() {
   await seed();
 
   const { createApp } = require(path.join(SERVER, "app"));
-  createApp().listen(5000, () => console.log("API on 5000"));
+  const api = createApp().listen(5000, () => console.log("API on 5000"));
 
   if (!fs.existsSync(path.join(BUILD, "index.html"))) {
     console.error("client/build is missing: run `npm run build` first.");
+    await mongoose.disconnect();
+    await mongod.stop();
     process.exit(1);
   }
   const web = express();
   web.use(express.static(BUILD));
   web.get("*", (q, r) => r.sendFile(path.join(BUILD, "index.html")));
-  web.listen(3000, () => console.log("SPA on 3000"));
-})();
+  const spa = web.listen(3000, () => console.log("SPA on 3000"));
+
+  // Shut the whole stack down when Playwright (or Ctrl+C) stops it, so no
+  // in-memory mongod or listening socket outlives the test run.
+  let stopping = false;
+  const shutdown = async () => {
+    if (stopping) return;
+    stopping = true;
+    const force = setTimeout(() => process.exit(0), 5000);
+    force.unref();
+    try {
+      api.closeAllConnections?.();
+      spa.closeAllConnections?.();
+      await Promise.all([new Promise((r) => api.close(r)), new Promise((r) => spa.close(r))]);
+      await mongoose.disconnect();
+      await mongod.stop();
+    } finally {
+      process.exit(0);
+    }
+  };
+  ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"].forEach((sig) => process.on(sig, shutdown));
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

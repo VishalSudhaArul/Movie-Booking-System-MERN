@@ -73,9 +73,9 @@ function SearchPanel({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Search"
-        className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-ink-850 shadow-2xl animate-modalScaleIn"
+        className="w-full max-w-xl overflow-hidden rounded-2xl border border-line-strong bg-ink-850 shadow-overlay animate-modalScaleIn"
       >
-        <div className="flex items-center gap-3 border-b border-white/[0.07] px-4">
+        <div className="flex items-center gap-3 border-b border-line px-4">
           <Icon name="search" className="h-5 w-5 shrink-0 text-gray-400" />
           <input
             ref={inputRef}
@@ -86,7 +86,7 @@ function SearchPanel({ onClose }) {
             aria-label="Search movies or genres"
             className="w-full bg-transparent py-4 text-sm text-white placeholder-gray-500 focus:outline-none"
           />
-          <kbd className="hidden rounded-md border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-semibold text-gray-400 sm:block">
+          <kbd className="hidden rounded-md border border-line-strong bg-fill px-1.5 py-0.5 text-3xs font-semibold text-gray-400 sm:block">
             ESC
           </kbd>
           <button onClick={onClose} className="text-gray-400 hover:text-white sm:hidden" aria-label="Close search">
@@ -95,7 +95,7 @@ function SearchPanel({ onClose }) {
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto p-2">
-          <p className="px-3 pb-1.5 pt-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+          <p className="px-3 pb-1.5 pt-2 text-2xs font-bold uppercase tracking-wider text-gray-500">
             {query.trim() ? "Movies" : "Suggested"}
           </p>
 
@@ -117,7 +117,7 @@ function SearchPanel({ onClose }) {
                     onClick={() => go(`/movies/${m._id}`)}
                     onMouseEnter={() => setActive(i)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition ${
-                      i === active ? "bg-white/[0.07]" : ""
+                      i === active ? "bg-fill-strong" : ""
                     }`}
                   >
                     <Poster src={m.poster} alt="" className="h-12 w-9 shrink-0 rounded-md" />
@@ -138,7 +138,7 @@ function SearchPanel({ onClose }) {
 
           {!query.trim() && (
             <>
-              <p className="px-3 pb-1.5 pt-4 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+              <p className="px-3 pb-1.5 pt-4 text-2xs font-bold uppercase tracking-wider text-gray-500">
                 Quick links
               </p>
               <div className="grid grid-cols-2 gap-1 pb-1">
@@ -146,7 +146,7 @@ function SearchPanel({ onClose }) {
                   <button
                     key={s.path}
                     onClick={() => go(s.path)}
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 transition hover:bg-white/[0.07] hover:text-white"
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 transition hover:bg-fill-strong hover:text-white"
                   >
                     <Icon name={s.icon} className="h-4 w-4 text-gray-400" />
                     {s.label}

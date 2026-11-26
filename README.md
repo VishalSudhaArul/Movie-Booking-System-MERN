@@ -126,6 +126,38 @@ npm start
 
 ---
 
+## 🎞 Virtual Cinema 2.0
+
+Immersive booking built on the real seat data: a 3D stadium hall (136–500
+seats), five camera views, a first-person seat view, a collision-limited
+walk-through mode (keyboard or touch joystick), geometry-based seat
+recommendations with reasons, seat heatmaps and a three-seat comparison,
+an approximate 7.1 speaker layout, wheelchair spaces and nearest exits from
+each hall's layout, ticket wayfinding from published venue data, High /
+Balanced / Lite graphics, and admin tools for designing halls, publishing
+venue directions, promo codes, review moderation and reconciled revenue.
+See [`docs/virtual-cinema.md`](docs/virtual-cinema.md) and
+[`docs/design-system.md`](docs/design-system.md).
+
+### Testing
+
+```bash
+cd server && npm test                      # Jest + in-memory MongoDB
+cd client && CI=true npx react-scripts test --watchAll=false
+cd client && npm run build && npx playwright test   # one worker, desktop/tablet/mobile
+cd client && node scripts/contrast-report.js        # WCAG contrast of the design tokens
+```
+
+### Before going to production
+
+- Rotate the MongoDB Atlas password and JWT secrets that appeared in this
+  repository's public Git history; treat them as compromised.
+- Set a strong admin access password in the server environment (admin
+  sign-in stays switched off while it is missing or weak).
+- Checkout is a demo: connect and verify a payment provider before taking money.
+
+---
+
 ## 🔐 Authorized Admin Gate Access
 For demonstration or administrative auditing without creating a theater owner account:
 1. Click **`⚙️ Admin`** in the navigation bar.

@@ -63,6 +63,8 @@ const createApp = () => {
   app.use("/api/reviews", require("./routes/reviewRoutes"));
   app.use("/api/coupons", require("./routes/couponRoutes"));
   app.use("/api/snack-orders", require("./routes/snackOrderRoutes"));
+  app.use("/api/layouts", require("./routes/layoutRoutes"));
+  app.use("/api/venues", require("./routes/venueRoutes"));
 
   app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });

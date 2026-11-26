@@ -7,7 +7,9 @@ import { EmptyState, ErrorState, Spinner } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/Toast";
 import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../lib/format";
 import { buildAuditorium } from "../lib/auditorium";
-import { hasWebGL, isLowPowerDevice, isNarrowScreen, prefersReducedMotion } from "../lib/webgl";
+import { defaultQuality, hasWebGL, isNarrowScreen, prefersReducedMotion } from "../lib/webgl";
+import { heatmap, recommendSeats } from "../lib/seatInsights";
+import SeatAdvisor from "../components/SeatAdvisor";
 import ErrorBoundary from "../components/ErrorBoundary";
 import HoldCountdown from "../components/HoldCountdown";
 import useSeatHold, { inBookingFlow, releaseHoldNow } from "../lib/useSeatHold";
@@ -67,16 +69,17 @@ export default function Seats() {
   const webgl = useMemo(() => hasWebGL(), []);
   const show3d = view === "3d" && webgl && !view3dFailed;
   const reducedMotion = useMemo(() => prefersReducedMotion(), []);
-  // Lite mode for the 3D hall: detected for weak devices, or chosen on the
-  // 3D toolbar (remembered on this device).
-  const detectedLowPower = useMemo(() => isLowPowerDevice(), []);
-  const [quality, setQuality] = useState(() => localStorage.getItem(QUALITY_KEY));
-  const lowPower = quality ? quality === "lite" : detectedLowPower;
-  const toggleLite = useCallback(() => {
-    const next = lowPower ? "full" : "lite";
+  // Graphics quality for the 3D hall (High / Balanced / Lite): chosen from the
+  // device's capability, or picked on the 3D toolbar (remembered on this device).
+  const [quality, setQualityState] = useState(() => {
+    const saved = localStorage.getItem(QUALITY_KEY);
+    if (saved === "full") return "balanced"; // the old "full quality" setting
+    return ["high", "balanced", "lite"].includes(saved) ? saved : defaultQuality();
+  });
+  const setQuality = useCallback((next) => {
     localStorage.setItem(QUALITY_KEY, next);
-    setQuality(next);
-  }, [lowPower]);
+    setQualityState(next);
+  }, []);
   const chooseView = (v) => {
     setView(v);
     localStorage.setItem(VIEW_KEY, v);
@@ -150,9 +153,10 @@ export default function Seats() {
 
   // Categories top-to-bottom (back of the hall first, screen at the bottom), each
   // with rows of seats. Rows, aisles and recliners come from the show's layout.
+  // The hall (seat positions, accessibility, doors) from the show's layout.
+  const hall = useMemo(() => (show?.seats ? buildAuditorium(show.layout, show.seats) : null), [show]);
   const layout = useMemo(() => {
     if (!show?.seats) return [];
-    const hall = buildAuditorium(show.layout, show.seats);
     if (hall) {
       const categories = [];
       [...hall.rows].reverse().forEach((row) => {
@@ -187,7 +191,7 @@ export default function Seats() {
       c.rows.forEach((r) => r.seats.sort((a, b) => numberOf(a.seatNumber) - numberOf(b.seatNumber)))
     );
     return categories;
-  }, [show]);
+  }, [show, hall]);
 
   const premiumCategory = useMemo(() => {
     if (layout.length < 2) return null;
@@ -201,8 +205,44 @@ export default function Seats() {
   const total = selectedObjects.reduce((sum, s) => sum + s.price, 0);
   const availableCount = (show?.seats || []).filter((s) => !s.isBooked).length;
 
+  /* ---------- Seat advisor: heatmap, comparison, previews ---------- */
+  const [heatMode, setHeatMode] = useState("availability");
+  const heat = useMemo(() => heatmap(hall, heatMode), [hall, heatMode]);
+  const [compare, setCompare] = useState([]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [previewRequest, setPreviewRequest] = useState(null);
+  const addToCompare = useCallback(
+    (seat) => {
+      setCompare((list) => {
+        if (list.includes(seat.seatNumber)) return list.filter((n) => n !== seat.seatNumber);
+        if (list.length >= 3) {
+          toast.info("You can compare up to three seats. Remove one first.");
+          return list;
+        }
+        return [...list, seat.seatNumber];
+      });
+    },
+    [toast]
+  );
+  const applySeats = (numbers) => {
+    if (show && !isUpcomingShow(show)) {
+      toast.info("This showtime has already started, so seats can't be booked.");
+      return;
+    }
+    const free = numbers.filter((n) => {
+      const s = hall?.seatIndex.get(n);
+      return s && (!s.isBooked || selectedSeats.includes(n));
+    });
+    setSelectedSeats(free.slice(0, MAX_SEATS));
+    setCompareMode(false);
+  };
+
   const toggleSeat = (seat) => {
     if (seat.isBooked) return;
+    if (compareMode) {
+      addToCompare(seat);
+      return;
+    }
     if (show && !isUpcomingShow(show)) {
       toast.info("This showtime has already started, so seats can't be booked.");
       return;
@@ -216,29 +256,11 @@ export default function Seats() {
     }
   };
 
-  // Pick the most central block of `count` adjacent free seats, preferring the middle rows.
+  // Pick the best `count` adjacent free seats by viewing geometry (see lib/seatInsights).
   const pickBestSeats = (count) => {
-    const rows = layout.flatMap((c) => c.rows);
-    const middle = (rows.length - 1) / 2;
-    let best = null;
-    rows.forEach((row, rowIndex) => {
-      const centre = (row.seats.length - 1) / 2;
-      for (let start = 0; start + count <= row.seats.length; start++) {
-        const block = row.seats.slice(start, start + count);
-        const adjacent = block.every(
-          (s, i) => !s.isBooked && (i === 0 || numberOf(s.seatNumber) - numberOf(block[i - 1].seatNumber) === 1)
-        );
-        if (!adjacent) continue;
-        const blockCentre = start + (count - 1) / 2;
-        // Keep groups on one side of the aisle whenever a row allows it.
-        const aisle = Math.ceil(row.seats.length / 2);
-        const splitByAisle = start < aisle && start + count > aisle ? 4 : 0;
-        const score = Math.abs(blockCentre - centre) + Math.abs(rowIndex - middle) * 1.5 + splitByAisle;
-        if (!best || score < best.score) best = { score, seats: block.map((s) => s.seatNumber) };
-      }
-    });
+    const best = hall ? recommendSeats(hall, { mode: "best", count, limit: 1 }).options[0] : null;
     if (best) {
-      setSelectedSeats(best.seats);
+      applySeats(best.seatNumbers);
       return;
     }
     const free = (show?.seats || []).filter((s) => !s.isBooked).map((s) => s.seatNumber);
@@ -325,7 +347,7 @@ export default function Seats() {
 
   if (status === "loading") {
     return (
-      <main className="container-page min-h-[80vh] py-10" role="status" aria-label="Loading seats">
+      <main id="main" className="container-page min-h-[80vh] py-10" role="status" aria-label="Loading seats">
         <div className="skeleton h-16 w-full max-w-xl rounded-2xl" />
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
           <div className="skeleton h-[480px] rounded-2xl" />
@@ -387,7 +409,7 @@ export default function Seats() {
   return (
     <main id="main" className="min-h-screen pb-32 lg:pb-16">
       {/* ───────────── Show header ───────────── */}
-      <div className="border-b border-white/[0.07] bg-ink-900">
+      <div className="border-b border-line bg-ink-900">
         <div className="container-page flex flex-wrap items-center justify-between gap-4 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <button onClick={() => navigate(movieId ? `/movies/${movieId}` : -1)} className="btn-icon" aria-label="Back to movie">
@@ -430,15 +452,15 @@ export default function Seats() {
         {/* Steps */}
         <ol className="mb-6 flex items-center gap-2 text-xs font-semibold text-gray-500" aria-label="Booking progress">
           <li className="flex items-center gap-2 text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] text-on-brand">1</span> Seats
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-solid text-2xs text-on-brand">1</span> Seats
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">2</span> Extras &amp; checkout
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-emphasis text-2xs">2</span> Extras &amp; checkout
           </li>
           <li aria-hidden="true" className="h-px w-8 bg-white/15" />
           <li className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">3</span> Ticket
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-emphasis text-2xs">3</span> Ticket
           </li>
         </ol>
 
@@ -453,10 +475,10 @@ export default function Seats() {
         <div className={`grid gap-6 ${show3d ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}>
           {/* ───────────── Seat map ───────────── */}
           <section className={`card ${view === "2d" ? "overflow-hidden" : ""}`} aria-label="Seat map">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-6">
               <div className="flex flex-wrap items-center gap-3">
                 {webgl && (
-                  <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Seat view">
+                  <div className="flex rounded-xl border border-line-strong bg-fill-subtle p-1" role="group" aria-label="Seat view">
                     {[["3d", "3D hall"], ["2d", "2D map"]].map(([v, label]) => (
                       <button key={v} onClick={() => chooseView(v)} aria-pressed={view === v} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${view === v ? "bg-brand-gradient text-on-brand" : "text-gray-400 hover:text-white"}`}>
                         {label}
@@ -478,7 +500,7 @@ export default function Seats() {
                     className={`h-8 w-8 rounded-lg border text-xs font-bold transition ${
                       selectedSeats.length === count
                         ? "border-brand-500 bg-brand-500/15 text-brand-300"
-                        : "border-white/10 text-gray-300 hover:border-white/25 hover:text-white"
+                        : "border-line-strong text-gray-300 hover:border-white/25 hover:text-white"
                     }`}
                   >
                     {count}
@@ -506,8 +528,14 @@ export default function Seats() {
                   <div className="p-2 sm:p-3">
                     <Auditorium3D
                       // A new renderer when the quality changes (antialiasing is fixed at creation).
-                      key={lowPower ? "lite" : "full"}
-                      onToggleLite={toggleLite}
+                      key={quality}
+                      quality={quality}
+                      onQualityChange={setQuality}
+                      heatmapColors={heat.colors}
+                      highlight={compare}
+                      compareMode={compareMode}
+                      onCompare={addToCompare}
+                      previewRequest={previewRequest}
                       layout={show.layout}
                       seats={show.seats}
                       selected={selectedSeats}
@@ -524,7 +552,6 @@ export default function Seats() {
                       moviePoster={movie?.poster}
                       trailerUrl={movie?.trailerUrl}
                       reducedMotion={reducedMotion}
-                      lowPower={lowPower}
                     />
                   </div>
                 </Suspense>
@@ -540,13 +567,13 @@ export default function Seats() {
                       return (
                         <div key={category.name}>
                           <div className="mb-3 flex items-center gap-3">
-                            <span className="h-px flex-1 bg-white/[0.08]" />
+                            <span className="h-px flex-1 bg-fill-strong" />
                             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                               {isPremium && <Icon name="crown" className="h-3.5 w-3.5 text-accent-300" />}
                               {category.name}
                               <span className="text-white">{formatPrice(category.price)}</span>
                             </span>
-                            <span className="h-px flex-1 bg-white/[0.08]" />
+                            <span className="h-px flex-1 bg-fill-strong" />
                           </div>
   
                           <div className="space-y-1.5">
@@ -563,7 +590,7 @@ export default function Seats() {
                               const recliner = row.seatType === "recliner";
                               return (
                                 <div key={row.label} className={`flex items-center justify-center gap-2 ${recliner ? "py-0.5" : ""}`}>
-                                  <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
+                                  <span className="w-5 text-center text-2xs font-semibold text-gray-500" aria-hidden="true">
                                     {row.label}
                                   </span>
                                   {blocks.map((block, i) => (
@@ -578,12 +605,14 @@ export default function Seats() {
                                             recliner={recliner}
                                             selected={selectedSeats.includes(seat.seatNumber)}
                                             onToggle={toggleSeat}
+                                            heatColor={heat.colors ? heat.colors.get(seat.seatNumber) : null}
+                                            compared={compare.includes(seat.seatNumber)}
                                           />
                                         ))}
                                       </div>
                                     </React.Fragment>
                                   ))}
-                                  <span className="w-5 text-center text-[11px] font-semibold text-gray-500" aria-hidden="true">
+                                  <span className="w-5 text-center text-2xs font-semibold text-gray-500" aria-hidden="true">
                                     {row.label}
                                   </span>
                                 </div>
@@ -597,7 +626,7 @@ export default function Seats() {
                     {/* Screen */}
                     <div className="px-6 pt-4" aria-hidden="true">
                       <div className="mx-auto h-10 w-full max-w-md rounded-[50%] border-t-4 border-white/70 bg-gradient-to-b from-white/15 to-transparent" />
-                      <p className="-mt-3 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500">
+                      <p className="-mt-3 text-center text-2xs font-semibold uppercase tracking-[0.3em] text-gray-500">
                         Screen this way
                       </p>
                     </div>
@@ -608,16 +637,25 @@ export default function Seats() {
             )}
 
             {/* Legend */}
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-white/[0.07] px-4 py-4 text-xs text-gray-400">
-              <LegendItem className="border-white/25 bg-white/[0.03]" label="Available" />
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-line px-4 py-4 text-xs text-gray-400">
+              <LegendItem className="border-white/25 bg-fill-subtle" label="Available" />
               {premiumCategory && <LegendItem className="border-accent-400/60 bg-accent-500/[0.1]" label={`Premium (${premiumCategory})`} />}
               {layout.some((c) => c.rows.some((r) => r.seatType === "recliner")) && (
-                <LegendItem className="w-6 rounded-t-lg border-white/25 bg-white/[0.03]" label="Recliner" />
+                <LegendItem className="w-6 rounded-t-lg border-white/25 bg-fill-subtle" label="Recliner" />
               )}
-              <LegendItem className="border-brand-500 bg-brand-500" label="Selected" />
+              <LegendItem className="border-brand-solid bg-brand-solid" label="Selected" />
               <LegendItem className="border-dashed border-sky-400/50 bg-sky-400/[0.08]" label="Reserved (someone is checking out)" />
-              <LegendItem className="border-transparent bg-white/[0.08]" label="Booked" />
+              <LegendItem className="border-transparent bg-fill-strong" label="Booked" />
+              {hall?.accessibility?.configured && (
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-t-md rounded-b-[3px] border border-sky-300/70 text-[9px] font-bold text-sky-200" aria-hidden="true">♿</span>
+                  Wheelchair space
+                </span>
+              )}
             </div>
+            {hall?.accessibility?.configured && hall.accessibility.note && (
+              <p className="border-t border-line px-4 py-2 text-center text-2xs text-gray-500" data-testid="access-note">{hall.accessibility.note}</p>
+            )}
           </section>
 
           {/* ───────────── Summary (desktop) ───────────── */}
@@ -625,7 +663,7 @@ export default function Seats() {
             <div className="card sticky top-24 p-5">
               <h2 className="text-lg font-bold text-white">Your selection</h2>
               <div className="mt-4 min-h-[72px]">{summary}</div>
-              <div className="mt-4 flex items-center justify-between border-t border-white/[0.07] pt-4">
+              <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
                 <span className="text-sm text-gray-400">
                   {selectedSeats.length} {selectedSeats.length === 1 ? "ticket" : "tickets"}
                 </span>
@@ -640,16 +678,37 @@ export default function Seats() {
                 </button>
               )}
               <HoldCountdown hold={hold} selectedCount={selectedSeats.length} onRenew={renew} className="mt-3 justify-center" />
-              <p className="mt-2 text-center text-[11px] text-gray-500">
+              <p className="mt-2 text-center text-2xs text-gray-500">
                 Seats you pick are held for you for 8 minutes. They're confirmed when you complete checkout.
               </p>
             </div>
           </aside>
         </div>
+
+        {hall && (
+          <div className={`mt-6 ${show3d ? "" : "lg:max-w-[calc(100%-364px)]"}`}>
+            <SeatAdvisor
+              hall={hall}
+              selected={selectedSeats}
+              premiumCategory={premiumCategory}
+              maxSeats={MAX_SEATS}
+              onApply={applySeats}
+              onPreview={show3d ? (n) => setPreviewRequest({ seatNumber: n, at: Date.now() }) : null}
+              heatMode={heatMode}
+              onHeatMode={setHeatMode}
+              legend={heat.legend}
+              compare={compare}
+              onCompareChange={setCompare}
+              compareMode={compareMode}
+              onCompareMode={setCompareMode}
+              disabled={ended}
+            />
+          </div>
+        )}
       </div>
 
       {/* ───────────── Summary bar (mobile & tablet) ───────────── */}
-      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "hidden" : ""}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-line-strong bg-ink-900/95 backdrop-blur-xl lg:hidden ${show3d ? "hidden" : ""}`}>
         <div className="container-page flex items-center justify-between gap-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-xs text-gray-400" aria-live="polite">
@@ -669,22 +728,38 @@ export default function Seats() {
   );
 }
 
-function SeatButton({ seat, selected, premium, recliner, onToggle }) {
+// True for colours light enough that dark text reads better than white on them.
+const isLightColor = (hex) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.18;
+};
+
+function SeatButton({ seat, selected, premium, recliner, onToggle, heatColor = null, compared = false }) {
   const size = recliner ? "h-7 w-8 rounded-t-xl sm:h-8 sm:w-10" : "h-7 w-7 rounded-t-lg sm:h-8 sm:w-8";
-  const base = `flex ${size} items-center justify-center rounded-b-[4px] border text-[10px] font-semibold transition duration-150 sm:text-[11px]`;
+  const base = `flex ${size} items-center justify-center rounded-b-[4px] border text-3xs font-semibold transition duration-150 sm:text-2xs`;
   const kind = recliner ? "recliner, " : "";
+  const access = [seat.wheelchair && "wheelchair space", seat.companion && "companion seat", seat.aisleSeat && "aisle seat"].filter(Boolean);
+  const accessText = access.length ? `${access.join(", ")}, ` : "";
   let style;
+  let inline;
   if (seat.reserved) {
     style = "cursor-not-allowed border-dashed border-sky-400/50 bg-sky-400/[0.08] text-transparent";
   } else if (seat.isBooked) {
-    style = "cursor-not-allowed border-transparent bg-white/[0.08] text-transparent";
+    style = "cursor-not-allowed border-transparent bg-fill-strong text-transparent";
   } else if (selected) {
-    style = "scale-105 border-brand-500 bg-brand-500 text-on-brand shadow-glow";
+    style = "scale-105 border-brand-solid bg-brand-solid text-on-brand shadow-glow";
+  } else if (heatColor) {
+    // Heatmap: the colour shows the metric; the number is dark on light shades
+    // and white on dark ones, so it stays readable across the whole scale.
+    style = `border-white/30 ${isLightColor(heatColor) ? "text-ink-950" : "text-white"} hover:brightness-125`;
+    inline = { background: heatColor };
   } else if (premium) {
     style = "border-accent-400/60 bg-accent-500/[0.1] text-accent-200 hover:bg-accent-500/25";
   } else {
-    style = "border-white/25 bg-white/[0.03] text-gray-300 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white";
+    style = "border-white/25 bg-fill-subtle text-gray-300 hover:border-brand-400 hover:bg-brand-500/15 hover:text-white";
   }
+  if (seat.wheelchair && !seat.isBooked && !selected) style += " border-2 border-sky-300";
+  if (compared) style += " ring-2 ring-white ring-offset-1 ring-offset-ink-900";
 
   return (
     <button
@@ -697,10 +772,11 @@ function SeatButton({ seat, selected, premium, recliner, onToggle }) {
           ? `Seat ${seat.seatNumber}, reserved by another customer`
           : seat.isBooked
           ? `Seat ${seat.seatNumber}, booked`
-          : `Seat ${seat.seatNumber}, ${kind}${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}`
+          : `Seat ${seat.seatNumber}, ${kind}${accessText}${seat.category}, ${formatPrice(seat.price)}${selected ? ", selected" : ""}${compared ? ", in comparison" : ""}`
       }
       title={seat.reserved ? `${seat.seatNumber} · Reserved` : seat.isBooked ? `${seat.seatNumber} · Booked` : `${seat.seatNumber} · ${recliner ? "Recliner · " : ""}${seat.category} · ${formatPrice(seat.price)}`}
       className={`${base} ${style}`}
+      style={inline}
     >
       {numberOf(seat.seatNumber)}
     </button>

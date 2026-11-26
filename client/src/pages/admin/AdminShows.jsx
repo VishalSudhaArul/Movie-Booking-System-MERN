@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { Pagination } from "../../components/ui/Navigation";
+import { SearchInput } from "../../components/ui/Input";
 import API from "../../api";
 import AdminLayout from "../../components/AdminLayout";
 import PageHeader from "../../components/ui/PageHeader";
@@ -10,8 +12,10 @@ import { EmptyState, ErrorState, Spinner } from "../../components/ui/Feedback";
 import { useToast } from "../../components/ui/Toast";
 import { formatPrice, formatShowDate, formatShowTime, getErrorMessage, isUpcomingShow } from "../../lib/format";
 
+const PAGE_SIZE = 12;
+
 const DEFAULT_LAYOUT = "classic-136";
-const EMPTY_FORM = { movieId: "", theatre: "", date: "", time: "", balconyPrice: "", firstClassPrice: "", secondClassPrice: "", layoutId: DEFAULT_LAYOUT };
+const EMPTY_FORM = { movieId: "", theatre: "", date: "", time: "", balconyPrice: "", firstClassPrice: "", secondClassPrice: "", layoutId: DEFAULT_LAYOUT, screenName: "" };
 
 const PRICE_FIELDS = [
   { key: "balconyPrice", label: "Balcony price (₹)" },
@@ -34,6 +38,9 @@ function AdminShows() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  // After a save, show the page that holds that showtime.
+  const [focusId, setFocusId] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -92,13 +99,16 @@ function AdminShows() {
         balconyPrice: Number(form.balconyPrice),
         firstClassPrice: Number(form.firstClassPrice),
         secondClassPrice: Number(form.secondClassPrice),
+        screenName: (form.screenName || "").trim(),
       };
       if (editId) {
         // The hall of an existing showtime is fixed (its seats and bookings come from it).
         await API.put(`/api/shows/${editId}`, payload);
+        setFocusId(editId);
         toast.success("Showtime updated.");
       } else {
-        await API.post("/api/shows", { ...payload, layoutId: form.layoutId || DEFAULT_LAYOUT });
+        const res = await API.post("/api/shows", { ...payload, layoutId: form.layoutId || DEFAULT_LAYOUT });
+        setFocusId(res.data?._id || res.data?.show?._id || null);
         toast.success("Showtime published.");
       }
       resetForm();
@@ -122,6 +132,7 @@ function AdminShows() {
       firstClassPrice: String(s.firstClassPrice ?? ""),
       secondClassPrice: String(s.secondClassPrice ?? ""),
       layoutId: s.layoutId || DEFAULT_LAYOUT,
+      screenName: s.screenName || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -147,12 +158,27 @@ function AdminShows() {
     (s) => !query || (s.movieId?.title || "").toLowerCase().includes(query) || (s.theatre || "").toLowerCase().includes(query)
   );
   const upcomingCount = shows.filter((s) => isUpcomingShow(s)).length;
+  const pageCount = Math.max(1, Math.ceil(filteredShows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageShows = filteredShows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // A new search starts from the first page.
+  useEffect(() => setPage(1), [query]);
+
+  useEffect(() => {
+    if (!focusId) return;
+    const index = filteredShows.findIndex((s) => s._id === focusId);
+    if (index >= 0) {
+      setPage(Math.floor(index / PAGE_SIZE) + 1);
+      setFocusId(null);
+    }
+  }, [focusId, filteredShows]);
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="space-y-8">
         <PageHeader
-          eyebrow="Admin"
+          breadcrumbs={[{ label: "Admin", to: "/admin/dashboard" }, { label: "Showtimes" }]}
           title="Showtimes"
           subtitle="Schedule shows and set seat prices for each class."
           icon="calendar"
@@ -178,7 +204,7 @@ function AdminShows() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field id="s-movie" label="Movie" required error={errors.movieId}>
-              <select id="s-movie" className={`input ${errors.movieId ? "input-error" : ""}`} value={form.movieId} onChange={update("movieId")}>
+              <select id="s-movie" className={`select ${errors.movieId ? "input-error" : ""}`} value={form.movieId} onChange={update("movieId")}>
                 <option value="">Choose a movie</option>
                 {movies.map((m) => (
                   <option key={m._id} value={m._id}>{m.title}</option>
@@ -195,7 +221,7 @@ function AdminShows() {
             >
               <select
                 id="s-layout"
-                className="input"
+                className="select"
                 value={form.layoutId}
                 onChange={update("layoutId")}
                 disabled={!!editId}
@@ -207,6 +233,9 @@ function AdminShows() {
                   </option>
                 ))}
               </select>
+            </Field>
+            <Field id="s-screen" label="Auditorium name (optional)" hint="Shown on tickets, e.g. Audi 3.">
+              <input id="s-screen" className="input" maxLength={40} placeholder="e.g. Audi 3" value={form.screenName} onChange={update("screenName")} />
             </Field>
             <Field id="s-date" label="Date" required error={errors.date}>
               <input id="s-date" type="date" className={`input ${errors.date ? "input-error" : ""}`} value={form.date} onChange={update("date")} />
@@ -241,11 +270,14 @@ function AdminShows() {
         </form>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative sm:w-80">
-            <label htmlFor="show-search" className="sr-only">Search showtimes</label>
-            <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input id="show-search" className="input pl-10" placeholder="Search by movie or theatre" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-          </div>
+          <SearchInput
+            id="show-search"
+            wrapperClassName="sm:w-80"
+            label="Search showtimes"
+            placeholder="Search by movie or theatre"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
           <p className="text-sm text-gray-400" aria-live="polite">
             Showing <span className="font-semibold text-white">{filteredShows.length}</span> of {shows.length}
           </p>
@@ -253,15 +285,16 @@ function AdminShows() {
 
         {status === "loading" ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-40 rounded-2xl" />)}
+            {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-40 rounded-card" />)}
           </div>
         ) : status === "error" ? (
           <ErrorState title="We couldn't load showtimes" onRetry={fetchData} />
         ) : filteredShows.length === 0 ? (
           <EmptyState icon="calendar" title={shows.length ? "No showtimes match" : "No showtimes yet"} message={shows.length ? "Try a different search." : "Use the form above to schedule one."} />
         ) : (
+          <>
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filteredShows.map((s) => {
+            {pageShows.map((s) => {
               const movie = s.movieId || {};
               const total = s.seats?.length || 0;
               const booked = (s.seats || []).filter((x) => x.isBooked).length;
@@ -295,6 +328,15 @@ function AdminShows() {
               );
             })}
           </ul>
+          <Pagination
+            label="Showtime pages"
+            page={currentPage}
+            pageCount={pageCount}
+            onChange={setPage}
+            total={filteredShows.length}
+            pageSize={PAGE_SIZE}
+          />
+          </>
         )}
       </div>
 
