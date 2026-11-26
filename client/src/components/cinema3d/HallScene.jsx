@@ -7,7 +7,6 @@ import { AdditiveBlending, CanvasTexture, DoubleSide, PlaneGeometry, RepeatWrapp
 // Surfaces
 const CARPET = "#1a2240";
 const AISLE = "#22304f";
-const RISER_EDGE = "#0f1423";
 const WALL = "#182348";
 const PANEL_A = "#223063";
 const PANEL_B = "#2a3a76";
@@ -62,6 +61,27 @@ function useCurvedScreen(width, height, curve) {
   }, [width, height, curve]);
 }
 
+/** Soft radial glow drawn in the browser (no download): the light a bright screen throws on its surround. */
+function useGlowTexture() {
+  const texture = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 256;
+    c.height = 144;
+    const ctx = c.getContext("2d");
+    const g = ctx.createRadialGradient(128, 72, 20, 128, 72, 140);
+    g.addColorStop(0, "rgba(170,200,255,0.9)");
+    g.addColorStop(0.55, "rgba(120,160,255,0.35)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 256, 144);
+    const t = new CanvasTexture(c);
+    t.colorSpace = SRGBColorSpace;
+    return t;
+  }, []);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return texture;
+}
+
 export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowPower = false, shadows, shadowMapSize = 1024, topView = false }) {
   const { room, screen, geometry: g } = hall;
   const theme = useThemeColors(["brand-300", "brand-500", "accent-400"]);
@@ -79,6 +99,16 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
   const screenCenterY = screen.bottom + screen.height / 2;
 
   const screenGeo = useCurvedScreen(screen.width, screen.height, screen.curve || 0);
+  const glow = useGlowTexture();
+  // The screen lights the hall: brighter while the trailer plays.
+  const screenLit = !!trailer?.playing;
+  // Masking frame round the screen, never wider than the front wall.
+  const frameW = Math.min(screen.width + 1.2, room.width - 0.3);
+  const frameH = screen.height + 1.0;
+  const bezel = 0.09;
+  // Side speaker panels only where the wall leaves room beside the screen
+  // (on a wall-to-wall screen the speakers sit behind it, as in real cinemas).
+  const sidePanels = screen.width / 2 + 2.4 < room.width / 2;
   useEffect(() => () => screenGeo.dispose(), [screenGeo]);
   const maxFloor = rows.reduce((m, r) => Math.max(m, r.floorY), 0);
   // Floor height at a depth (the raked floor under the seats; 0 in front of them).
@@ -190,15 +220,16 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
       {/* Lighting: dim house lights, light from the screen, a soft key light. */}
       <hemisphereLight args={["#c5cfee", "#161b30", 1.05]} />
       <ambientLight intensity={0.45} />
+      {/* Light thrown by the screen onto the audience, strongest on the front rows. */}
       <spotLight
-        position={[0, screenCenterY + 1, 1.5]}
-        target-position={[0, 1, 14]}
-        angle={0.9}
-        penumbra={0.9}
-        intensity={70}
-        distance={45}
-        decay={1.6}
-        color="#9cc4ff"
+        position={[0, screenCenterY, 1.2]}
+        target-position={[0, 1, (rows[0]?.z || 8) + 6]}
+        angle={1.0}
+        penumbra={0.95}
+        intensity={screenLit ? 95 : 60}
+        distance={Math.max(45, room.depth)}
+        decay={1.5}
+        color="#a9c8ff"
       />
       <spotLight
         position={[0, room.height - 0.5, (stallsEndZ + 5) / 2]}
@@ -237,10 +268,26 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         trailer={trailer}
         lowPower={lowPower}
       />
-      <mesh position={[0, screenCenterY, -0.15]}>
-        <boxGeometry args={[screen.width + 1.4, screen.height + 1.2, 0.1]} />
+      {/* Matte black masking, a thin satin bezel and a soft glow round the edges */}
+      <mesh position={[0, screenCenterY, -0.22]}>
+        <boxGeometry args={[frameW, frameH, 0.1]} />
         <meshStandardMaterial color="#03040a" roughness={1} />
       </mesh>
+      <mesh position={[0, screenCenterY, -0.12]} renderOrder={-1}>
+        <planeGeometry args={[Math.min(screen.width * 1.08, room.width - 0.4), screen.height * 1.14]} />
+        <meshBasicMaterial map={glow} transparent opacity={screenLit ? 0.32 : 0.18} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+      </mesh>
+      {[
+        [0, screen.height / 2 + bezel / 2, screen.width + bezel * 2, bezel],
+        [0, -screen.height / 2 - bezel / 2, screen.width + bezel * 2, bezel],
+        [screen.width / 2 + bezel / 2, 0, bezel, screen.height],
+        [-screen.width / 2 - bezel / 2, 0, bezel, screen.height],
+      ].map(([x, y, w, h], i) => (
+        <mesh key={`bezel-${i}`} position={[x, screenCenterY + y, (screen.curve || 0) * (screen.width / 2) * (x ? 1 : 0) - 0.02]}>
+          <boxGeometry args={[w, h, 0.04]} />
+          <meshStandardMaterial color="#1b2234" roughness={0.45} metalness={0.5} />
+        </mesh>
+      ))}
       <mesh position={[0, 0.3, 1.2]} receiveShadow={shadows}>
         <boxGeometry args={[room.width - 2, 0.6, 2.4]} />
         <meshStandardMaterial color="#1c2647" roughness={0.7} />
@@ -289,8 +336,8 @@ export default function HallScene({ hall, movieTitle, moviePoster, trailer, lowP
         <meshStandardMaterial roughness={0.9} />
       </Instances>
 
-      {/* Speaker panels either side of the screen */}
-      {[-1, 1].map((side) => (
+      {/* Speaker panels either side of the screen, where there's room */}
+      {sidePanels && [-1, 1].map((side) => (
         <mesh key={`spk-${side}`} position={[side * (screen.width / 2 + 1.6), screenCenterY, -0.08]}>
           <boxGeometry args={[1.6, screen.height + 0.6, 0.12]} />
           <meshStandardMaterial color="#0b0f1e" roughness={0.95} />

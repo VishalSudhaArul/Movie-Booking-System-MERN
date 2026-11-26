@@ -159,3 +159,15 @@ describe("layout editor API with a cross-aisle", () => {
     expect((await request(app).get(`/api/layouts/${saved.body.id}`)).body.rows[7].crossAisleBefore).toBe(true);
   });
 });
+
+describe("giant 16:9 cinema screens", () => {
+  test.each(listLayouts().map((l) => l.id))("%s: 16:9, spans most of the front wall, fits under the ceiling", (id) => {
+    const { screen, room, geometry } = getLayout(id);
+    expect(screen.width / screen.height).toBeCloseTo(16 / 9, 1);
+    expect(screen.width / room.width).toBeGreaterThanOrEqual(0.89);
+    expect(screen.width).toBeLessThan(room.width - 1); // clear of the side walls
+    expect(screen.bottom + screen.height).toBeLessThanOrEqual(room.height - 1.1); // clear of the ceiling
+    // The front row sits about half a screen-width back.
+    expect(geometry.stalls.firstRowDistance).toBeGreaterThanOrEqual(screen.width * 0.49);
+  });
+});

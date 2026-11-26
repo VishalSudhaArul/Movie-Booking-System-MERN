@@ -68,7 +68,7 @@ describe.each(MULTIPLEX_CAPACITIES)("multiplex-%i layout", (capacity) => {
     expect(layout.room.width).toBeGreaterThanOrEqual(classic.room.width);
     expect(layout.room.height).toBeGreaterThan(classic.room.height);
     expect(layout.room.depth).toBeGreaterThan(classic.room.depth);
-    expect(layout.screen.width).toBeGreaterThan(classic.screen.width);
+    expect(layout.screen.width).toBeGreaterThanOrEqual(classic.screen.width); // both fill ~90 % of their front wall
     expect(layout.screen.width).toBeLessThan(layout.room.width);
     // Every row fits inside the room with a walkway along each wall.
     layout.rows.forEach((r) => {

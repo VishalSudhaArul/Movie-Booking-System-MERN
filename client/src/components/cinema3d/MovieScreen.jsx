@@ -4,11 +4,13 @@
 // - Always ready: the movie's poster (or its title) painted onto the curved
 //   screen. This is what shows while a trailer loads, if there is none, if it
 //   fails, and when the visitor prefers reduced motion.
-// - Direct video files play through a VideoTexture on the curved screen itself.
-//   The canvas only redraws when the video has a new frame.
+// - Direct video files play through a VideoTexture on the curved screen itself,
+//   scaled to cover the whole screen (cropped, never stretched). The canvas
+//   only redraws when the video has a new frame.
 // - YouTube can't be read into WebGL (it's a cross-origin player), so its
-//   iframe is placed on the screen with CSS 3D (drei <Html transform>). The
-//   canvas lets it show through only while the trailer is actually playing,
+//   iframe is placed on the screen with CSS 3D (drei <Html transform>), sized
+//   to the whole 16:9 screen. The canvas lets it show through only while the
+//   trailer is actually playing (it fades in from black),
 //   and seats or walls in front of it still hide it. The iframe never takes
 //   clicks: seat picking and the camera work exactly as before.
 //
@@ -19,11 +21,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import { CanvasTexture, DoubleSide, SRGBColorSpace, VideoTexture } from "three";
+import { CanvasTexture, DoubleSide, LinearFilter, SRGBColorSpace, VideoTexture } from "three";
 import { YOUTUBE_EMBED_ORIGIN, youtubeScreenUrl } from "../../lib/trailerSource";
 
-const CANVAS_W = 1400;
-const CANVAS_H = 600;
+// The poster picture is painted at the screen's own 16:9 shape, so it's never stretched.
+const CANVAS_W = 1600;
+const CANVAS_H = 900;
 // A trailer that hasn't started after this long is treated as unavailable.
 const START_TIMEOUT_MS = 15000;
 // YouTube player states (IFrame API).
@@ -51,7 +54,7 @@ function paintScreen(ctx, title, img) {
     ctx.fillStyle = "rgba(4,6,13,0.55)";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    const h = CANVAS_H - 90;
+    const h = CANVAS_H - 140;
     const w = Math.min(h * (img.width / img.height), CANVAS_W * 0.42);
     const x = 120;
     const y = (CANVAS_H - h) / 2;
@@ -61,7 +64,7 @@ function paintScreen(ctx, title, img) {
     ctx.shadowBlur = 0;
     textLeft = x + w;
   } else {
-    const glow = ctx.createRadialGradient(CANVAS_W / 2, 270, 20, CANVAS_W / 2, 300, 700);
+    const glow = ctx.createRadialGradient(CANVAS_W / 2, CANVAS_H * 0.45, 20, CANVAS_W / 2, CANVAS_H / 2, 800);
     glow.addColorStop(0, "rgba(140,200,255,0.35)");
     glow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = glow;
@@ -73,11 +76,11 @@ function paintScreen(ctx, title, img) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "rgba(255,255,255,0.94)";
-  ctx.font = "700 70px Outfit, Inter, system-ui, sans-serif";
-  ctx.fillText(title || "Now showing", cx, CANVAS_H / 2 - 20, maxW);
-  ctx.font = "500 26px Inter, system-ui, sans-serif";
+  ctx.font = "700 84px Outfit, Inter, system-ui, sans-serif";
+  ctx.fillText(title || "Now showing", cx, CANVAS_H / 2 - 24, maxW);
+  ctx.font = "500 30px Inter, system-ui, sans-serif";
   ctx.fillStyle = "rgba(200,220,255,0.72)";
-  ctx.fillText("CINEBOOK  ·  NOW SHOWING", cx, CANVAS_H / 2 + 60, maxW);
+  ctx.fillText("CINEBOOK  ·  NOW SHOWING", cx, CANVAS_H / 2 + 70, maxW);
 }
 
 /** The screen's resting picture: poster and title, or the title alone. */
@@ -134,7 +137,7 @@ function usePosterTexture(title, posterUrl) {
 /* ---------------- Direct video file ---------------- */
 
 /** Plays a video file into a texture cropped to the screen's shape. */
-function useVideoTexture(src, { playing, muted, screenAspect, onStatus }) {
+function useVideoTexture(src, { playing, muted, volume, screenAspect, onStatus, attempt }) {
   const invalidate = useThree((s) => s.invalidate);
   const [state, setState] = useState({ video: null, texture: null, shown: false });
   const statusRef = useRef(onStatus);
@@ -153,6 +156,10 @@ function useVideoTexture(src, { playing, muted, screenAspect, onStatus }) {
 
     const texture = new VideoTexture(video);
     texture.colorSpace = SRGBColorSpace;
+    // No mipmaps for video: they'd be rebuilt every frame for no visible gain.
+    texture.generateMipmaps = false;
+    texture.minFilter = LinearFilter;
+    texture.magFilter = LinearFilter;
     let alive = true;
     let frameHandle = 0;
     const report = (s) => alive && statusRef.current?.(s);
@@ -166,7 +173,8 @@ function useVideoTexture(src, { playing, muted, screenAspect, onStatus }) {
         : window.setTimeout(onFrame, 1000 / 30);
     };
     const onLoaded = () => {
-      // Crop (cover) the video to the wide screen instead of stretching it.
+      // Cover the whole screen without stretching: a 16:9 trailer fills the
+      // 16:9 screen exactly; any other shape is cropped evenly, never squashed.
       const videoAspect = video.videoWidth / video.videoHeight || 16 / 9;
       if (screenAspect > videoAspect) {
         texture.repeat.set(1, videoAspect / screenAspect);
@@ -219,12 +227,13 @@ function useVideoTexture(src, { playing, muted, screenAspect, onStatus }) {
       texture.dispose();
       setState({ video: null, texture: null, shown: false });
     };
-  }, [src, screenAspect, invalidate]);
+  }, [src, screenAspect, invalidate, attempt]);
 
   const { video } = state;
   useEffect(() => {
     if (!video) return;
     video.muted = muted;
+    video.volume = Math.max(0, Math.min(1, volume));
     if (playing) {
       const p = video.play();
       // Autoplay refused (rare once muted): wait for the Play button.
@@ -232,7 +241,7 @@ function useVideoTexture(src, { playing, muted, screenAspect, onStatus }) {
     } else {
       video.pause();
     }
-  }, [video, playing, muted]);
+  }, [video, playing, muted, volume]);
 
   return state.shown ? state.texture : null;
 }
@@ -244,21 +253,22 @@ const holeShader = {
   fragmentShader: "void main() { gl_FragColor = vec4(0.0); }",
 };
 
-function YouTubeOnScreen({ id, position, width, height, lowPower, playing, muted, onStatus, onShown }) {
+function YouTubeOnScreen({ id, position, width, height, lowPower, playing, muted, volume, onStatus, onShown }) {
   const invalidate = useThree((s) => s.invalidate);
   const frameRef = useRef(null);
   const [revealed, setRevealed] = useState(false);
   const readyRef = useRef(false);
   const startedRef = useRef(false);
-  const wantRef = useRef({ playing, muted });
-  wantRef.current = { playing, muted };
+  const wantRef = useRef({ playing, muted, volume });
+  wantRef.current = { playing, muted, volume };
   const statusRef = useRef(onStatus);
   statusRef.current = onStatus;
   const shownRef = useRef(onShown);
   shownRef.current = onShown;
 
   // A smaller player on low-power devices: YouTube then streams a lighter video.
-  const px = lowPower ? { w: 640, h: 360 } : { w: 1280, h: 720 };
+  // Same 16:9 shape as the screen, so the picture fills it with no bars.
+  const px = lowPower ? { w: 640, h: Math.round((640 * height) / width) } : { w: 1280, h: Math.round((1280 * height) / width) };
   const distanceFactor = (width * 400) / px.w;
   const src = useMemo(() => youtubeScreenUrl(id), [id]);
 
@@ -268,6 +278,7 @@ function YouTubeOnScreen({ id, position, width, height, lowPower, playing, muted
   };
   const apply = () => {
     if (!readyRef.current) return;
+    send("setVolume", [Math.round(Math.max(0, Math.min(1, wantRef.current.volume)) * 100)]);
     send(wantRef.current.muted ? "mute" : "unMute");
     send(wantRef.current.playing ? "playVideo" : "pauseVideo");
   };
@@ -327,7 +338,7 @@ function YouTubeOnScreen({ id, position, width, height, lowPower, playing, muted
   // Play / pause / mute from the controls outside the 3D view.
   useEffect(() => {
     apply();
-  }, [playing, muted]);
+  }, [playing, muted, volume]);
 
   useEffect(() => {
     invalidate();
@@ -349,7 +360,10 @@ function YouTubeOnScreen({ id, position, width, height, lowPower, playing, muted
       style={{ pointerEvents: "none" }}
       material={<shaderMaterial side={DoubleSide} visible={revealed} {...holeShader} />}
     >
-      <div style={{ width: px.w, height: px.h, background: "#000", pointerEvents: "none" }}>
+      <div
+        style={{ width: px.w, height: px.h, background: "#000", pointerEvents: "none", opacity: revealed ? 1 : 0, transition: "opacity 600ms ease" }}
+        data-testid="screen-trailer-surface"
+      >
         <iframe
           ref={frameRef}
           src={src}
@@ -384,14 +398,16 @@ export default function MovieScreen({ geometry, centerY, screen, title, poster, 
   const videoTexture = useVideoTexture(source?.kind === "video" ? source.src : null, {
     playing: !!trailer?.playing,
     muted: trailer?.muted !== false,
+    volume: trailer?.volume ?? 1,
     screenAspect,
     onStatus: trailer?.onStatus,
+    attempt: trailer?.attempt || 0,
   });
 
-  // YouTube is 16:9: as tall as the screen, centred, just in front of the
-  // curved surface so its edges aren't hidden by the curve.
-  const ytHeight = screen.height;
-  const ytWidth = Math.min(screen.width, (ytHeight * 16) / 9);
+  // YouTube is 16:9 and so is the screen: the player covers all of it, just in
+  // front of the curved surface so the curve's edges don't hide it.
+  const ytWidth = screen.width;
+  const ytHeight = Math.min(screen.height, (ytWidth * 9) / 16);
   const half = screen.width / 2;
   const curveAtEdge = (screen.curve || 0) * half * (ytWidth / 2 / half) ** 2;
   const showYoutube = source?.kind === "youtube";
@@ -405,7 +421,7 @@ export default function MovieScreen({ geometry, centerY, screen, title, poster, 
       </mesh>
       {showYoutube && (
         <YouTubeOnScreen
-          key={source.id}
+          key={`${source.id}:${trailer.attempt || 0}`}
           id={source.id}
           position={[0, centerY, curveAtEdge + 0.03]}
           width={ytWidth}
@@ -413,6 +429,7 @@ export default function MovieScreen({ geometry, centerY, screen, title, poster, 
           lowPower={lowPower}
           playing={!!trailer.playing}
           muted={trailer.muted !== false}
+          volume={trailer.volume ?? 1}
           onStatus={trailer.onStatus}
           onShown={setYoutubeShown}
         />

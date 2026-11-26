@@ -74,6 +74,11 @@ function usePresets(hall) {
       // stays above the bottom edge.
       map: mapFraming(front, back, topFloor),
       screen: { pos: [0, 3.2 + midRow.floorY * 0.5, mid], target: screenCenter },
+      // Fullscreen theatre: the view from the best centre seat (about 60 % back).
+      cinema: (() => {
+        const r = rows[Math.min(rows.length - 1, Math.round(rows.length * 0.6))];
+        return { pos: [0, r.floorY + eye + 0.05, r.z], target: screenCenter };
+      })(),
       stage: { pos: [0, screen.bottom + 0.9, 2.6], target: [0, 2.6, mid + 4] },
       bounds: new Box3(new Vector3(-room.width / 2, 0, -1), new Vector3(room.width / 2, room.height, room.depth)),
       maxDistance: Math.max(42, room.depth * 1.25),
@@ -258,6 +263,11 @@ export default function Auditorium3D({
   const [walkMsg, setWalkMsg] = useState("");
   const [arrivedSeat, setArrivedSeat] = useState(null);
   const [soundOn, setSoundOn] = useState(false);
+  // Fullscreen theatre: "native" (Fullscreen API on the 3D view), "css" (fills
+  // the window where the API isn't available, e.g. iPhone Safari) or false.
+  const [theatre, setTheatre] = useState(false);
+  const theatreRef = useRef(theatre);
+  theatreRef.current = theatre;
   const walkInput = useWalkInput();
   const walkApi = useRef(null);
   // Where the orbit camera resumes after walking, and a seat to preview once it's back.
@@ -293,7 +303,8 @@ export default function Auditorium3D({
     const h = el?.clientHeight || 1;
     // The panel docks to the side at the page's `md` breakpoint (the window is
     // ≥ 768 px wide), even when the 3D view itself is a little narrower.
-    if (!w || !window.matchMedia("(min-width: 768px)").matches) return 0;
+    // In fullscreen theatre mode the panel is hidden: no shift.
+    if (!w || theatreRef.current || !window.matchMedia("(min-width: 768px)").matches) return 0;
     const d = preset ? Math.hypot(...preset.pos.map((v, i) => v - preset.target[i])) : 20;
     const visibleWidth = 2 * d * Math.tan(MathUtils.degToRad(FOV / 2)) * (w / h);
     return ((PANEL_PX / 2) / w) * visibleWidth;
@@ -415,6 +426,50 @@ export default function Auditorium3D({
   const exitWalkKey = useCallback(() => exitWalk(), [exitWalk]);
   const kickWalk = useCallback(() => walkApi.current?.kick(), []);
   useWalkKeys(walking, walkInput, exitWalkKey, kickWalk);
+
+  const enterTheatre = useCallback(async () => {
+    finishIntro();
+    setHover(null);
+    const el = stageRef.current;
+    let mode = "css";
+    if (el && el.requestFullscreen && document.fullscreenEnabled !== false) {
+      try {
+        await el.requestFullscreen({ navigationUI: "hide" });
+        mode = "native";
+      } catch (e) {
+        mode = "css";
+      }
+    }
+    setTheatre(mode);
+  }, [finishIntro]);
+  const exitTheatre = useCallback(() => {
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    setTheatre(false);
+  }, []);
+  // Fly to the best seat once the view has its fullscreen size.
+  useEffect(() => {
+    if (!theatre || walking) return undefined;
+    const id = requestAnimationFrame(() => goTo(presets.cinema, "cinema"));
+    return () => cancelAnimationFrame(id);
+  }, [theatre]); // only when entering or leaving
+  useEffect(() => {
+    if (!theatre) return undefined;
+    // Leaving native fullscreen (Esc, browser UI) ends theatre mode too.
+    const onChange = () => {
+      if (!document.fullscreenElement) setTheatre((t) => (t === "native" ? false : t));
+    };
+    const onKey = (e) => e.key === "Escape" && theatre === "css" && !walking && setTheatre(false);
+    document.addEventListener("fullscreenchange", onChange);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [theatre, walking]);
+  // Leaving the page while in fullscreen: give the browser its window back.
+  useEffect(() => () => {
+    if (document.fullscreenElement && document.fullscreenElement === stageRef.current) document.exitFullscreen().catch(() => {});
+  }, []);
 
   // The seat to walk to: the one being previewed, else the first one selected.
   const walkTarget = viewSeat || (selected.length ? hall.seatIndex.get(selected[0]) : null);
@@ -582,6 +637,7 @@ export default function Auditorium3D({
           azimuth: c?.azimuthAngle,
           polar: c?.polarAngle,
           maxDistance: c?.maxDistance,
+          focalOffset: c?.getFocalOffset ? c.getFocalOffset(new Vector3()).toArray() : null,
           drawCalls: info?.calls,
           timings: { ...timingsRef.current },
           renderer: getRendererName(),
@@ -599,6 +655,8 @@ export default function Auditorium3D({
           walkPose: walking ? walkApi.current?.getPose() || null : null,
           sound: soundOn,
           doors: hall.doors.length,
+          fullscreen: theatre,
+          screen: { width: hall.screen.width, height: hall.screen.height, bottom: hall.screen.bottom },
         };
       },
       // Screen coordinates of a point on the cinema screen (u, v from -1 to 1).
@@ -652,7 +710,7 @@ export default function Auditorium3D({
     return () => {
       delete window.__cinema3d;
     };
-  }, [mode, introDone, viewSeat, hall, goTo, presets, trailer.status, quality, lowPower, walking, walkLabel, soundOn]);
+  }, [mode, introDone, viewSeat, hall, goTo, presets, trailer.status, quality, lowPower, walking, walkLabel, soundOn, theatre]);
 
   /* ---------- Keyboard navigation (when the 3D view has focus) ---------- */
 
@@ -741,8 +799,11 @@ export default function Auditorium3D({
     >
       <div
         ref={stageRef}
-        className="relative h-[min(78vh,680px)] min-h-[460px] overflow-hidden rounded-xl bg-ink-950 outline-none ring-brand-400 focus-visible:ring-2"
-        style={introDone ? undefined : { position: "sticky", top: 84 }}
+        className={`${
+          theatre === "css" ? "fixed inset-0 z-[70] h-auto min-h-0" : theatre === "native" ? "relative h-full min-h-0" : "relative h-[min(78vh,680px)] min-h-[460px] rounded-xl"
+        } overflow-hidden bg-ink-950 outline-none ring-brand-400 focus-visible:ring-2`}
+        style={introDone || theatre ? undefined : { position: "sticky", top: 84 }}
+        data-theatre={theatre || undefined}
         data-testid="auditorium-3d"
         tabIndex={0}
         role="region"
@@ -808,7 +869,7 @@ export default function Auditorium3D({
 
         {/* Camera toolbar: one scrollable row, clear of the booking panel */}
         <div
-          className="glass scroll-row absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-xl p-1 md:max-w-[calc(100%-320px)]"
+          className={`glass scroll-row absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-xl p-1 ${theatre ? "" : "md:max-w-[calc(100%-320px)]"}`}
           role="toolbar"
           aria-label="Camera views"
         >
@@ -839,6 +900,15 @@ export default function Auditorium3D({
             title="Show the approximate speaker layout"
           >
             <Icon name="volume" className="h-3.5 w-3.5" /> Sound
+          </button>
+          <button
+            className={`${toolbarBtn(!!theatre)} flex shrink-0 items-center gap-1`}
+            onClick={() => (theatre ? exitTheatre() : enterTheatre())}
+            aria-pressed={!!theatre}
+            aria-label={theatre ? "Exit fullscreen theatre" : "Fullscreen theatre"}
+            title={theatre ? "Exit fullscreen (Esc)" : "Watch from the best seat, fullscreen"}
+          >
+            <Icon name={theatre ? "shrink" : "expand"} className="h-3.5 w-3.5" /> {theatre ? "Exit" : "Fullscreen"}
           </button>
           <span className="mx-1 h-5 w-px shrink-0 bg-fill-emphasis" aria-hidden="true" />
           <button className={`${iconBtn} shrink-0`} onClick={() => { finishIntro(); controls()?.dolly(3, animate); }} disabled={mode === "seat" || walking} aria-label="Zoom in" title="Zoom in" aria-keyshortcuts="+">
@@ -926,7 +996,7 @@ export default function Auditorium3D({
 
         {/* Floating booking panel */}
         <aside
-          className="glass absolute inset-x-2 bottom-2 z-10 flex max-h-[72%] flex-col overflow-hidden rounded-2xl md:inset-x-auto md:bottom-3 md:right-3 md:top-3 md:max-h-none md:w-[290px]"
+          className={`${theatre ? "hidden" : "flex"} glass absolute inset-x-2 bottom-2 z-10 max-h-[72%] flex-col overflow-hidden rounded-2xl md:inset-x-auto md:bottom-3 md:right-3 md:top-3 md:max-h-none md:w-[290px]`}
           aria-label="Your booking"
           data-testid="booking-panel"
         >

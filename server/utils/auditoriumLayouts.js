@@ -33,15 +33,17 @@ const CLASSIC_136 = {
   id: "classic-136",
   name: "Classic hall",
   version: 2,
-  screen: { width: 14, height: 6, bottom: 1.9, curve: 0.08 },
-  room: { width: 22, height: 12, depth: 24 },
+  // A 16:9 screen across 90 % of the front wall (19.8 × 11.14 m), so 16:9
+  // trailers fill it edge to edge. The first row is half a screen-width back.
+  screen: { width: 19.8, height: 11.14, bottom: 1.9, curve: 0.07 },
+  room: { width: 22, height: 14.3, depth: 28.4 },
   geometry: {
     seatWidth: { standard: 0.62, recliner: 0.9 },
     rowPitch: { standard: 1.1, recliner: 1.7 },
     aisleWidth: 1.3,
     crossAisleWidth: 1.5,
     eyeHeight: 1.15, // seated eye height above the row's floor
-    stalls: { firstRowDistance: 5.5, riser: 0.17 },
+    stalls: { firstRowDistance: 9.9, riser: 0.17 },
   },
   sections: [
     { name: "Second Class", tier: "stalls" },
@@ -73,10 +75,10 @@ const CLASSIC_136 = {
   doors: [
     { id: "front-left", label: "Front left door", side: "left", z: 3.2, kind: "both", accessible: true },
     { id: "front-right", label: "Front right door", side: "right", z: 3.2, kind: "both", accessible: true },
-    { id: "mid-left", label: "Middle left exit", side: "left", z: 14.5, kind: "exit", accessible: false },
-    { id: "mid-right", label: "Middle right exit", side: "right", z: 14.5, kind: "exit", accessible: false },
-    { id: "rear-left", label: "Rear left exit", side: "left", z: 21.4, kind: "exit", accessible: false },
-    { id: "rear-right", label: "Rear right exit", side: "right", z: 21.4, kind: "exit", accessible: false },
+    { id: "mid-left", label: "Middle left exit", side: "left", z: 18.9, kind: "exit", accessible: false },
+    { id: "mid-right", label: "Middle right exit", side: "right", z: 18.9, kind: "exit", accessible: false },
+    { id: "rear-left", label: "Rear left exit", side: "left", z: 25.8, kind: "exit", accessible: false },
+    { id: "rear-right", label: "Rear right exit", side: "right", z: 25.8, kind: "exit", accessible: false },
   ],
   // Row L is on the flat floor by the step-free front doors.
   accessibility: {
@@ -99,6 +101,18 @@ const MULTIPLEX_CAPACITIES = [300, 350, 400, 450, 500];
 const ROW_LETTERS = "ABCDEFGHJKLMNOPQRSTUVWXYZ"; // 25 letters, no I
 
 const round2 = (n) => Math.round(n * 100) / 100;
+
+/* Giant 16:9 cinema screens. Trailers are 16:9, so they fill the screen edge
+   to edge with no bars and no distortion. The screen spans `fill` of the front
+   wall; the room is made tall enough for it with 1.2 m to spare above. */
+const SCREEN_ASPECT = 16 / 9;
+const cinemaScreen = (width, { bottom = 2, curve = 0.06 } = {}) => ({
+  width: round2(width),
+  height: round2(width / SCREEN_ASPECT),
+  bottom,
+  curve,
+});
+const roomHeightFor = (screen, minimum) => round2(Math.max(minimum, screen.bottom + screen.height + 1.2));
 
 const multiplexLayout = (capacity) => {
   const rowCount = Math.round(20 + (capacity - 300) / 40); // 20 … 25
@@ -137,13 +151,13 @@ const multiplexLayout = (capacity) => {
   // never narrower than the seating plus a 2 m walkway along each wall.
   const roomWidth = round2(Math.max(22 + (capacity - 300) / 50, seatingWidth + 2 * 2));
   const sideAisleWidth = round2((roomWidth - seatingWidth) / 2);
-  const screenWidth = round2(roomWidth * 0.8);
-  const screenHeight = round2(screenWidth / 2.35); // scope ratio
-  const screenBottom = 2.1;
-  const firstRowDistance = round2(Math.max(6.5, screenWidth * 0.42));
+  const screen = cinemaScreen(roomWidth * 0.9, { bottom: 2.1 });
+  const screenWidth = screen.width;
+  // Half a screen-width back, so the front row takes in the whole screen.
+  const firstRowDistance = round2(Math.max(6.5, screenWidth * 0.5));
   const depth = round2(firstRowDistance + rowCount * rowPitch + 3.5);
   const backFloor = Array.from({ length: rowCount }, (_, i) => riserFor(i)).reduce((a, b) => a + b, 0);
-  const height = round2(Math.max(14, screenBottom + screenHeight + 2.4, backFloor + 4.6));
+  const height = roomHeightFor(screen, Math.max(14, backFloor + 4.6));
 
   const rows = sides.map((side, i) => ({
     label: ROW_LETTERS[i],
@@ -163,7 +177,7 @@ const multiplexLayout = (capacity) => {
     name: `Multiplex hall · ${capacity} seats`,
     version: 1,
     kind: "multiplex",
-    screen: { width: screenWidth, height: screenHeight, bottom: screenBottom, curve: 0.06 },
+    screen,
     room: { width: roomWidth, height, depth },
     geometry: {
       seatWidth: { standard: seatWidth, recliner: 0.9 },
@@ -281,11 +295,10 @@ const grandLayout = (capacity) => {
   // It also grows with the hall's depth: with the first row ~0.46 screen-widths
   // back, a screen of 0.76 × the seating depth gives the last row ≥ 30°.
   const seatingSpan = stdRows * g.pitch + g.reclinerRows * g.reclinerPitch + g.cross;
-  const screenWidth = round2(Math.min(roomWidth * 0.92, Math.max(roomWidth * 0.84, seatingSpan * 0.76)));
-  const screenHeight = round2(screenWidth / 2.35);
-  const screenBottom = 2.3;
+  const screen = cinemaScreen(Math.min(roomWidth * 0.92, Math.max(roomWidth * 0.9, seatingSpan * 0.76)), { bottom: 2.3, curve: 0.07 });
+  const screenWidth = screen.width;
   // About half a screen-width back, so even the front row takes in the whole screen.
-  const firstRowDistance = round2(Math.max(9, screenWidth * 0.46));
+  const firstRowDistance = round2(Math.max(9, screenWidth * 0.5));
   const seatingDepth = stdRows * g.pitch + g.reclinerRows * g.reclinerPitch + g.cross;
   const crossZ = round2(firstRowDistance + g.crossBefore * g.pitch - g.pitch / 2 + g.cross / 2);
   const rearDoorZ = round2(firstRowDistance + seatingDepth + 1.0);
@@ -296,8 +309,8 @@ const grandLayout = (capacity) => {
     name: `Grand hall · ${capacity} seats`,
     version: 1,
     kind: "grand",
-    screen: { width: screenWidth, height: screenHeight, bottom: screenBottom, curve: 0.07 },
-    room: { width: roomWidth, height: round2(Math.max(15, screenBottom + screenHeight + 2.6, backFloor + 4.8)), depth: round2(firstRowDistance + seatingDepth + 3.2) },
+    screen,
+    room: { width: roomWidth, height: roomHeightFor(screen, Math.max(15, backFloor + 4.8)), depth: round2(firstRowDistance + seatingDepth + 3.2) },
     geometry: {
       seatWidth: { standard: g.seatWidth, recliner: g.reclinerWidth },
       rowPitch: { standard: g.pitch, recliner: g.reclinerPitch },
@@ -424,10 +437,9 @@ const buildCustomLayout = (spec, id = "custom-preview") => {
   const rowWidth = (r) => r.seats * (r.seatType === "recliner" ? reclinerWidth : seatWidth) + r.aisleAfter.length * aisleWidth;
   const seatingWidth = Math.max(...rows.map(rowWidth));
   const roomWidth = round2(Math.max(16, seatingWidth + 2 * 2));
-  const screenWidth = round2(roomWidth * 0.8);
-  const screenHeight = round2(screenWidth / 2.35);
-  const screenBottom = 2.1;
-  const firstRowDistance = round2(Math.max(6, screenWidth * 0.42));
+  const screen = cinemaScreen(roomWidth * 0.9, { bottom: 2.1 });
+  const screenWidth = screen.width;
+  const firstRowDistance = round2(Math.max(6, screenWidth * 0.5));
   const seatingDepth = rows.reduce((d, r) => d + (r.seatType === "recliner" ? pitchRecliner : pitchStd), 0) + (hasCross ? crossWidth : 0);
   const crossIndex = rows.findIndex((r) => r.crossAisleBefore);
   const crossZ = hasCross
@@ -435,7 +447,7 @@ const buildCustomLayout = (spec, id = "custom-preview") => {
     : null;
   const depth = round2(firstRowDistance + seatingDepth + 3.5);
   const backFloor = rows.reduce((a, r) => a + r.riser, 0);
-  const height = round2(Math.max(12, screenBottom + screenHeight + 2.4, backFloor + 4.6));
+  const height = roomHeightFor(screen, Math.max(12, backFloor + 4.6));
   const rowA = rows[0];
   const wheelchair = spec.wheelchairSpaces !== false && rowA.seats >= 4;
   return {
@@ -443,7 +455,7 @@ const buildCustomLayout = (spec, id = "custom-preview") => {
     name: spec.name.trim(),
     version: 1,
     kind: "custom",
-    screen: { width: screenWidth, height: screenHeight, bottom: screenBottom, curve: 0.06 },
+    screen,
     room: { width: roomWidth, height, depth },
     geometry: {
       seatWidth: { standard: seatWidth, recliner: reclinerWidth },

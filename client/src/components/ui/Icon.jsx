@@ -45,6 +45,8 @@ const PATHS = {
   info: "M12 11v5m0-8.500h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
   plus: "M12 5v14M5 12h14",
   minus: "M5 12h14",
+  expand: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   trash: "M5 7h14M10 7V4.500h4V7m-7 0l1 12.500h8L17 7M10 11v5m4-5v5",
   qr: "M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h2.500v2.500H14V14zm3.500 3.500H20V20h-2.500v-2.500zM14 20h.01M20 14h.01",
   grid: "M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z",

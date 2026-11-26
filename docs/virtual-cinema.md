@@ -50,19 +50,40 @@ wheelchair spaces) and risers grow towards the back so that, for every seat in
 every hall, the line to the bottom of the screen clears the head in front
 (checked in unit tests).
 
-| Hall | Seats | Rows | Room W × D (m) | Screen (m) | Notes |
-| --- | --- | --- | --- | --- | --- |
-| Classic | 136 | 12 | 22 × 24 | 14 × 6 | Legacy shows; former balcony rows A–D now continue the floor behind a cross-aisle |
-| Multiplex 300–500 | 300–500 | 20–25 | 22–26 × 34–41 | 17.6–20.8 wide | Three blocks, straight aisles |
-| Grand 600 | 600 | 25 | 25.6 × 45.5 | 23.6 × 10.0 | Mid cross-aisle, 2 recliner rows |
-| Grand 700 | 700 | 25 | 28.1 × 45.6 | 23.9 × 10.2 | Mid cross-aisle, 2 recliner rows |
-| **Grand 800** (default for new showtimes) | **800** | 25 | 31.8 × 46.9 | 26.7 × 11.4 | Mid cross-aisle, 2 recliner rows |
+| Hall | Seats | Rows | Room W × D × H (m) | Screen 16:9 (m) | First row | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Classic | 136 | 12 | 22 × 28.4 × 14.3 | 19.8 × 11.1 | 9.9 m | Legacy shows; former balcony rows A–D continue the floor behind a cross-aisle |
+| Multiplex 300–500 | 300–500 | 20–25 | 22–26 × 36–44 × 14.4–16.5 | 19.8–23.4 wide | 9.9–11.7 m | Three blocks, straight aisles |
+| Grand 600 | 600 | 25 | 25.6 × 46.4 × 16.8 | 23.6 × 13.3 | 11.8 m | Mid cross-aisle, 2 recliner rows |
+| Grand 700 | 700 | 25 | 28.1 × 47.3 × 17.7 | 25.3 × 14.2 | 12.6 m | Mid cross-aisle, 2 recliner rows |
+| **Grand 800** (default for new showtimes) | **800** | 25 | 31.8 × 49.0 × 19.6 | 28.6 × 16.1 | 14.3 m | Mid cross-aisle, 2 recliner rows |
+
+Every screen is **16:9 and spans 90–92 % of the front wall**, with 1.2 m clear
+below the ceiling. Trailers are 16:9, so YouTube and video trailers fill the
+whole screen with no bars and no distortion (other shapes are cropped evenly,
+never stretched). The first row sits half a screen-width back, so the front
+row takes in the whole screen; risers grow towards the back so no head in front
+crosses the screen, and even the last row sees at least 30°.
 
 Grand halls keep the multiplex comfort standard (0.62 m seats, 1.15 m rows),
 give recliners 0.90 m and 1.70 m, keep 1.3 m aisles and a ≥ 2.2 m walkway on
-each wall, place the first row about half a screen-width from the screen, and
-size the screen (84–92 % of the room width) so even the last row sees at least
-30°. Seats are angled up to 25° towards the screen centre.
+each wall. Seats are angled up to 25° towards the screen centre.
+
+## Screen, trailer and fullscreen theatre
+
+- The screen has a matte black masking frame, a thin satin bezel and a soft
+  glow; light from the screen falls on the front rows and brightens while the
+  trailer plays.
+- Trailer controls: play/pause, mute, volume, a loading spinner, and "Try
+  again" when a trailer can't play (the poster shows meanwhile). One player at
+  a time: a retry remounts it, never duplicates it.
+- **Fullscreen theatre** (camera toolbar) puts the whole 3D auditorium, not
+  just the video, into fullscreen and moves to the best centre seat, about 60 %
+  back. The booking panel steps aside and comes back on exit. Where the
+  Fullscreen API isn't available (iPhone Safari) it fills the browser window.
+- YouTube can't be drawn into WebGL, so its player is placed over the screen
+  with CSS 3D, just in front of the curved surface; seen from the side or close
+  up it can extend a few pixels past the bezel.
 
 The stored price category keys are unchanged ("Second Class", "First Class",
 "Balcony") so existing shows, bookings and the `balconyPrice` field stay valid;

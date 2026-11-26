@@ -216,9 +216,10 @@ test.describe("desktop and tablet", () => {
     const s = await state(page);
     expect(s.mode).toBe("seat");
     // The camera sits at the seat's real position: row K is the second row from
-    // the screen (about 6.6 m back) at seated eye height.
-    expect(s.position[2]).toBeGreaterThan(5.5);
-    expect(s.position[2]).toBeLessThan(8);
+    // the screen (11 m back: the first row is half the 19.8 m screen's width away)
+    // at seated eye height.
+    expect(s.position[2]).toBeGreaterThan(10);
+    expect(s.position[2]).toBeLessThan(12);
     expect(s.position[1]).toBeGreaterThan(1);
     expect(s.position[1]).toBeLessThan(2);
     const view = page.getByTestId("seat-view-panel");

@@ -302,7 +302,9 @@ test.describe("trailer on the 3D screen", () => {
     await startIfWaiting(page);
     await expect(bar).toHaveAttribute("data-status", "failed", { timeout: 10000 });
     await expect(bar).toContainText("Trailer unavailable");
-    await expect(bar.getByRole("button")).toHaveCount(0);
+    // No play/pause or sound controls for a trailer that can't play; only "Try again".
+    await expect(bar.getByRole("button")).toHaveCount(1);
+    await expect(bar.getByRole("button", { name: "Try again" })).toBeVisible();
     await expect(frames(page)).toHaveCount(0); // the player is removed
     await lookAtScreen(page);
     expect(MAGENTA(await screenColour(page))).toBe(false);
@@ -392,5 +394,143 @@ test.describe("trailer on the 3D screen", () => {
     await expect(frames(page)).toHaveCount(1, { timeout: 15000 });
     await expect(frames(page)).toHaveAttribute("src", /\/embed\/goodtrailer\?/);
     expect(errors).toEqual([]);
+  });
+});
+
+/** Points on the screen (u, v in -1..1) that are in view and not under an overlay. */
+async function clearScreenPoints(page, points) {
+  const out = [];
+  for (const [u, v] of points) {
+    const p = await page.evaluate(([a, b]) => window.__cinema3d.projectScreen(a, b), [u, v]);
+    if (!p || !p.visible) continue;
+    const clear = await page.evaluate(([x, y]) => {
+      const el = document.elementFromPoint(x, y);
+      return !!el && !!el.closest("[data-testid=auditorium-3d]") && !el.closest(".glass");
+    }, [p.x, p.y]);
+    if (clear) out.push([u, v]);
+  }
+  return out;
+}
+
+test.describe("giant 16:9 screen and fullscreen theatre", () => {
+  const CORNERS = [[-0.92, 0.88], [0.92, 0.88], [-0.92, -0.88], [0.92, -0.88], [-0.5, 0.6], [0.5, -0.6]];
+
+  test("the screen is a giant 16:9 and a YouTube trailer fills all of it (no side bars)", async ({ page, request }, testInfo) => {
+    await setTrailer(request, shows[0].movieId, "https://www.youtube.com/watch?v=fillscreen1");
+    await routes(page);
+    await open3D(page, testInfo, shows[0].id);
+    const s = await state(page);
+    expect(s.screen.width / s.screen.height).toBeCloseTo(16 / 9, 1);
+    expect(s.screen.width).toBeGreaterThanOrEqual(19.8); // was 14 m in the classic hall
+    await ensurePlaying(page);
+    // Only one player, at the screen's own 16:9 shape.
+    await expect(frames(page)).toHaveCount(1);
+    // Its declared size (offsetWidth is 0 inside a CSS 3D transform).
+    const surface = await page.getByTestId("screen-trailer-surface").evaluate((el) => ({ w: parseFloat(el.style.width), h: parseFloat(el.style.height) }));
+    expect(surface.w / surface.h).toBeCloseTo(16 / 9, 1);
+
+    // From a real screenshot: the trailer's colour reaches the screen's corners
+    // (with the old 2.35:1 screen these were black side bars).
+    await page.evaluate(() => window.__cinema3d.goTo("rear"));
+    await page.waitForTimeout(900);
+    const points = await clearScreenPoints(page, CORNERS);
+    expect(points.length).toBeGreaterThanOrEqual(2);
+    for (const [u, v] of points) {
+      await expect.poll(async () => MAGENTA(await screenColour(page, u, v)), { timeout: 5000, message: `screen point ${u},${v}` }).toBe(true);
+    }
+    await snap(page, testInfo, "giant-screen-youtube");
+
+    // Volume: the slider reaches the player (desktop and tablet show it).
+    if (testInfo.project.name !== "mobile") {
+      await controlsBar(page).getByLabel("Trailer volume").fill("40");
+      await expect.poll(() => page.evaluate(() => window.__yt)).toContain("setVolume");
+      await expect(controlsBar(page).getByRole("button", { name: "Mute trailer" })).toBeVisible(); // volume > 0 unmutes
+    }
+  });
+
+  test("a direct video fills the whole curved screen without distortion", async ({ page, request }, testInfo) => {
+    const webm = await makeMagentaWebm(page); // 320 × 180: 16:9
+    await setTrailer(request, shows[0].movieId, "http://localhost:3000/e2e-trailers/magenta.webm");
+    await routes(page, { webm });
+    await open3D(page, testInfo, shows[0].id);
+    await ensurePlaying(page);
+    await page.evaluate(() => window.__cinema3d.goTo("rear"));
+    await page.waitForTimeout(900);
+    const points = await clearScreenPoints(page, CORNERS);
+    expect(points.length).toBeGreaterThanOrEqual(2);
+    for (const [u, v] of points) {
+      await expect.poll(async () => MAGENTA(await screenColour(page, u, v)), { timeout: 5000, message: `screen point ${u},${v}` }).toBe(true);
+    }
+  });
+
+  test("fullscreen theatre: the whole 3D hall fills the display from the best seat; the trailer keeps playing; exit restores", async ({ page, request }, testInfo) => {
+    const errors = watchErrors(page);
+    await setTrailer(request, shows[0].movieId, "https://www.youtube.com/watch?v=theatremod1");
+    await routes(page);
+    await open3D(page, testInfo, shows[0].id);
+    await ensurePlaying(page);
+    const toolbar = page.getByRole("toolbar", { name: "Camera views" });
+    await toolbar.getByRole("button", { name: "Fullscreen theatre" }).click();
+    await expect.poll(async () => (await state(page)).fullscreen).toBeTruthy();
+    const vp = page.viewportSize();
+    await expect.poll(async () => {
+      const b = await page.getByTestId("auditorium-3d").boundingBox();
+      return Math.round(b.width) >= vp.width - 1 && Math.round(b.height) >= vp.height - 1;
+    }).toBe(true);
+    await expect.poll(async () => (await state(page)).mode).toBe("cinema");
+    // Wait for the camera to arrive at the seat.
+    let last = "";
+    await expect
+      .poll(async () => {
+        const pos = (await state(page)).position.map((v) => v.toFixed(2)).join();
+        const still = pos === last;
+        last = pos;
+        await page.waitForTimeout(200);
+        return still;
+      }, { timeout: 10000 })
+      .toBe(true);
+    await expect(page.getByTestId("booking-panel")).toBeHidden();
+    // Centred on the hall's middle line, looking at the middle of the screen, unshifted.
+    const seatView = await state(page);
+    console.log(`[theatre] ${testInfo.project.name} ${JSON.stringify({ position: seatView.position, target: seatView.target, focalOffset: seatView.focalOffset })}`);
+    expect(Math.abs(seatView.position[0])).toBeLessThan(0.05);
+    expect(Math.abs(seatView.target[0])).toBeLessThan(0.05);
+    expect(Math.abs(seatView.focalOffset[0])).toBeLessThan(0.05);
+    // Same player, still playing: switching views never starts a second one.
+    await expect(frames(page)).toHaveCount(1);
+    await expect(controlsBar(page)).toHaveAttribute("data-status", "playing");
+    // The screen is in view from the best seat.
+    const mid = await page.evaluate(() => window.__cinema3d.projectScreen(0, 0));
+    expect(mid.visible).toBe(true);
+    await expect.poll(async () => MAGENTA(await screenColour(page)), { timeout: 5000 }).toBe(true);
+    await page.screenshot({ path: `e2e/screenshots/${testInfo.project.name}/fullscreen-theatre.png` });
+
+    // Camera moves while playing; the player stays.
+    await page.evaluate(() => window.__cinema3d.rotate(10));
+    await expect(frames(page)).toHaveCount(1);
+
+    await toolbar.getByRole("button", { name: "Exit fullscreen theatre" }).click();
+    await expect.poll(async () => (await state(page)).fullscreen).toBe(false);
+    await expect(page.getByTestId("booking-panel")).toBeVisible();
+    const after = await page.getByTestId("auditorium-3d").boundingBox();
+    expect(after.height).toBeLessThan(vp.height);
+    await expect(controlsBar(page)).toHaveAttribute("data-status", "playing");
+    expect(errors).toEqual([]);
+  });
+
+  test("a failed trailer offers Try again, which reloads a single player", async ({ page, request }, testInfo) => {
+    await setTrailer(request, shows[0].movieId, "https://www.youtube.com/watch?v=brokenvideo");
+    await routes(page);
+    let loads = 0;
+    page.on("request", (r) => r.url().includes("/embed/brokenvideo") && (loads += 1));
+    await open3D(page, testInfo, shows[0].id);
+    await startIfWaiting(page);
+    await expect(controlsBar(page)).toHaveAttribute("data-status", "failed", { timeout: 15000 });
+    const before = loads;
+    await controlsBar(page).getByRole("button", { name: "Try again" }).click();
+    // The player is loaded again, once; it's refused again, so the poster returns.
+    await expect.poll(() => loads).toBe(before + 1);
+    await expect(controlsBar(page)).toHaveAttribute("data-status", "failed", { timeout: 15000 });
+    await expect(frames(page)).toHaveCount(0);
   });
 });
